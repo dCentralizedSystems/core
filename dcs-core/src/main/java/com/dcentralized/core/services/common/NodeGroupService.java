@@ -1,0 +1,1000 @@
+/*
+ * Copyright (c) 2014-2015 dCentralizedSystems, LLC. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.  You may obtain a copy of
+ * the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, without warranties or
+ * conditions of any kind, EITHER EXPRESS OR IMPLIED.  See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+package com.dcentralized.core.services.common;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
+import com.dcentralized.core.common.ServiceClient;
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceHost.ServiceHostState;
+import com.dcentralized.core.common.ServiceStatUtils;
+import com.dcentralized.core.common.ServiceStats.ServiceStat;
+import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
+import com.dcentralized.core.common.StatefulService;
+import com.dcentralized.core.common.UriUtils;
+import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.services.common.NodeState.NodeOption;
+import com.dcentralized.core.services.common.NodeState.NodeStatus;
+
+/**
+ * Service for maintaining a list of nodes through the use of a membership gossip layer. New nodes
+ * are added to a group through POST
+ */
+public class NodeGroupService extends StatefulService {
+    public static final String STAT_NAME_JOIN_RETRY_COUNT = "joinRetryCount";
+
+    public static final String PROPERTY_NAME_PEER_REQUEST_TIMEOUT_MICROS = Utils.PROPERTY_NAME_PREFIX
+            + "NodeGroupService.peerRequestTimeoutMicros";
+
+    public static final long PEER_REQUEST_TIMEOUT_MICROS = Long.getLong(
+            PROPERTY_NAME_PEER_REQUEST_TIMEOUT_MICROS,
+            ServiceHostState.DEFAULT_OPERATION_TIMEOUT_MICROS / 3);
+
+    private enum NodeGroupChange {
+        PEER_ADDED, PEER_STATUS_CHANGE, SELF_CHANGE
+    }
+
+    public static class JoinPeerRequest {
+        public static final String KIND = Utils.buildKind(JoinPeerRequest.class);
+
+        public static JoinPeerRequest create(URI peerToJoin, Integer quorum) {
+            JoinPeerRequest r = new JoinPeerRequest();
+            r.memberGroupReference = peerToJoin;
+            r.membershipQuorum = quorum;
+            r.kind = KIND;
+            return r;
+        }
+
+        /**
+         * Member of the group we wish to join through
+         */
+        public URI memberGroupReference;
+
+        /**
+         * Optional node join options. If specified the node state representing the local node
+         * will be updated with these options. Further, these options determine join behavior.
+         */
+        public EnumSet<NodeOption> localNodeOptions;
+
+        /**
+         * See {@link NodeState#membershipQuorum}
+         */
+        public Integer membershipQuorum;
+
+        /**
+         * See {@link NodeState#locationQuorum}
+         */
+        public Integer locationQuorum;
+
+        public String kind;
+    }
+
+    public static class UpdateQuorumRequest {
+        public static final String KIND = Utils.buildKind(UpdateQuorumRequest.class);
+
+        public static UpdateQuorumRequest create(boolean isGroupUpdate) {
+            UpdateQuorumRequest r = new UpdateQuorumRequest();
+            r.isGroupUpdate = isGroupUpdate;
+            r.kind = KIND;
+            return r;
+        }
+
+        public UpdateQuorumRequest setMembershipQuorum(int count) {
+            this.membershipQuorum = count;
+            return this;
+        }
+
+        public UpdateQuorumRequest setLocationQuorum(int count) {
+            this.locationQuorum = count;
+            return this;
+        }
+
+        public boolean isGroupUpdate;
+        public Integer membershipQuorum;
+        public Integer locationQuorum;
+        public String kind;
+    }
+
+    public static class NodeGroupConfig {
+        public static final long DEFAULT_NODE_REMOVAL_DELAY_MICROS = TimeUnit.MINUTES.toMicros(5);
+        public long nodeRemovalDelayMicros = DEFAULT_NODE_REMOVAL_DELAY_MICROS;
+
+        /**
+         * Number of maintenance intervals after last update to group membership before owner
+         * selection and replication requests should be processed.
+         */
+        public long stableGroupMaintenanceIntervalCount = 5;
+
+        /**
+         * Timeout for gossip requests to peers, in microseconds. The default is smaller than the operation timeout
+         * so we have the chance to mark a non responsive peer as unavailable, and retry pending operations
+         * before they expire.
+         */
+        public long peerRequestTimeoutMicros = PEER_REQUEST_TIMEOUT_MICROS;
+    }
+
+    public static class NodeGroupState extends ServiceDocument {
+        /**
+         * The node group configuration
+         */
+        public NodeGroupConfig config;
+        /**
+         * The map of peer nodes, updated through random probing of a limited number of peers and
+         * two way state merges
+         */
+        public Map<String, NodeState> nodes = new ConcurrentHashMap<>();
+        /**
+         * The maximum value among all reported times from the peers. If one peer has significant
+         * time drift compared to others, this value will appears in the future or past, compared to local time.
+         * This value is updated during gossip and is considered a "global" field that settles to the same
+         * value across all peers, when gossip ahs converged
+         */
+        public long membershipUpdateTimeMicros;
+
+        /**
+         * The local membership update time, as observed by each node. This value is only updated
+         * by the local node and not merged with other peer reported values. It is used to determine
+         * node group stability, a heuristic used in
+         * {@link NodeGroupUtils#isMembershipSettled(com.dcentralized.core.common.ServiceHost, long, NodeGroupState)}
+         */
+        public long localMembershipUpdateTimeMicros;
+    }
+
+    public static final int MIN_PEER_GOSSIP_COUNT = 10;
+
+    public static final String STAT_NAME_RESTARTING_SERVICES_COUNT = "restartingServicesCount";
+    public static final String STAT_NAME_RESTARTING_SERVICES_FAILURE_COUNT = "restartingServicesFailureCount";
+    public static final String STAT_NAME_PREFIX_GOSSIP_PATCH_DURATION = "GossipPatchDurationMicros";
+
+    private URI uri;
+
+    private URI publicUri;
+
+    private NodeGroupState cachedState;
+
+    public NodeGroupService() {
+        super(NodeGroupState.class);
+        super.toggleOption(ServiceOption.CORE, true);
+        super.toggleOption(ServiceOption.INSTRUMENTATION, true);
+        super.toggleOption(ServiceOption.PERIODIC_MAINTENANCE, true);
+        super.toggleOption(ServiceOption.CONCURRENT_GET_HANDLING, true);
+    }
+
+    @Override
+    public URI getUri() {
+        if (this.uri == null) {
+            this.uri = super.getUri();
+        }
+        return this.uri;
+    }
+
+    private URI getPublicUri() {
+        if (this.publicUri == null) {
+            this.publicUri = UriUtils.buildPublicUri(getHost(), getSelfLink());
+        }
+        return this.publicUri;
+    }
+
+    @Override
+    public void handleStart(Operation startPost) {
+        NodeGroupState initState = null;
+        if (startPost.hasBody()) {
+            initState = startPost.getBody(NodeGroupState.class);
+        } else {
+            initState = new NodeGroupState();
+        }
+
+        initState.documentOwner = getHost().getId();
+
+        if (initState.config == null) {
+            initState.config = new NodeGroupConfig();
+        }
+
+        NodeState self = initState.nodes.get(getHost().getId());
+        self = buildLocalNodeState(self);
+
+        if (!validateNodeOptions(startPost, self.options)) {
+            return;
+        }
+
+        initState.nodes.put(self.id, self);
+        this.cachedState = Utils.clone(initState);
+        startPost.setBody(this.cachedState).complete();
+    }
+
+    @Override
+    public void handleGet(Operation get) {
+        get.setBody(this.cachedState).complete();
+    }
+
+    @Override
+    public void handlePatch(Operation patch) {
+        NodeGroupState body = getStateFromBody(patch);
+        if (body == null) {
+            patch.fail(new IllegalArgumentException("body of type NodeGroupState is required"));
+            return;
+        }
+
+        patch.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
+
+        NodeGroupState localState = getState(patch);
+        if (localState == null || localState.nodes == null) {
+            this.cachedState = localState;
+            logWarning("Invalid local state");
+            patch.fail(Operation.STATUS_CODE_FAILURE_THRESHOLD);
+            return;
+        }
+
+        if (body.config == null && body.nodes.isEmpty()) {
+            UpdateQuorumRequest bd = patch.getBody(UpdateQuorumRequest.class);
+            if (UpdateQuorumRequest.KIND.equals(bd.kind)) {
+                handleUpdateQuorumPatch(patch, localState);
+                return;
+            }
+            patch.fail(new IllegalArgumentException("nodes or config are required"));
+            return;
+        }
+
+        if (body.config != null && body.nodes.isEmpty()) {
+            localState.config = body.config;
+            this.cachedState = Utils.clone(localState);
+            patch.complete();
+            return;
+        }
+
+        EnumSet<NodeGroupChange> changes = EnumSet.noneOf(NodeGroupChange.class);
+        mergeRemoteAndLocalMembership(
+                localState,
+                body,
+                changes);
+
+        patch.setNotificationDisabled(changes.isEmpty());
+
+        localState.documentOwner = getHost().getId();
+        NodeState localNodeState = localState.nodes.get(getHost().getId());
+        localNodeState.groupReference = getPublicUri();
+
+        this.cachedState = localState;
+
+        patch.setBodyNoCloning(this.cachedState).complete();
+
+        if (!isAvailable()) {
+            boolean isAvailable = NodeGroupUtils.isNodeGroupAvailable(getHost(), localState);
+            setAvailable(isAvailable);
+        }
+
+        if (localNodeState.status == NodeStatus.AVAILABLE) {
+            return;
+        }
+
+        localNodeState.status = NodeStatus.AVAILABLE;
+        sendAvailableSelfPatch(localNodeState);
+    }
+
+    private void handleUpdateQuorumPatch(Operation patch,
+            NodeGroupState localState) {
+        UpdateQuorumRequest bd = patch.getBody(UpdateQuorumRequest.class);
+        NodeState self = localState.nodes.get(getHost().getId());
+
+        if (bd.membershipQuorum != null) {
+            self.membershipQuorum = Math.max(1, bd.membershipQuorum);
+        }
+
+        if (bd.locationQuorum != null) {
+            self.locationQuorum = Math.max(1, bd.locationQuorum);
+        }
+
+        self.documentVersion++;
+        self.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+        localState.membershipUpdateTimeMicros = self.documentUpdateTimeMicros;
+        localState.localMembershipUpdateTimeMicros = self.documentUpdateTimeMicros;
+
+        this.cachedState = Utils.clone(localState);
+
+        if (!bd.isGroupUpdate) {
+            patch.complete();
+            return;
+        }
+
+        // TODO use a three phase consensus algorithm to update quorum similar
+        // to the steady state replication consensus.
+
+        // Issue N requests to update quorum to all member of the group. If they
+        // do not all succeed the request, then the operation fails and some peers
+        // will be left with a quorum level different than the others. That is
+        // acceptable. The replication logic, can reject a peer if its quorum level
+        // is not set at the same level as the owner. The client of this request can
+        // also retry...
+
+        bd.isGroupUpdate = false;
+
+        int failureThreshold = (localState.nodes.size() - 1) / 2;
+        AtomicInteger pending = new AtomicInteger(localState.nodes.size());
+        AtomicInteger failures = new AtomicInteger();
+        CompletionHandler c = (o, e) -> {
+            if (e != null) {
+                logWarning("Node %s failed quorum update: %s", o.getUri(), e.toString());
+                failures.incrementAndGet();
+            }
+
+            int p = pending.decrementAndGet();
+            if (p != 0) {
+                return;
+            }
+            if (failures.get() > failureThreshold) {
+                patch.fail(new IllegalStateException("Majority of nodes failed request"));
+            } else {
+                if (bd.membershipQuorum != null) {
+                    logInfo("Quorum updated across all peers to %d", bd.membershipQuorum);
+                }
+                if (bd.locationQuorum != null) {
+                    logInfo("Location quorum updated across all peers to %d", bd.locationQuorum);
+                }
+                patch.complete();
+            }
+        };
+
+        for (NodeState node : localState.nodes.values()) {
+            if (!NodeState.isAvailable(node, getHost().getId(), true)) {
+                c.handle(null, null);
+                continue;
+            }
+            if (bd.membershipQuorum != null) {
+                node.membershipQuorum = bd.membershipQuorum;
+            }
+
+            if (bd.locationQuorum != null) {
+                node.locationQuorum = bd.locationQuorum;
+            }
+
+            Operation p = Operation
+                    .createPatch(node.groupReference)
+                    .setBody(bd)
+                    .setCompletion(c);
+            sendRequest(p);
+        }
+    }
+
+    /**
+     * Handles a POST to either join this service to a group using a peer existing member
+     * (JoinPeerRequest as the body) or add a new local monitor service to track the state of a
+     * remote peer
+     *
+     * @param post
+     */
+    @RouteDocumentation(
+            description = "Join a peer to this node group",
+            requestBodyType = JoinPeerRequest.class)
+    @Override
+    public void handlePost(Operation post) {
+        if (!post.hasBody()) {
+            post.fail(new IllegalArgumentException("body is required"));
+            return;
+        }
+
+        NodeGroupState localState = getState(post);
+        if (localState == null || localState.nodes == null) {
+            logWarning("invalid local state");
+            post.fail(Operation.STATUS_CODE_BAD_REQUEST);
+            return;
+        }
+
+        JoinPeerRequest joinBody = post.getBody(JoinPeerRequest.class);
+        if (joinBody != null && joinBody.memberGroupReference != null) {
+            // set a short join operation timeout so that join retries will occur in any environment
+            long joinTimeOutMicrosUtc = Utils.fromNowMicrosUtc(
+                    Math.max(TimeUnit.SECONDS.toMicros(1),
+                            getHost().getOperationTimeoutMicros() / 10));
+            handleJoinPost(joinBody, post, joinTimeOutMicrosUtc, getState(post), null);
+            return;
+        }
+
+        NodeState body = post.getBody(NodeState.class);
+        if (body.id == null) {
+            post.fail(new IllegalArgumentException("id is required"));
+            return;
+        }
+
+        boolean isLocalNode = body.id.equals(getHost().getId());
+
+        if (body.groupReference == null) {
+            post.fail(new IllegalArgumentException("groupReference is required"));
+            return;
+        }
+
+        if (isLocalNode) {
+            // this is a node instance representing us
+            buildLocalNodeState(body);
+        } else {
+            body.documentSelfLink = UriUtils.buildUriPath(getSelfLink(), body.id);
+        }
+
+        localState.nodes.put(body.id, body);
+        this.cachedState = Utils.clone(localState);
+        post.setBodyNoCloning(this.cachedState).complete();
+    }
+
+    private void handleJoinPost(JoinPeerRequest joinBody,
+            Operation joinOp,
+            long expirationMicros,
+            NodeGroupState localState,
+            NodeGroupState remotePeerState) {
+
+        if (UriUtils.isHostEqual(getHost(), joinBody.memberGroupReference)) {
+            logInfo("Skipping self join");
+            // we tried joining ourself, abort;
+            joinOp.complete();
+            return;
+        }
+
+        NodeState self = localState.nodes.get(getHost().getId());
+
+        if (joinOp != null) {
+            self.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+            self.documentVersion++;
+
+            if (joinBody.membershipQuorum != null) {
+                if (!joinBody.membershipQuorum.equals(self.membershipQuorum)) {
+                    logInfo("Quorum changed from %d to %d", self.membershipQuorum,
+                            joinBody.membershipQuorum);
+                }
+                self.membershipQuorum = joinBody.membershipQuorum;
+            }
+
+            if (joinBody.locationQuorum != null) {
+                if (!joinBody.locationQuorum.equals(self.locationQuorum)) {
+                    logInfo("Location quorum changed from %d to %d", self.locationQuorum,
+                            joinBody.locationQuorum);
+                }
+                self.locationQuorum = joinBody.locationQuorum;
+            }
+
+            if (joinBody.localNodeOptions != null) {
+                if (!validateNodeOptions(joinOp, joinBody.localNodeOptions)) {
+                    return;
+                }
+                self.options = joinBody.localNodeOptions;
+            }
+
+            localState.membershipUpdateTimeMicros = self.documentUpdateTimeMicros;
+            this.cachedState = Utils.clone(localState);
+
+            // complete the join POST, continue with state merge
+            joinOp.complete();
+        }
+
+        // this method is two pass
+        // First pass get the remote peer state
+        // Second pass, insert self
+
+        if (remotePeerState == null) {
+            // Pass 1, get existing member state
+            sendRequest(Operation.createGet(joinBody.memberGroupReference)
+                    .setCompletion(
+                            (o, e) -> {
+                                if (e != null) {
+                                    handleJoinFailure(e, joinBody, localState,
+                                            expirationMicros);
+                                    return;
+                                }
+
+                                NodeGroupState remoteState = getStateFromBody(o);
+                                handleJoinPost(joinBody, null, expirationMicros,
+                                        localState, remoteState);
+                            }));
+            return;
+        }
+
+        // Pass 2, merge remote group state with ours, send self to peer
+        sendRequest(Operation.createPatch(getUri()).setBody(remotePeerState));
+
+        logInfo("Sending POST to %s to insert self: %s",
+                joinBody.memberGroupReference, Utils.toJson(self));
+
+        Operation insertSelfToPeer = Operation
+                .createPost(joinBody.memberGroupReference)
+                .setBody(self)
+                .setCompletion(
+                        (o, e) -> {
+                            if (e != null) {
+                                logSevere("Insert POST to %s failed", o.getUri());
+                            }
+                            // we will restart services to synchronize with peers on the next
+                            // maintenance interval with a stable group membership
+                        });
+        sendRequest(insertSelfToPeer);
+    }
+
+    private void handleJoinFailure(Throwable e, JoinPeerRequest joinBody,
+            NodeGroupState localState,
+            long expirationMicros) {
+        if (Utils.beforeNow(expirationMicros)) {
+            logSevere("Failure joining peer %s due to %s, attempt expired, will not retry",
+                    joinBody.memberGroupReference, e.toString());
+            return;
+        }
+
+        // avoid rescheduling if the host is in the process of stopping
+        if (getHost().isStopping()) {
+            return;
+        }
+
+        getHost().scheduleCore(() -> {
+            logWarning("Retrying GET to %s, due to %s",
+                    joinBody.memberGroupReference,
+                    e.toString());
+            handleJoinPost(joinBody, null, expirationMicros, localState, null);
+            adjustStat(STAT_NAME_JOIN_RETRY_COUNT, 1);
+        }, getHost().getMaintenanceIntervalMicros(), TimeUnit.MICROSECONDS);
+
+    }
+
+    private boolean validateNodeOptions(Operation joinOp, EnumSet<NodeOption> options) {
+        if (options.isEmpty()) {
+            joinOp.fail(new IllegalArgumentException("at least one option must be specified"));
+            return false;
+        }
+
+        if (options.contains(NodeOption.OBSERVER) && options.contains(NodeOption.PEER)) {
+            joinOp.fail(new IllegalArgumentException(
+                    String.format("%s and %s are mutually exclusive",
+                            NodeOption.OBSERVER, NodeOption.PEER)));
+            return false;
+        }
+
+        return true;
+    }
+
+    private void sendAvailableSelfPatch(NodeState local) {
+        // mark self as available by issuing self PATCH
+        NodeGroupState body = new NodeGroupState();
+        body.config = null;
+        body.documentOwner = getHost().getId();
+        body.documentSelfLink = UriUtils.buildUriPath(getSelfLink(), body.documentOwner);
+        local.status = NodeStatus.AVAILABLE;
+        body.nodes.put(local.id, local);
+
+        sendRequest(Operation.createPatch(getUri()).setBody(
+                body));
+    }
+
+    private NodeState buildLocalNodeState(NodeState body) {
+        if (body == null) {
+            body = new NodeState();
+        }
+        body.id = getHost().getId();
+        body.status = NodeStatus.SYNCHRONIZING;
+        Integer q = Integer.getInteger(NodeState.PROPERTY_NAME_MEMBERSHIP_QUORUM);
+        if (q != null) {
+            body.membershipQuorum = q;
+        } else {
+            // Initialize default quorum based on service host peerHosts argument
+            int total = getHost().getInitialPeerHosts().size() + 1;
+            int quorum = (total / 2) + 1;
+            body.membershipQuorum = Math.max(1, quorum);
+        }
+        Integer lq = Integer.getInteger(NodeState.PROPERTY_NAME_LOCATION_QUORUM);
+        if (lq != null) {
+            body.locationQuorum = lq;
+        } else {
+            body.locationQuorum = 1;
+        }
+        if (getHost().getLocation() != null) {
+            logInfo("Setting node %s location to %s, location quorum is %d",
+                    body.id, getHost().getLocation(), body.locationQuorum);
+            if (body.customProperties == null) {
+                body.customProperties = new HashMap<>();
+            }
+            body.customProperties.put(NodeState.PROPERTY_NAME_LOCATION,
+                    getHost().getLocation());
+        }
+        body.groupReference = getPublicUri();
+        body.documentSelfLink = UriUtils.buildUriPath(getSelfLink(), body.id);
+        body.documentKind = Utils.buildKind(NodeState.class);
+        body.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+        return body;
+    }
+
+    @Override
+    public void handleMaintenance(Operation maint) {
+        NodeGroupState localState = this.cachedState;
+        if (localState == null || localState.nodes == null) {
+            maint.complete();
+            return;
+        }
+
+        if (localState.nodes.size() <= 1) {
+            if (!isAvailable()) {
+                // self patch at least once, so we update availability
+                sendRequest(Operation.createPatch(getUri())
+                        .setBodyNoCloning(localState)
+                        .setCompletion((o, e) -> {
+                            maint.complete();
+                        }));
+            } else {
+                maint.complete();
+            }
+            return;
+        }
+
+        if (getHost().isStopping()) {
+            maint.complete();
+            return;
+        }
+
+        // probe a fixed, random selection of our peers, giving them our view of the group and
+        // getting back theirs
+
+        // probe log 10 of peers (exclude self)
+        int peersToProbe = (int) Math.log10(localState.nodes.size() - 1);
+        // probe at least N peers
+        peersToProbe = Math.max(peersToProbe, MIN_PEER_GOSSIP_COUNT);
+        // probe at most total number of peers
+        peersToProbe = Math.min(localState.nodes.size() - 1, peersToProbe);
+
+        AtomicInteger remaining = new AtomicInteger(peersToProbe);
+        List<NodeState> randomizedPeers = shuffleGroupMembers(localState);
+        NodeState localNode = localState.nodes.get(getHost().getId());
+        localNode.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+        localNode.groupReference = UriUtils.buildPublicUri(getHost(), getSelfLink());
+        localState.documentOwner = getHost().getId();
+
+        NodeGroupState patchBody = new NodeGroupState();
+        patchBody.documentOwner = getHost().getId();
+        patchBody.documentUpdateTimeMicros = localNode.documentUpdateTimeMicros;
+
+        int probeCount = 0;
+        for (NodeState peer : randomizedPeers) {
+            if (peer == null) {
+                continue;
+            }
+
+            if (peer.id.equals(getHost().getId())) {
+                continue;
+            }
+
+            NodeState remotePeer = peer;
+            URI peerUri = peer.groupReference;
+            // send a gossip PATCH to the peer, with our state
+
+            // perform a health check to N randomly selected peers
+            // 1) We issue a PATCH to a peer, with the body set to our view of the group
+            // 2a) if the peer is healthy, they will merge our state with theirs and return
+            // the merged state in the response. We will then update our state and mark the
+            // peer AVAILABLE. We just update peer node, we don't currently merge their state
+            // 2b) if the PATCH failed, we mark the PEER it UNAVAILABLE
+
+            long sendTimeMicros = Utils.getSystemNowMicrosUtc();
+            CompletionHandler ch = (o, e) -> handleGossipPatchCompletion(sendTimeMicros, maint, o,
+                    e, localState,
+                    patchBody,
+                    remaining, remotePeer);
+
+            Operation patch = Operation
+                    .createPatch(peerUri)
+                    .setRetryCount(0)
+                    .setConnectionTag(ServiceClient.CONNECTION_TAG_GOSSIP)
+                    .setExpiration(
+                            Utils.fromNowMicrosUtc(
+                                    localState.config.peerRequestTimeoutMicros))
+                    .forceRemote()
+                    .setCompletion(ch);
+
+            if (peer.groupReference.equals(localNode.groupReference)) {
+                // If we just detected this is a peer node that used to listen on our address,
+                // but its obviously no longer around, mark it as REPLACED and do not send PATCH
+                if (peer.status != NodeStatus.REPLACED) {
+                    peer.status = NodeStatus.REPLACED;
+                    peer.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+                    peer.documentVersion++;
+                }
+                ch.handle(null, null);
+            } else {
+                patch.setBodyNoCloning(localState)
+                        .setContentType(Operation.MEDIA_TYPE_APPLICATION_KRYO_OCTET_STREAM)
+                        .sendWith(this);
+            }
+
+            // only probe N peers
+            if (++probeCount >= peersToProbe) {
+                break;
+            }
+        }
+
+        if (probeCount == 0) {
+            maint.complete();
+        }
+    }
+
+    public void handleGossipPatchCompletion(long sendTimeMicros, Operation maint, Operation patch,
+            Throwable e,
+            NodeGroupState localState, NodeGroupState patchBody, AtomicInteger remaining,
+            NodeState remotePeer) {
+
+        try {
+            if (patch == null) {
+                return;
+            }
+
+            updateGossipPatchStat(sendTimeMicros, remotePeer);
+
+            long updateTime = localState.membershipUpdateTimeMicros;
+            if (e != null) {
+                updateTime = remotePeer.status != NodeStatus.UNAVAILABLE ? Utils.getNowMicrosUtc()
+                        : updateTime;
+                if (remotePeer.status != NodeStatus.UNAVAILABLE) {
+                    logWarning("Sending patch to peer %s failed with %s; marking as UNAVAILABLE",
+                            remotePeer.id, Utils.toString(e));
+                    remotePeer.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
+                    remotePeer.documentVersion++;
+                }
+                remotePeer.status = NodeStatus.UNAVAILABLE;
+            } else {
+                NodeGroupState peerState = getStateFromBody(patch);
+                if (peerState.documentOwner.equals(remotePeer.id)) {
+                    NodeState remotePeerStateFromRsp = peerState.nodes.get(remotePeer.id);
+                    if (remotePeerStateFromRsp.documentVersion > remotePeer.documentVersion) {
+                        remotePeer = remotePeerStateFromRsp;
+                    }
+                } else if (remotePeer.status != NodeStatus.REPLACED) {
+                    logWarning("Peer address %s has changed to id %s from %s",
+                            patch.getUri(),
+                            peerState.documentOwner,
+                            remotePeer.id);
+                    remotePeer.status = NodeStatus.REPLACED;
+                    remotePeer.documentVersion++;
+                }
+                updateTime = Math.max(updateTime, peerState.membershipUpdateTimeMicros);
+            }
+
+            synchronized (patchBody) {
+                patchBody.nodes.put(remotePeer.id, remotePeer);
+                patchBody.membershipUpdateTimeMicros = Math.max(updateTime,
+                        patchBody.membershipUpdateTimeMicros);
+            }
+
+        } finally {
+            int r = remaining.decrementAndGet();
+            if (r <= 0) {
+                // to merge updated state, issue a self PATCH. It contains NodeState entries for every
+                // peer node we just talked to
+                sendRequest(Operation.createPatch(getUri())
+                        .setBodyNoCloning(patchBody));
+
+                maint.complete();
+            }
+        }
+
+    }
+
+    private void updateGossipPatchStat(long sendTimeMicros, NodeState remotePeer) {
+        long patchCompletionTime = Utils.getSystemNowMicrosUtc();
+
+        String statName = remotePeer.id + STAT_NAME_PREFIX_GOSSIP_PATCH_DURATION;
+        ServiceStat st = ServiceStatUtils.getOrCreateHourlyTimeSeriesHistogramStat(this, statName, EnumSet.of(AggregationType.AVG));
+        setStat(st, patchCompletionTime - sendTimeMicros);
+    }
+
+    /**
+     * Merges current node group state with state that came through a PATCH.
+     *
+     * PATCH requests are sent from
+     *
+     * 1) local service to itself, after it has communicated with a peer, during maintenance.
+     *
+     * 2) A remote peer when its probing this local service, during its maintenance cycle
+     *
+     * The key invariants that should not be violated, guaranteeing forward evolution of state even
+     * if nodes only talk to a small portion of their peers:
+     *
+     * - When a status changes, the change is accepted if the remote version is higher
+     *
+     * - A local node is the only node that can change its own node entry status, for a PATCH that it
+     * receives.
+     *
+     * - A node should never increment the version of a node entry, for other nodes, unless that node
+     * entry is marked UNAVAILABLE
+     *
+     * - When a status changes during gossip version must be incremented - Versions always move forward
+     */
+    private void mergeRemoteAndLocalMembership(
+            NodeGroupState localState,
+            NodeGroupState remotePeerState,
+            EnumSet<NodeGroupChange> changes) {
+        if (localState == null) {
+            return;
+        }
+
+        boolean isSelfPatch = remotePeerState.documentOwner.equals(getHost().getId());
+        long now = Utils.getNowMicrosUtc();
+
+        NodeState selfEntry = localState.nodes.get(getHost().getId());
+
+        for (NodeState remoteEntry : remotePeerState.nodes.values()) {
+
+            NodeState currentEntry = localState.nodes.get(remoteEntry.id);
+            boolean isLocalNode = remoteEntry.id.equals(getHost().getId());
+
+            if (!isSelfPatch && isLocalNode) {
+                if (remoteEntry.status != currentEntry.status) {
+                    logWarning("Peer %s is reporting us as %s, current status: %s",
+                            remotePeerState.documentOwner, remoteEntry.status, currentEntry.status);
+                    if (remoteEntry.documentVersion > currentEntry.documentVersion) {
+                        // increment local version to re-enforce we are alive and well
+                        currentEntry.documentVersion = remoteEntry.documentVersion;
+                        currentEntry.documentUpdateTimeMicros = now;
+                        changes.add(NodeGroupChange.SELF_CHANGE);
+                    }
+                }
+                // local instance of node group service is the only one that can update its own
+                // status
+                continue;
+            }
+
+            if (currentEntry == null) {
+                boolean hasExpired = remoteEntry.documentExpirationTimeMicros > 0
+                        && remoteEntry.documentExpirationTimeMicros < now;
+                if (hasExpired || NodeState.isUnAvailable(remoteEntry, null)) {
+                    continue;
+                }
+                if (selfEntry.groupReference.equals(remoteEntry.groupReference)) {
+                    logWarning("Local address %s has changed to id %s from %s", remoteEntry.groupReference, getHost().getId(), remoteEntry.id);
+                    changes.add(NodeGroupChange.SELF_CHANGE);
+                    continue;
+                }
+                if (!isLocalNode) {
+                    logInfo("Adding new peer %s (%s), status %s", remoteEntry.id,
+                            remoteEntry.groupReference, remoteEntry.status);
+                }
+                // we found a new peer, through the gossip PATCH. Add to our state
+                localState.nodes.put(remoteEntry.id, remoteEntry);
+                changes.add(NodeGroupChange.PEER_ADDED);
+                continue;
+            }
+
+            boolean needsUpdate = currentEntry.status != remoteEntry.status
+                    || currentEntry.membershipQuorum != remoteEntry.membershipQuorum;
+            if (needsUpdate) {
+                changes.add(NodeGroupChange.PEER_STATUS_CHANGE);
+            }
+
+            if (isSelfPatch && isLocalNode && needsUpdate) {
+                // we sent a self PATCH to update our status. Move our version forward;
+                currentEntry.documentVersion = Math.max(remoteEntry.documentVersion,
+                        currentEntry.documentVersion) + 1;
+                currentEntry.documentUpdateTimeMicros = Math.max(
+                        remoteEntry.documentUpdateTimeMicros,
+                        now);
+                currentEntry.status = remoteEntry.status;
+                currentEntry.options = remoteEntry.options;
+                continue;
+            }
+
+            // versions move forward only, ignore stale nodes
+            if (remoteEntry.documentVersion < currentEntry.documentVersion) {
+                logFine("v:%d - q:%d, v:%d - q:%d , %s - %s (local:%s %d)",
+                        currentEntry.documentVersion,
+                        currentEntry.membershipQuorum,
+                        remoteEntry.documentVersion, remoteEntry.membershipQuorum,
+                        currentEntry.id,
+                        remotePeerState.documentOwner,
+                        getHost().getId(),
+                        selfEntry.documentVersion);
+                continue;
+            }
+
+            if (remoteEntry.documentVersion == currentEntry.documentVersion && needsUpdate) {
+                // pick update with most recent time, even if that is prone to drift and jitter
+                // between nodes
+                if (remoteEntry.documentUpdateTimeMicros < currentEntry.documentUpdateTimeMicros) {
+                    logWarning(
+                            "Ignoring update for %s from peer %s. Local status: %s, remote status: %s",
+                            remoteEntry.id, remotePeerState.documentOwner, currentEntry.status,
+                            remoteEntry.status);
+                    continue;
+                }
+            }
+
+            if (remoteEntry.status == NodeStatus.UNAVAILABLE
+                    && currentEntry.documentExpirationTimeMicros == 0
+                    && remoteEntry.documentExpirationTimeMicros == 0) {
+                remoteEntry.documentExpirationTimeMicros = Utils.fromNowMicrosUtc(
+                        localState.config.nodeRemovalDelayMicros);
+                logInfo("Set expiration at %d for unavailable node %s(%s)",
+                        remoteEntry.documentExpirationTimeMicros,
+                        remoteEntry.id,
+                        remoteEntry.groupReference);
+                changes.add(NodeGroupChange.PEER_STATUS_CHANGE);
+                needsUpdate = true;
+            }
+
+            if (remoteEntry.status == NodeStatus.UNAVAILABLE
+                    && currentEntry.status == NodeStatus.UNAVAILABLE
+                    && needsUpdate) {
+                // nodes increment their own entry version, except, if they are unavailable
+                remoteEntry.documentVersion++;
+            }
+
+            localState.nodes.put(remoteEntry.id, remoteEntry);
+        }
+
+        List<String> missingNodes = new ArrayList<>();
+        for (NodeState l : localState.nodes.values()) {
+            NodeState r = remotePeerState.nodes.get(l.id);
+            if (!NodeState.isUnAvailable(l, null) || l.id.equals(getHost().getId())) {
+                continue;
+            }
+
+            long expirationMicros = l.documentExpirationTimeMicros;
+            if (r != null) {
+                expirationMicros = Math.max(l.documentExpirationTimeMicros,
+                        r.documentExpirationTimeMicros);
+            }
+
+            if (expirationMicros > 0 && now > expirationMicros) {
+                changes.add(NodeGroupChange.PEER_STATUS_CHANGE);
+                logInfo("Removing expired unavailable node %s(%s)", l.id, l.groupReference);
+                missingNodes.add(l.id);
+            }
+        }
+
+        for (String id : missingNodes) {
+            localState.nodes.remove(id);
+        }
+
+        boolean isModified = !changes.isEmpty();
+        localState.membershipUpdateTimeMicros = Math.max(
+                remotePeerState.membershipUpdateTimeMicros,
+                isModified ? now : localState.membershipUpdateTimeMicros);
+        if (isModified) {
+            logInfo("State updated, merge with %s, self %s, %d",
+                    remotePeerState.documentOwner,
+                    localState.documentOwner,
+                    localState.membershipUpdateTimeMicros);
+            localState.localMembershipUpdateTimeMicros = now;
+        }
+    }
+
+    private List<NodeState> shuffleGroupMembers(NodeGroupState localState) {
+        List<NodeState> peers = new ArrayList<>(localState.nodes.values());
+        Collections.shuffle(peers, ThreadLocalRandom.current());
+        return peers;
+    }
+
+    private NodeGroupState getStateFromBody(Operation o) {
+        if (!o.hasBody()) {
+            return new NodeGroupState();
+        }
+        NodeGroupState rsp = o.getBody(NodeGroupState.class);
+        if (rsp != null) {
+            if (rsp.nodes == null) {
+                rsp.nodes = new HashMap<>();
+            }
+        }
+        return rsp;
+    }
+}

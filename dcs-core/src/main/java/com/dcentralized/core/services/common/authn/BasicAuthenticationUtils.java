@@ -1,0 +1,339 @@
+/*
+ * Copyright (c) 2014-2015 dCentralizedSystems, LLC. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.  You may obtain a copy of
+ * the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, without warranties or
+ * conditions of any kind, EITHER EXPRESS OR IMPLIED.  See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+package com.dcentralized.core.services.common.authn;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.util.Base64;
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import com.dcentralized.core.common.AuthUtils;
+import com.dcentralized.core.common.Claims;
+import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.AuthorizationContext;
+import com.dcentralized.core.common.StatelessService;
+import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.jwt.Verifier;
+import com.dcentralized.core.common.jwt.Verifier.TokenException;
+import com.dcentralized.core.services.common.GuestUserService;
+import com.dcentralized.core.services.common.QueryTask;
+import com.dcentralized.core.services.common.QueryTask.Query;
+import com.dcentralized.core.services.common.ServiceUriPaths;
+
+/**
+ * Utility class defining helper methods for basic authentication
+ */
+public final class BasicAuthenticationUtils {
+
+    public static final String WWW_AUTHENTICATE_HEADER_NAME = "www-authenticate";
+    public static final String WWW_AUTHENTICATE_HEADER_VALUE = "Basic realm=\"xenon\"";
+    public static final String BASIC_AUTH_NAME = "Basic";
+    private static final String BASIC_AUTH_SEPARATOR = " ";
+    private static final String BASIC_AUTH_USER_SEPARATOR = ":";
+
+    public static final EnumSet<QueryTask.QuerySpecification.QueryOption> QUERY_OPTIONS_TOP_RESULTS =
+            EnumSet.of(QueryTask.QuerySpecification.QueryOption.TOP_RESULTS);
+
+    private BasicAuthenticationUtils() {
+
+    }
+
+    /**
+     * Holds user and auth queries
+     */
+    public static class BasicAuthenticationContext {
+        public Query userQuery;
+        public Query authQuery;
+    }
+
+    /**
+     * Utility method to logout an user
+     * @param service service invoking this method
+     * @param op Operation context of the logout request
+     */
+    public static void handleLogout(StatelessService service, Operation op) {
+        if (op.getAuthorizationContext() == null) {
+            op.complete();
+            return;
+        }
+        String userLink = op.getAuthorizationContext().getClaims().getSubject();
+        if (!associateAuthorizationContext(service, op, userLink, 0)) {
+            op.setStatusCode(Operation.STATUS_CODE_SERVER_FAILURE_THRESHOLD).complete();
+            return;
+        }
+        op.complete();
+    }
+
+    /**
+     * Utility method to log an user into the system
+     * @param service service invoking this method
+     * @param op Operation context of the login request
+     * @param authContext authContext to perform the login checks
+     * @param expirationTimeMicros expiration time for the auth token
+     */
+    public static void handleLogin(StatelessService service, Operation op,
+            BasicAuthenticationContext authContext, long expirationTimeMicros) {
+        queryUserService(service, op, authContext, expirationTimeMicros);
+    }
+
+    /**
+     * Utility method to parse a request to extract the username and password
+     * @param service service invoking this method
+     * @param op Operation context of the login request
+     * @return
+     */
+    public static String[] parseRequest(StatelessService service, Operation op) {
+        // Attempt to fetch and use userInfo, if AUTHORIZATION_HEADER_NAME is null.
+        String authHeader = op.getRequestHeader(Operation.AUTHORIZATION_HEADER);
+        String userInfo = op.getUri().getUserInfo();
+        String authString;
+        if (authHeader != null) {
+            String[] authHeaderParts = authHeader.split(BASIC_AUTH_SEPARATOR);
+            // malformed header; send a 400 response
+            if (authHeaderParts.length != 2 || !authHeaderParts[0].equalsIgnoreCase(BASIC_AUTH_NAME)) {
+                op.fail(Operation.STATUS_CODE_BAD_REQUEST);
+                return null;
+            }
+
+            try {
+                authString = new String(Base64.getDecoder().decode(authHeaderParts[1]), Utils.CHARSET);
+            } catch (UnsupportedEncodingException e) {
+                service.logWarning("Exception decoding auth header: %s", Utils.toString(e));
+                op.setStatusCode(Operation.STATUS_CODE_BAD_REQUEST).complete();
+                return null;
+            }
+
+        } else if (userInfo != null) {
+            authString = userInfo;
+        } else {
+            // if no header or userInfo is specified, send a 401 response and a header asking for basic auth
+            op.addResponseHeader(WWW_AUTHENTICATE_HEADER_NAME, WWW_AUTHENTICATE_HEADER_VALUE);
+            op.fail(Operation.STATUS_CODE_UNAUTHORIZED);
+            return null;
+        }
+
+        String[] userNameAndPassword = authString.split(BASIC_AUTH_USER_SEPARATOR);
+        if (userNameAndPassword.length != 2) {
+            op.fail(Operation.STATUS_CODE_BAD_REQUEST);
+            return null;
+        }
+        return userNameAndPassword;
+    }
+
+    /**
+     * Utility method for constructing a Basic authorization header from the provided credentials
+     * @param name the username (or email)
+     * @param password the password
+     * @return the Base64 encoded auth request header to pass to request an auth token.
+     */
+    public static String constructBasicAuth(String name, String password) {
+        String userPass = String.format("%s:%s", name, password);
+        byte[] bytes = Base64.getEncoder().encode(userPass.getBytes(StandardCharsets.UTF_8));
+        String encodedUserPass = new String(bytes, StandardCharsets.UTF_8);
+        String basicAuth = "Basic " + encodedUserPass;
+        return basicAuth;
+    }
+
+    /**
+     * This method invokes the query specified by the service to check if the user is
+     * valid
+     * @param service service invoking this method
+     * @param parentOp Operation context of the login request
+     * @param authContext authContext to perform the login checks
+     * @param expirationTimeMicros expiration time for the auth token
+     */
+    private static void queryUserService(StatelessService service, Operation parentOp,
+            BasicAuthenticationContext authContext, long expirationTimeMicros) {
+        QueryTask q = new QueryTask();
+        q.querySpec = new QueryTask.QuerySpecification();
+        q.querySpec.query = authContext.userQuery;
+        q.querySpec.options = QUERY_OPTIONS_TOP_RESULTS;
+        q.querySpec.resultLimit = 1;
+        q.taskInfo.isDirect = true;
+
+        Operation.CompletionHandler userServiceCompletion = (o, ex) -> {
+            if (ex != null) {
+                service.logWarning("Exception validating user: %s", Utils.toString(ex));
+                parentOp.setBodyNoCloning(o.getBodyRaw()).fail(o.getStatusCode());
+                return;
+            }
+
+            QueryTask rsp = o.getBody(QueryTask.class);
+            if (rsp.results.documentLinks.isEmpty()) {
+                parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+                return;
+            }
+
+            // The user is valid; query the auth provider to check if the credentials match
+            String userLink = rsp.results.documentLinks.get(0);
+            queryAuthStore(service, parentOp, userLink, authContext, expirationTimeMicros);
+        };
+
+        Operation queryOp = Operation
+                .createPost(AuthUtils.buildAuthProviderHostUri(service.getHost(),
+                        ServiceUriPaths.CORE_LOCAL_QUERY_TASKS))
+                .setBody(q)
+                .setCompletion(userServiceCompletion);
+        service.setAuthorizationContext(queryOp, service.getSystemAuthorizationContext());
+        service.sendRequest(queryOp);
+    }
+
+    /**
+     * This method invokes the query specified by the service to check if
+     * the user credentials are valid
+     * @param service service invoking this method
+     * @param parentOp Operation context of the login request
+     * @param userLink service link for the user
+     * @param authContext authContext to perform the login checks
+     * @param expirationTimeMicros expiration time for the auth token
+     */
+    private static void queryAuthStore(StatelessService service, Operation parentOp, String userLink,
+            BasicAuthenticationContext authContext, long expirationTimeMicros) {
+        // query against the auth credentials store
+        QueryTask authQuery = new QueryTask();
+        authQuery.querySpec = new QueryTask.QuerySpecification();
+        authQuery.querySpec.query = authContext.authQuery;
+        authQuery.querySpec.options = QUERY_OPTIONS_TOP_RESULTS;
+        authQuery.querySpec.resultLimit = 1;
+        authQuery.taskInfo.isDirect = true;
+        Operation.CompletionHandler authCompletionHandler = (authOp, authEx) -> {
+            if (authEx != null) {
+                service.logWarning("Exception validating user credentials: %s",
+                        Utils.toString(authEx));
+                parentOp.setBodyNoCloning(authOp.getBodyRaw()).fail(
+                        Operation.STATUS_CODE_SERVER_FAILURE_THRESHOLD);
+                return;
+            }
+
+            QueryTask authRsp = authOp.getBody(QueryTask.class);
+            if (authRsp.results.documentLinks.isEmpty()) {
+                parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+                return;
+            }
+
+            // set token validity
+            if (!associateAuthorizationContext(service, parentOp, userLink, expirationTimeMicros)) {
+                parentOp.fail(Operation.STATUS_CODE_SERVER_FAILURE_THRESHOLD);
+                return;
+            }
+
+            parentOp.complete();
+        };
+
+        Operation queryAuth = Operation
+                .createPost(AuthUtils.buildAuthProviderHostUri(service.getHost(),
+                        ServiceUriPaths.CORE_LOCAL_QUERY_TASKS))
+                .setBody(authQuery)
+                .setCompletion(authCompletionHandler);
+        service.setAuthorizationContext(queryAuth, service.getSystemAuthorizationContext());
+        service.sendRequest(queryAuth);
+    }
+
+    /**
+     * This method associates an auth context with the input operation
+     * @param service service invoking this method
+     * @param op Operation context of the login request
+     * @param userLink service link for the user
+     * @param expirationTimeMicros expiration time for the auth token
+     * @return
+     */
+    private static boolean associateAuthorizationContext(StatelessService service, Operation op, String userLink, long expirationTimeMicros) {
+        Claims.Builder builder = new Claims.Builder();
+        builder.setIssuer(AuthenticationConstants.DEFAULT_ISSUER);
+        builder.setSubject(userLink);
+        builder.setExpirationTime(TimeUnit.MICROSECONDS.toSeconds(expirationTimeMicros));
+
+        // Generate token for set of claims
+        Claims claims = builder.getResult();
+        String token;
+
+        try {
+            token = service.getTokenSigner().sign(claims);
+        } catch (Exception e) {
+            service.logSevere(e);
+            return false;
+        }
+
+        AuthorizationContext.Builder ab = AuthorizationContext.Builder.create();
+        ab.setClaims(claims);
+        ab.setToken(token);
+        ab.setPropagateToClient(true);
+
+        // Associate resulting authorization context with operation.
+        service.setAuthorizationContext(op, ab.getResult());
+        return true;
+    }
+
+    /**
+     * Utility method to verify the token in incoming request
+     * @param service service invoking this method
+     * @param op Operation context of the request
+     */
+    public static void handleTokenVerify(StatelessService service, Operation op) {
+        String token = getAuthToken(op);
+        if (token == null) {
+            Exception e = new IllegalArgumentException("Token is empty");
+            service.logWarning("Error verifying token: %s", e.getMessage());
+            op.fail(e);
+            return;
+        }
+        try {
+            // use JWT token verifier for basic auth
+            Verifier verifier = service.getTokenVerifier();
+            Claims claims = verifier.verify(token, Claims.class);
+
+            if (claims != null) {
+                // In case of expired token we would just use guest context.
+                Long expirationTime = claims.getExpirationTime();
+                if (expirationTime != null
+                        && TimeUnit.SECONDS.toMicros(expirationTime)
+                        <= Utils.getSystemNowMicrosUtc()) {
+                    service.logFine("Token expired for %s", claims.getSubject());
+                    AuthorizationContext guestCtx = service
+                            .getAuthorizationContextForSubject(GuestUserService.SELF_LINK);
+                    claims = guestCtx.getClaims();
+                }
+            }
+            AuthorizationContext.Builder ab = AuthorizationContext.Builder.create();
+            ab.setClaims(claims);
+            ab.setToken(token);
+            op.setBody(ab.getResult());
+            op.complete();
+        } catch (TokenException | GeneralSecurityException e) {
+            service.logWarning("Error verifying token: %s", e.getMessage());
+            op.fail(e);
+        }
+    }
+
+    /**
+     * Extracts the auth token from the request
+     * @param op Operation context of the request
+     * @return auth token for the request
+     */
+    public static String getAuthToken(Operation op) {
+        String token = op.getRequestHeader(Operation.REQUEST_AUTH_TOKEN_HEADER);
+        if (token == null) {
+            Map<String, String> cookies = op.getCookies();
+            if (cookies == null) {
+                return null;
+            }
+            token = cookies.get(AuthenticationConstants.REQUEST_AUTH_TOKEN_COOKIE);
+        }
+        return token;
+    }
+
+}

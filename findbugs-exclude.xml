@@ -1,0 +1,23 @@
+<FindBugsFilter>
+     <!-- Findbugs reports lots of unwritten/unread public fields, and as best we can tell -->
+     <!-- many are spurious, so we disable all of them. It's true that -->
+     <!-- we'll miss some valid ones, but this is not serious -->
+     <Match>
+       <Or>
+         <Bug pattern="UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
+         <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+         <Bug pattern="UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"/>
+         <Bug pattern="EI_EXPOSE_REP2"/>
+       </Or>
+     </Match>
+
+     <!-- Findbugs complains about direct byte buffer exposure, which is required for zero copies -->
+     <Match>
+       <Bug pattern="EI_EXPOSE_REP"/>
+       <Class name="com.dcentralized.cap.util.FastByteArrayInputStream"/>
+     </Match>
+          <Match>
+       <Bug pattern="EI_EXPOSE_REP"/>
+       <Class name="com.dcentralized.cap.util.FastByteArrayOutputStream"/>
+     </Match>
+</FindBugsFilter>

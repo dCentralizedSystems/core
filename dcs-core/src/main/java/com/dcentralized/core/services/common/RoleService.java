@@ -1,0 +1,197 @@
+/*
+ * Copyright (c) 2014-2015 dCentralizedSystems, LLC. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.  You may obtain a copy of
+ * the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, without warranties or
+ * conditions of any kind, EITHER EXPRESS OR IMPLIED.  See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+package com.dcentralized.core.services.common;
+
+import java.util.Set;
+
+import com.dcentralized.core.common.FactoryService;
+import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Service;
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.StatefulService;
+import com.dcentralized.core.common.Utils;
+
+public class RoleService extends StatefulService {
+    public static final String FACTORY_LINK = ServiceUriPaths.CORE_AUTHZ_ROLES;
+
+    public static Service createFactory() {
+        FactoryService fs = new FactoryService(RoleState.class) {
+
+            @Override
+            public Service createServiceInstance() throws Throwable {
+                return new RoleService();
+            }
+
+            @Override
+            public void handlePost(Operation request) {
+                checkAndNestCompletionForAuthzCacheClear(this, request);
+                super.handlePost(request);
+            }
+        };
+        fs.toggleOption(ServiceOption.IDEMPOTENT_POST, true);
+        return fs;
+    }
+
+    private static void checkAndNestCompletionForAuthzCacheClear(Service s, Operation op) {
+        if (AuthorizationCacheUtils.isAuthzCacheClearApplicableOperation(op)) {
+            RoleState state = AuthorizationCacheUtils.extractBody(op, s, RoleState.class);
+            if (state != null) {
+                AuthorizationCacheUtils.clearAuthzCacheForRole(s, op, state);
+            }
+        }
+    }
+
+    public enum Policy {
+        ALLOW,
+        DENY,
+    }
+
+    /**
+     * The {@link RoleState} represents a role. A role applies to users contained in its user group,
+     * to HTTP verbs in the set of applicable verbs, and to resources in its resource group.
+     */
+    public static class RoleState extends ServiceDocument {
+        public static final String KIND = Utils.buildKind(RoleState.class);
+        public static final String FIELD_NAME_USER_GROUP_LINK = "userGroupLink";
+        public static final String FIELD_NAME_RESOURCE_GROUP_LINK = "resourceGroupLink";
+
+        public String userGroupLink;
+        public String resourceGroupLink;
+        public Set<Action> verbs;
+        public Policy policy;
+        public int priority;
+
+        public static class Builder {
+            private RoleService.RoleState roleState;
+
+            private Builder() {
+                this.roleState = new RoleState();
+            }
+
+            public static Builder create() {
+                return  new Builder();
+            }
+
+            public Builder withUserGroupLink(String userGroupLink) {
+                this.roleState.userGroupLink = userGroupLink;
+                return this;
+            }
+
+            public Builder withResourceGroupLink(String resourceGroupLink) {
+                this.roleState.resourceGroupLink = resourceGroupLink;
+                return this;
+            }
+
+            public Builder withVerbs(Set<Service.Action> verbs) {
+                this.roleState.verbs = verbs;
+                return this;
+            }
+
+            public Builder withPolicy(RoleService.Policy policy) {
+                this.roleState.policy = policy;
+                return this;
+            }
+
+            public Builder withSelfLink(String selfLink) {
+                this.roleState.documentSelfLink = selfLink;
+                return this;
+            }
+
+            public RoleService.RoleState build() {
+                return this.roleState;
+            }
+        }
+    }
+
+    public RoleService() {
+        super(RoleState.class);
+        super.toggleOption(ServiceOption.PERSISTENCE, true);
+        super.toggleOption(ServiceOption.REPLICATION, true);
+        super.toggleOption(ServiceOption.OWNER_SELECTION, true);
+    }
+
+    @Override
+    public void processCompletionStageUpdateAuthzArtifacts(Operation op) {
+        checkAndNestCompletionForAuthzCacheClear(this, op);
+        op.complete();
+    }
+
+    @Override
+    public void setProcessingStage(Service.ProcessingStage stage) {
+        super.setProcessingStage(stage);
+    }
+
+    @Override
+    public void handleStart(Operation op) {
+        if (!op.hasBody()) {
+            op.fail(new IllegalArgumentException("body is required"));
+            return;
+        }
+
+        RoleState state = op.getBody(RoleState.class);
+        if (!validate(op, state)) {
+            return;
+        }
+        op.complete();
+    }
+
+    @Override
+    public void handlePut(Operation op) {
+        if (!op.hasBody()) {
+            op.fail(new IllegalArgumentException("body is required"));
+            return;
+        }
+
+        RoleState newState = op.getBody(RoleState.class);
+        if (!validate(op, newState)) {
+            return;
+        }
+
+        RoleState currentState = getState(op);
+        ServiceDocumentDescription documentDescription = getStateDescription();
+
+        if (ServiceDocument.equals(documentDescription, currentState, newState)) {
+            // do not update state
+            op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_STATE_NOT_MODIFIED);
+        }
+
+        setState(op, newState);
+        op.complete();
+    }
+
+    private boolean validate(Operation op, RoleState state) {
+        if (state.userGroupLink == null) {
+            op.fail(new IllegalArgumentException("userGroupLink is required"));
+            return false;
+        }
+
+        if (state.resourceGroupLink == null) {
+            op.fail(new IllegalArgumentException("resourceGroupLink is required"));
+            return false;
+        }
+
+        if (state.verbs == null) {
+            op.fail(new IllegalArgumentException("verbs is required"));
+            return false;
+        }
+
+        if (state.policy == null) {
+            op.fail(new IllegalArgumentException("policy is required"));
+            return false;
+        }
+
+        return true;
+    }
+}

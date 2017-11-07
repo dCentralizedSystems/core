@@ -1,0 +1,273 @@
+/*
+ * Copyright (c) 2014-2017 dCentralizedSystems, LLC. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.  You may obtain a copy of
+ * the License at http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, without warranties or
+ * conditions of any kind, EITHER EXPRESS OR IMPLIED.  See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+package com.dcentralized.core.common;
+
+import java.net.ProtocolException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetector.Level;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
+import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+import com.dcentralized.core.common.test.TestContext;
+import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
+import com.dcentralized.core.services.common.EventStreamService;
+
+public class TestEventStreams extends BasicReusableHostTestCase {
+    private static final List<ServerSentEvent> EVENTS = Arrays.asList(
+            new ServerSentEvent().setData("test1\ntest2"),
+            new ServerSentEvent().setEvent("test type").setData("some: data"),
+            new ServerSentEvent().setId("id-1").setEvent("test type").setData("data1\ndata2\n"),
+            new ServerSentEvent().setEvent("DONE")
+    );
+
+    private static final long EVENT_EMIT_PERIOD_MS = 500;
+    private static final long INITIAL_DELAY_MS = 100;
+    private static final int PARALLELISM = 10;
+
+    private EventStreamService service;
+
+    public int connectionCount = 2;
+
+    public int eventsPerConnection = 100;
+
+    @Rule
+    public TestResults testResults = new TestResults();
+    private EventStreamService torrent;
+
+    @Before
+    public void setup() throws Throwable {
+        this.service = new EventStreamService(EVENTS, INITIAL_DELAY_MS, EVENT_EMIT_PERIOD_MS, TimeUnit.MILLISECONDS,
+                PARALLELISM, 1);
+        this.host.startService(this.service);
+
+        this.torrent = new EventStreamService(EVENTS, 0, 0, TimeUnit.MILLISECONDS, PARALLELISM,
+                (this.eventsPerConnection / EVENTS.size()) + 1);
+        this.host.startService(Operation.createPost(UriUtils.buildUri(this.host, "/torrent")), this.torrent);
+
+        this.host.waitForServiceAvailable("/torrent", EventStreamService.SELF_LINK);
+    }
+
+    @After
+    public void tearDown() throws Throwable {
+        this.host.stopService(this.service);
+        this.host.stopService(this.torrent);
+    }
+
+    @Test
+    public void testSimpleLocal() throws Throwable {
+        doSimpleTest(false);
+    }
+
+    @Test
+    public void testSimpleRemote() throws Throwable {
+        doSimpleTest(true);
+    }
+
+    @Test
+    public void testThroughput() throws Throwable {
+        TestContext ctx = TestContext.create(this.connectionCount, TimeUnit.MINUTES.toMicros(1));
+
+        AtomicInteger receivedCount = new AtomicInteger();
+        long start = System.nanoTime();
+        for (int i = 0; i < this.connectionCount; ++i) {
+            Operation get = Operation.createGet(this.host, "/torrent")
+                    .setServerSentEventHandler(event -> {
+                        int n = receivedCount.incrementAndGet();
+                        if (n % 500 == 0) {
+                            this.host.log("Received event %d", n);
+                        }
+                    })
+                    .setCompletion(ctx.getCompletion());
+            get.forceRemote();
+            this.host.send(get);
+        }
+        ctx.await();
+
+        long end = System.nanoTime();
+
+        int n = receivedCount.get();
+        double durationSeconds = (end - start) / 1_000_000_000.0;
+        double thput = n / durationSeconds;
+
+        this.testResults.getReport().lastValue(TestResults.KEY_THROUGHPUT, thput);
+
+        this.testResults.getReport().lastValue("events", n);
+        this.testResults.getReport().lastValue("connections", this.connectionCount);
+        this.testResults.getReport().lastValue("events/conn", this.eventsPerConnection);
+        this.testResults.getReport().lastValue("parallelism", PARALLELISM);
+
+        this.host.log("throughput (events/s): %f", thput);
+        this.host.log("events: %s", n);
+        this.host.log("connections: %s", this.connectionCount);
+        this.host.log("events/conn: %s", this.eventsPerConnection);
+        this.host.log("parallelism: %s", PARALLELISM);
+    }
+
+    private void doSimpleTest(boolean isRemote) {
+        TestContext ctx = TestContext.create(1, TimeUnit.MINUTES.toMicros(1));
+        List<ServerSentEvent> events = new ArrayList<>();
+        List<Long> timesReceived = new ArrayList<>();
+        Operation get = Operation.createGet(this.host, EventStreamService.SELF_LINK)
+                .setHeadersReceivedHandler(op -> {
+                    Assert.assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
+                            op.getContentType());
+                    Assert.assertEquals(0, events.size());
+                })
+                .setServerSentEventHandler(event -> {
+                    timesReceived.add(System.currentTimeMillis());
+                    events.add(event);
+                })
+                .setCompletion(ctx.getCompletion());
+        if (isRemote) {
+            get.forceRemote();
+        }
+        this.host.send(get);
+        ctx.await();
+        Assert.assertEquals(EVENTS, events);
+        double averageDelay = IntStream.range(1, timesReceived.size())
+                .mapToLong(i -> timesReceived.get(i) - timesReceived.get(i - 1))
+                .average().getAsDouble();
+        Assert.assertTrue(averageDelay >= EVENT_EMIT_PERIOD_MS / 2.0);
+    }
+
+    @Test
+    public void testMaxParallelismLocal() {
+        long idealDuration = INITIAL_DELAY_MS + (EVENTS.size() - 1) * EVENT_EMIT_PERIOD_MS;
+        long startTime = System.currentTimeMillis();
+        doParallelTest(PARALLELISM, false);
+        long actualDuration = System.currentTimeMillis() - startTime;
+        Assert.assertTrue(actualDuration >= idealDuration);
+        Assert.assertTrue(actualDuration < idealDuration * 2);
+    }
+
+    @Test
+    public void testMaxParallelismRemote() {
+        long idealDuration = INITIAL_DELAY_MS + (EVENTS.size() - 1) * EVENT_EMIT_PERIOD_MS;
+        long startTime = System.currentTimeMillis();
+        doParallelTest(PARALLELISM, true);
+        long actualDuration = System.currentTimeMillis() - startTime;
+        Assert.assertTrue(actualDuration >= idealDuration);
+        Assert.assertTrue(actualDuration < idealDuration * 2);
+    }
+
+    private void doParallelTest(int parallelism, boolean isRemote) {
+        TestContext ctx = TestContext.create(parallelism, TimeUnit.MINUTES.toMicros(1));
+        List<ServerSentEvent> events = new ArrayList<>();
+        for (int i = 0; i < parallelism; ++i) {
+            Operation get = Operation.createGet(this.host, EventStreamService.SELF_LINK)
+                    .setServerSentEventHandler(event -> {
+                        synchronized (events) {
+                            events.add(event);
+                        }
+                    })
+                    .setCompletion(ctx.getCompletion());
+            if (isRemote) {
+                get.forceRemote();
+            }
+            this.host.send(get);
+        }
+        ctx.await();
+        Assert.assertEquals(EVENTS.size() * parallelism, events.size());
+    }
+
+    @Test
+    public void testWithLoad() throws Throwable {
+        Level level = ResourceLeakDetector.getLevel();
+        ResourceLeakDetector.setLevel(Level.PARANOID);
+        try {
+            doTestWithLoad();
+        } finally {
+            ResourceLeakDetector.setLevel(level);
+        }
+    }
+
+    private void doTestWithLoad() throws Throwable {
+        TestContext ctx = TestContext.create(1, TimeUnit.MINUTES.toMicros(1));
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            this.doParallelTest(PARALLELISM, true);
+        });
+        future.whenComplete(ctx.getCompletionDeferred());
+        List<DeferredResult<String>> deferredResults = new ArrayList<>();
+        while (!future.isDone() && deferredResults.size() < 500) {
+            ExampleServiceState state = new ExampleServiceState();
+            state.name = "test";
+            Operation postOp = Operation.createPost(this.host, ExampleService.FACTORY_LINK)
+                    .setBody(state).forceRemote();
+            deferredResults.add(this.host.sendWithDeferredResult(postOp, ExampleServiceState.class)
+                    .thenApply(s -> s.documentSelfLink));
+            Thread.sleep(3); // Slowdown
+            if (Math.random() < 1 / 100.0) {
+                System.gc();
+            }
+        }
+        this.host.log("Requests sent: %d", deferredResults.size());
+        ctx.await();
+        ctx = TestContext.create(1, TimeUnit.MINUTES.toMicros(1));
+        DeferredResult.allOf(deferredResults)
+                .whenComplete(ctx.getCompletionDeferred());
+        ctx.await();
+        System.gc();
+    }
+
+    @Test
+    public void testWithExceptionLocal() throws Throwable {
+        String message = "Test failure";
+        this.service.setFailException(new RuntimeException(message));
+        try {
+            this.doSimpleTest(false);
+            Assert.fail("Expected to fail");
+        } catch (RuntimeException e) {
+            Assert.assertEquals(message, e.getMessage());
+        } finally {
+            this.service.setFailException(null);
+        }
+    }
+
+    @Test
+    public void testWithExceptionRemote() throws Throwable {
+        String message = "Test failure";
+        this.service.setFailException(new RuntimeException(message));
+        try {
+            List<ServerSentEvent> events = new ArrayList<>();
+            Operation get = Operation.createGet(this.host, EventStreamService.SELF_LINK)
+                    .setHeadersReceivedHandler(op -> {
+                        Assert.assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
+                                op.getContentType());
+                    })
+                    .setServerSentEventHandler(events::add);
+            get.forceRemote();
+            FailureResponse response = this.host.getTestRequestSender().sendAndWaitFailure(get);
+            Assert.assertEquals(EVENTS, events);
+            Throwable e = response.failure;
+            Assert.assertNotNull(e);
+            Assert.assertEquals(ProtocolException.class, e.getClass());
+            Assert.assertTrue(e.getMessage().contains(message));
+        } finally {
+            this.service.setFailException(null);
+        }
+    }
+}
