@@ -19,11 +19,11 @@ import java.net.URI;
 import java.util.UUID;
 import java.util.function.Function;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.ServiceHost.Arguments;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.authn.BasicAuthenticationService;
+
+import org.junit.Test;
 
 public class TestAuthUtils {
 

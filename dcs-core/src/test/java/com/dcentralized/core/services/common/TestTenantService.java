@@ -22,16 +22,16 @@ import java.net.URI;
 import java.util.EnumSet;
 import java.util.UUID;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.ServiceDocumentQueryResult;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.TestProperty;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestTenantService extends BasicReusableHostTestCase {
     public static final int SERVICE_COUNT = 100;

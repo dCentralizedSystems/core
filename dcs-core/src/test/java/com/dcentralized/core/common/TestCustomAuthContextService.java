@@ -17,15 +17,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.test.AuthorizationHelper;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.AuthorizationContextServiceHelper;
 import com.dcentralized.core.services.common.AuthorizationContextServiceHelper.AuthServiceContext;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestCustomAuthContextService extends BasicTestCase {
 

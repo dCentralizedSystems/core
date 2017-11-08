@@ -20,16 +20,17 @@ import java.net.URI;
 import java.util.HashSet;
 import java.util.UUID;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.test.TestRequestSender;
 import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
 import com.dcentralized.core.services.common.UserService.UserState;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 
 public class TestUserService extends BasicReusableHostTestCase {
     private TestRequestSender sender;

@@ -325,7 +325,7 @@ public class ServiceHost implements ServiceRequestSender {
     public static final String SERVICE_URI_SUFFIX_REPLICATION = "/replication";
 
     public static final String DCP_ENVIRONMENT_VAR_PREFIX = "XENON_";
-    public static final String GIT_COMMIT_PROPERTIES_RESOURCE_NAME = "xenon.git.properties";
+    public static final String GIT_COMMIT_PROPERTIES_RESOURCE_NAME = "dcs-core.git.properties";
     public static final String GIT_COMMIT_SOURCE_PROPERTY_PREFIX = "git.commit";
     public static final String GIT_COMMIT_SOURCE_PROPERTY_COMMIT_ID = GIT_COMMIT_SOURCE_PROPERTY_PREFIX
             + ".id";

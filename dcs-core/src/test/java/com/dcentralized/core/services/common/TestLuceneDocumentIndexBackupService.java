@@ -25,12 +25,6 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Service;
@@ -47,6 +41,12 @@ import com.dcentralized.core.services.common.ServiceHostManagementService.Backup
 import com.dcentralized.core.services.common.ServiceHostManagementService.BackupType;
 import com.dcentralized.core.services.common.ServiceHostManagementService.RestoreRequest;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.InMemoryExampleService;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestLuceneDocumentIndexBackupService {
 

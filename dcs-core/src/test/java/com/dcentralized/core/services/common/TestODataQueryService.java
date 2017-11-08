@@ -28,9 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.junit.After;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.ODataUtils;
 import com.dcentralized.core.common.Operation;
@@ -40,6 +37,9 @@ import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+
+import org.junit.After;
+import org.junit.Test;
 
 public class TestODataQueryService extends BasicReusableHostTestCase {
     public long min = 10;

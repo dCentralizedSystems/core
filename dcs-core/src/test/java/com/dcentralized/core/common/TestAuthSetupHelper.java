@@ -13,16 +13,14 @@
 
 package com.dcentralized.core.common;
 
+import static com.dcentralized.core.common.UriUtils.buildUriPath;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import static com.dcentralized.core.common.UriUtils.buildUriPath;
 
 import java.net.URI;
 import java.util.EnumSet;
 import java.util.UUID;
-
-import org.junit.Test;
 
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.ServiceHost.ServiceHostState;
@@ -44,6 +42,8 @@ import com.dcentralized.core.services.common.ServiceHostManagementService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UserGroupService;
 import com.dcentralized.core.services.common.UserGroupService.UserGroupState;
+
+import org.junit.Test;
 
 // Note that we can't use BasicReusableHostTestCase here because we need to
 // enable authorization on the host before it's started, and

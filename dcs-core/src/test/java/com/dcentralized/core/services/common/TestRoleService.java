@@ -21,16 +21,16 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.services.common.RoleService.Policy;
 import com.dcentralized.core.services.common.RoleService.RoleState;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestRoleService extends BasicReusableHostTestCase {
     private URI factoryUri;

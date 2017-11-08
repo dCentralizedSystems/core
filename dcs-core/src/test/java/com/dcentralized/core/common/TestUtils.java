@@ -57,19 +57,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Kryo.DefaultInstantiatorStrategy;
-import com.esotericsoftware.kryo.io.Output;
-import com.esotericsoftware.kryo.serializers.VersionFieldSerializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.objenesis.strategy.StdInstantiatorStrategy;
-
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceDocumentDescription.Builder;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingOption;
@@ -83,6 +70,19 @@ import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.QueryValidationTestService.NestedType;
 import com.dcentralized.core.services.common.QueryValidationTestService.QueryValidationServiceState;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Kryo.DefaultInstantiatorStrategy;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.VersionFieldSerializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.objenesis.strategy.StdInstantiatorStrategy;
 
 public class TestUtils {
 

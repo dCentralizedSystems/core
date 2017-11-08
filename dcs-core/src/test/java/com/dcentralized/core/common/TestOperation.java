@@ -13,6 +13,8 @@
 
 package com.dcentralized.core.common;
 
+import static com.dcentralized.core.common.Operation.STATUS_CODE_NOT_MODIFIED;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -22,16 +24,12 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import static com.dcentralized.core.common.Operation.STATUS_CODE_NOT_MODIFIED;
-
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-
-import org.junit.Test;
 
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Operation.SerializedOperation;
@@ -41,6 +39,8 @@ import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Test;
 
 public class TestOperation extends BasicReusableHostTestCase {
 

@@ -29,6 +29,20 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.dcentralized.core.common.CommandLineArgumentParser;
+import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.ServiceClient;
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceHost;
+import com.dcentralized.core.common.ServiceHost.ServiceHostState.SslClientAuthMode;
+import com.dcentralized.core.common.StatelessService;
+import com.dcentralized.core.common.UriUtils;
+import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.test.VerificationHost;
+import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
+import com.dcentralized.core.services.common.NodeState;
+import com.dcentralized.core.services.common.ServiceUriPaths;
+
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -43,19 +57,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.dcentralized.core.common.CommandLineArgumentParser;
-import com.dcentralized.core.common.Operation;
-import com.dcentralized.core.common.ServiceClient;
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceHost;
-import com.dcentralized.core.common.ServiceHost.ServiceHostState.SslClientAuthMode;
-import com.dcentralized.core.common.StatelessService;
-import com.dcentralized.core.common.UriUtils;
-import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.common.test.VerificationHost;
-import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
-import com.dcentralized.core.services.common.NodeState;
-import com.dcentralized.core.services.common.ServiceUriPaths;
 
 /**
  * DCP Host with 2-way SSL certificate authentication test.

@@ -19,9 +19,6 @@ import java.net.URI;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.OperationProcessingChain.Filter;
 import com.dcentralized.core.common.OperationProcessingChain.FilterReturnCode;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
@@ -31,6 +28,9 @@ import com.dcentralized.core.common.TestOperationProcessingChain.CounterService.
 import com.dcentralized.core.common.TestOperationProcessingChain.CounterService.CounterServiceState;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestOperationProcessingChain extends BasicTestCase {
 

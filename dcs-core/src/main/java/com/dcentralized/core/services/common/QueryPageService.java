@@ -15,9 +15,6 @@ package com.dcentralized.core.services.common;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.store.AlreadyClosedException;
-
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentQueryResult;
@@ -29,6 +26,9 @@ import com.dcentralized.core.services.common.LuceneDocumentIndexService.DeleteQu
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryRuntimeContext;
+
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.store.AlreadyClosedException;
 
 public class QueryPageService extends StatelessService {
     public static final String KIND = Utils.buildKind(QueryTask.class);

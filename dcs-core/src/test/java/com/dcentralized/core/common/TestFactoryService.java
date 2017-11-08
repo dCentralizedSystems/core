@@ -42,10 +42,6 @@ import java.util.function.Supplier;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.FactoryService.FactoryServiceConfiguration;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.test.ExampleService;
@@ -61,6 +57,10 @@ import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.TaskService;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.InMemoryExampleService;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 class ControlledStateSynchTaskService extends TaskService<ControlledStateSynchTaskService.State> {
 

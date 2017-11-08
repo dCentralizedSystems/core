@@ -25,9 +25,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.ServiceStats.ServiceStatLogHistogram;
@@ -39,6 +36,9 @@ import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestUtilityService extends BasicReusableHostTestCase {
 

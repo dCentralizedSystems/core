@@ -13,12 +13,13 @@
 
 package com.dcentralized.core.services.common.authn;
 
+import static com.dcentralized.core.services.common.authn.BasicAuthenticationService.UPPER_SESSION_LIMIT_SECONDS_PROPERTY;
+import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
-import static com.dcentralized.core.services.common.authn.BasicAuthenticationService.UPPER_SESSION_LIMIT_SECONDS_PROPERTY;
-import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
 
 import java.net.URI;
 import java.time.Instant;
@@ -31,13 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import com.dcentralized.core.common.AuthorizationSetupHelper;
 import com.dcentralized.core.common.BasicTestCase;
@@ -56,6 +50,14 @@ import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UserService;
 import com.dcentralized.core.services.common.UserService.UserState;
 import com.dcentralized.core.services.common.authn.AuthenticationRequest.AuthenticationRequestType;
+
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestBasicAuthenticationService extends BasicTestCase {
     private static final String USER = "jane@doe.com";

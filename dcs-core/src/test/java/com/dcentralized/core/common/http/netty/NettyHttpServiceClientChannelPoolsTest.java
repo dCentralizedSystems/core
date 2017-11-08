@@ -19,11 +19,11 @@ import static org.junit.Assert.assertNotNull;
 import java.util.concurrent.Executors;
 import javax.net.ssl.SSLContext;
 
+import com.dcentralized.core.common.ServiceClient;
+
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.dcentralized.core.common.ServiceClient;
 
 public class NettyHttpServiceClientChannelPoolsTest {
 

@@ -24,6 +24,8 @@ import java.util.EnumSet;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
+import com.dcentralized.core.common.serialization.JsonMapper;
+
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -35,8 +37,6 @@ import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.dcentralized.core.common.serialization.JsonMapper;
 
 public class TestGsonConfiguration {
 

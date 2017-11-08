@@ -25,12 +25,12 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceErrorResponse;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.services.common.NodeGroupBroadcastResult.PeerNodeResult;
+
+import org.junit.Test;
 
 public class TestNodeGroupUtils {
 

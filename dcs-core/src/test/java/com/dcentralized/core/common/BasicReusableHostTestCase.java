@@ -15,6 +15,14 @@ package com.dcentralized.core.common;
 
 import java.util.concurrent.TimeUnit;
 
+import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.TestContext;
+import com.dcentralized.core.common.test.TestRequestSender;
+import com.dcentralized.core.common.test.VerificationHost;
+import com.dcentralized.core.services.common.ServiceUriPaths;
+import com.dcentralized.core.services.common.TaskService;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -24,14 +32,6 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
-
-import com.dcentralized.core.common.Operation.CompletionHandler;
-import com.dcentralized.core.common.test.ExampleService;
-import com.dcentralized.core.common.test.TestContext;
-import com.dcentralized.core.common.test.TestRequestSender;
-import com.dcentralized.core.common.test.VerificationHost;
-import com.dcentralized.core.services.common.ServiceUriPaths;
-import com.dcentralized.core.services.common.TaskService;
 
 /**
  * Base class that reuse the same HOST during test cycle.

@@ -18,15 +18,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.UserGroupService.UserGroupState;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestUserGroupService extends BasicReusableHostTestCase {
     private URI factoryUri;

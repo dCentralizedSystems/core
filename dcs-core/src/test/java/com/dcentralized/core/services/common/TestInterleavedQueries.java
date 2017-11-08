@@ -22,10 +22,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Service.ServiceOption;
@@ -37,6 +33,10 @@ import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.services.common.QueryTask.Query.Occurance;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
 public class TestInterleavedQueries extends BasicReusableHostTestCase {
 

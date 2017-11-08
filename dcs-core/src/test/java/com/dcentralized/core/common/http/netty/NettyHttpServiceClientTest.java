@@ -33,22 +33,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLContext;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.dcentralized.core.common.AuthorizationSetupHelper;
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
@@ -75,6 +59,22 @@ import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.ReplicationFactoryTestService;
 import com.dcentralized.core.services.common.ReplicationTestService;
 import com.dcentralized.core.services.common.ReplicationTestService.ReplicationTestServiceState;
+
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
 
 public class NettyHttpServiceClientTest {
 

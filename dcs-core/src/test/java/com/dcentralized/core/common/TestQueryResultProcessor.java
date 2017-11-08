@@ -23,9 +23,9 @@ import static org.junit.Assert.assertSame;
 import java.net.URI;
 import java.util.HashMap;
 
-import org.junit.Test;
-
 import com.dcentralized.core.services.common.QueryTask;
+
+import org.junit.Test;
 
 public class TestQueryResultProcessor {
 

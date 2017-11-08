@@ -23,8 +23,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.function.Function;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.FactoryService;
 import com.dcentralized.core.common.NodeSelectorState;
@@ -39,6 +37,7 @@ import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.SynchronizationManagementService.SynchronizationManagementState;
 
+import org.junit.Test;
 
 public class TestSynchronizationManagementService extends BasicReusableHostTestCase {
     public int nodeCount = 3;

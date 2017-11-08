@@ -43,12 +43,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.gson.annotations.SerializedName;
-
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.CompletionHandler;
@@ -92,6 +86,12 @@ import com.dcentralized.core.services.common.QueryTask.QueryTerm;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
 import com.dcentralized.core.services.common.QueryValidationTestService.QueryValidationServiceState;
 import com.dcentralized.core.services.common.TenantService.TenantState;
+
+import com.google.gson.annotations.SerializedName;
+
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
 
 public class TestQueryTaskService {
 
@@ -176,7 +176,7 @@ public class TestQueryTaskService {
                 EnumSet.of(ServiceOption.PERSISTENCE));
 
         final int expectedCustomFields = 36;
-        final int expectedBuiltInFields = 10;
+        final int expectedBuiltInFields = 9;
         // Verify the reflection of the root document
         assertTrue(sdd.propertyDescriptions != null && !sdd.propertyDescriptions.isEmpty());
         assertEquals(expectedCustomFields + expectedBuiltInFields, sdd.propertyDescriptions.size());
@@ -201,7 +201,7 @@ public class TestQueryTaskService {
         assertEquals(descriptionsPerType.get(TypeName.LONG), (Long) (1L + 4L + 3L));
         assertTrue(descriptionsPerType.get(TypeName.PODO) == 3L);
         assertTrue(descriptionsPerType.get(TypeName.COLLECTION) == 8L);
-        assertTrue(descriptionsPerType.get(TypeName.STRING) == 6L + 5L);
+        assertTrue(descriptionsPerType.get(TypeName.STRING) == 6L + 4L);
         assertTrue(descriptionsPerType.get(TypeName.DATE) == 1L);
         assertTrue(descriptionsPerType.get(TypeName.DOUBLE) == 4L);
         assertTrue(descriptionsPerType.get(TypeName.BYTES) == 1L);

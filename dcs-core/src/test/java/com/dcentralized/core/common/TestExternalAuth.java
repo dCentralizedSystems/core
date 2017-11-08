@@ -19,8 +19,6 @@ import static org.junit.Assert.assertTrue;
 import java.net.URI;
 import java.util.UUID;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.test.AuthorizationHelper;
 import com.dcentralized.core.common.test.ExampleService;
@@ -38,6 +36,8 @@ import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UserService;
 import com.dcentralized.core.services.common.authn.BasicAuthenticationService;
 import com.dcentralized.core.services.common.authn.BasicAuthenticationUtils;
+
+import org.junit.Test;
 
 public class TestExternalAuth extends BasicTestCase {
 

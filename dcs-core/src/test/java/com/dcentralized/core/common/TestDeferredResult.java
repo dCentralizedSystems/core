@@ -22,10 +22,10 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.dcentralized.core.common.test.TestContext;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.dcentralized.core.common.test.TestContext;
 
 public class TestDeferredResult {
     private <T> Supplier<T> exceptionSupplier() {

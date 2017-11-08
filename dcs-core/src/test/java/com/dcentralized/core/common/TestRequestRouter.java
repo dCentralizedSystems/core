@@ -22,12 +22,12 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 
+import com.dcentralized.core.common.OperationProcessingChain.FilterReturnCode;
+import com.dcentralized.core.common.Service.Action;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.dcentralized.core.common.OperationProcessingChain.FilterReturnCode;
-import com.dcentralized.core.common.Service.Action;
 
 class RequestBody {
     public enum Kind {

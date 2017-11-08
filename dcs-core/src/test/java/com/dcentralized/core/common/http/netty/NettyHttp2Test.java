@@ -23,12 +23,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Service;
@@ -44,6 +38,13 @@ import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestProperty;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.MinimalTestService;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+
 
 /**
  * Tests for our Netty-based HTTP/2 implementation

@@ -23,8 +23,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentDescription;
 import com.dcentralized.core.common.ServiceDocumentDescription.Builder;
@@ -32,6 +30,8 @@ import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingO
 import com.dcentralized.core.common.ServiceDocumentQueryResult;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
+
+import org.junit.Test;
 
 public class TestQueryTaskUtils {
 

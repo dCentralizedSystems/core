@@ -13,13 +13,14 @@
 
 package com.dcentralized.core.services.common;
 
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+
 import static com.dcentralized.core.services.common.LuceneDocumentIndexService.QUERY_THREAD_COUNT;
 import static com.dcentralized.core.services.common.LuceneDocumentIndexService.UPDATE_THREAD_COUNT;
 import static com.dcentralized.core.services.common.ServiceHostManagementService.BackupType.DIRECTORY;
 import static com.dcentralized.core.services.common.ServiceHostManagementService.BackupType.STREAM;
 import static com.dcentralized.core.services.common.ServiceHostManagementService.BackupType.ZIP;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
 import java.net.URI;
@@ -37,6 +38,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
+
+import com.dcentralized.core.common.FileUtils;
+import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Service;
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceHost;
+import com.dcentralized.core.common.ServiceStats;
+import com.dcentralized.core.common.StatelessService;
+import com.dcentralized.core.common.UriUtils;
+import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.services.common.LuceneDocumentIndexService.CommitInfo;
+import com.dcentralized.core.services.common.LuceneDocumentIndexService.InternalDocumentIndexInfo;
+import com.dcentralized.core.services.common.LuceneDocumentIndexService.MaintenanceRequest;
+import com.dcentralized.core.services.common.ServiceHostManagementService.BackupRequest;
+import com.dcentralized.core.services.common.ServiceHostManagementService.BackupType;
+import com.dcentralized.core.services.common.ServiceHostManagementService.RestoreRequest;
 
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.DirectoryReader;
@@ -59,22 +76,6 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.store.RAMDirectory;
-
-import com.dcentralized.core.common.FileUtils;
-import com.dcentralized.core.common.Operation;
-import com.dcentralized.core.common.Service;
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceHost;
-import com.dcentralized.core.common.ServiceStats;
-import com.dcentralized.core.common.StatelessService;
-import com.dcentralized.core.common.UriUtils;
-import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.services.common.LuceneDocumentIndexService.CommitInfo;
-import com.dcentralized.core.services.common.LuceneDocumentIndexService.InternalDocumentIndexInfo;
-import com.dcentralized.core.services.common.LuceneDocumentIndexService.MaintenanceRequest;
-import com.dcentralized.core.services.common.ServiceHostManagementService.BackupRequest;
-import com.dcentralized.core.services.common.ServiceHostManagementService.BackupType;
-import com.dcentralized.core.services.common.ServiceHostManagementService.RestoreRequest;
 
 /**
  * Handle backup and restore of lucene index files.

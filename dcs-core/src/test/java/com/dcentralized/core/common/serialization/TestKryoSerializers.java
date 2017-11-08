@@ -36,9 +36,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import com.esotericsoftware.kryo.io.Output;
-import org.junit.Test;
-
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentDescription;
@@ -47,6 +44,9 @@ import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.serialization.KryoSerializers.KryoForObjectThreadLocal;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+
+import com.esotericsoftware.kryo.io.Output;
+import org.junit.Test;
 
 public class TestKryoSerializers {
 

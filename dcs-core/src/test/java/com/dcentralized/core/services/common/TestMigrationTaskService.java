@@ -42,11 +42,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.NodeSelectorState;
 import com.dcentralized.core.common.Operation;
@@ -83,6 +78,11 @@ import com.dcentralized.core.services.common.QueryTask.QuerySpecification;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
 import com.dcentralized.core.services.common.TestNodeGroupService.ExampleFactoryServiceWithCustomSelector;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestMigrationTaskService extends BasicReusableHostTestCase {
 

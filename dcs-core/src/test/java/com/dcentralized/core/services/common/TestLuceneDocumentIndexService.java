@@ -59,18 +59,6 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.lucene.search.IndexSearcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import com.dcentralized.core.common.test.ExampleService;
-import com.dcentralized.core.common.test.ExampleService.ExampleImmutableService;
-import com.dcentralized.core.common.test.ExampleService.ExampleODLService;
-import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
-import com.dcentralized.core.common.test.ExampleServiceHost;
 import com.dcentralized.core.common.AuthorizationSetupHelper;
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.FactoryService;
@@ -98,6 +86,11 @@ import com.dcentralized.core.common.TestUtilityService;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.AuthTestUtils;
+import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.ExampleService.ExampleImmutableService;
+import com.dcentralized.core.common.test.ExampleService.ExampleODLService;
+import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+import com.dcentralized.core.common.test.ExampleServiceHost;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestProperty;
@@ -111,6 +104,14 @@ import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.QueryTask.Query.Occurance;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.AnotherPersistentService.AnotherPersistentState;
+
+import org.apache.lucene.search.IndexSearcher;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 class FaultInjectionLuceneDocumentIndexService extends LuceneDocumentIndexService {
 

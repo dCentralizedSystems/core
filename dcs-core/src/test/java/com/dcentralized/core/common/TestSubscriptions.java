@@ -28,9 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.junit.After;
-import org.junit.Test;
-
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.ServiceSubscriptionState.ServiceSubscriber;
 import com.dcentralized.core.common.http.netty.NettyHttpServiceClient;
@@ -43,6 +40,8 @@ import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.NodeGroupService.NodeGroupConfig;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 
+import org.junit.After;
+import org.junit.Test;
 
 public class TestSubscriptions extends BasicTestCase {
     private final int NODE_COUNT = 2;

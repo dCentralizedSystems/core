@@ -18,10 +18,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Service.Action;
@@ -30,6 +26,10 @@ import com.dcentralized.core.services.common.QueryTask.NumericRange;
 import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.ResourceGroupService.PatchQueryRequest;
 import com.dcentralized.core.services.common.ResourceGroupService.ResourceGroupState;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestResourceGroupService extends BasicReusableHostTestCase {
     private URI factoryUri;

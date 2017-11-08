@@ -22,14 +22,14 @@ import java.net.URI;
 import java.util.List;
 import java.util.logging.Logger;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.services.common.ServiceHostLogService.LogServiceState;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestServiceHostLogService extends BasicReusableHostTestCase {
     private static final String LOG_MESSAGE = "this is log message number ";

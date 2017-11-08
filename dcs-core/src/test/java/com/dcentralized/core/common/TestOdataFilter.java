@@ -20,13 +20,13 @@ import static org.junit.Assert.assertNull;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Test;
-
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.QueryTask.NumericRange;
 import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.QueryTask.Query.Occurance;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
+
+import org.junit.Test;
 
 public class TestOdataFilter {
 

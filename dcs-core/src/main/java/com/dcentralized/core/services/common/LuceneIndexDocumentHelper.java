@@ -26,6 +26,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.dcentralized.core.common.ReflectionUtils;
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
+import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingOption;
+import com.dcentralized.core.common.ServiceDocumentDescription.PropertyUsageOption;
+import com.dcentralized.core.common.ServiceDocumentDescription.TypeName;
+import com.dcentralized.core.common.TaskState;
+import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.serialization.KryoSerializers;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification;
+
+import com.esotericsoftware.kryo.KryoException;
+import com.esotericsoftware.kryo.io.Output;
+
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.Field;
@@ -38,20 +53,6 @@ import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.NumericUtils;
-
-import com.dcentralized.core.common.ReflectionUtils;
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceDocumentDescription;
-import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
-import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingOption;
-import com.dcentralized.core.common.ServiceDocumentDescription.PropertyUsageOption;
-import com.dcentralized.core.common.ServiceDocumentDescription.TypeName;
-import com.dcentralized.core.common.TaskState;
-import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.common.serialization.KryoSerializers;
-import com.dcentralized.core.services.common.QueryTask.QuerySpecification;
-import com.esotericsoftware.kryo.KryoException;
-import com.esotericsoftware.kryo.io.Output;
 
 /**
  * Internal only helper used by the {@code LuceneDocumentIndexService} to add new documents

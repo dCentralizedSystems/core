@@ -23,9 +23,6 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.FactoryService;
 import com.dcentralized.core.common.Operation;
@@ -33,6 +30,9 @@ import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.StatefulService;
 import com.dcentralized.core.common.UriUtils;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestCloningJava8Times extends BasicReusableHostTestCase {
 

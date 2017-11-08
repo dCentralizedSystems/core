@@ -45,12 +45,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Service.ProcessingStage;
 import com.dcentralized.core.common.Service.ServiceOption;
@@ -86,6 +80,12 @@ import com.dcentralized.core.services.common.ServiceHostManagementService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UiFileContentService;
 import com.dcentralized.core.services.common.UserService;
+
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestServiceHost {
 

@@ -20,14 +20,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.ServiceHost.ServiceNotFoundException;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.TestContext;
+
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
     private static final int DOCUMENT_COUNT = 10;

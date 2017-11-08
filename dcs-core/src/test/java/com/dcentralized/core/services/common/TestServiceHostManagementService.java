@@ -13,15 +13,16 @@
 
 package com.dcentralized.core.services.common;
 
-import static java.util.stream.Collectors.toList;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static java.util.stream.Collectors.toList;
 
 import static com.dcentralized.core.common.ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
 import static com.dcentralized.core.services.common.ServiceHostManagementService.STAT_NAME_AUTO_BACKUP_PERFORMED_COUNT;
 import static com.dcentralized.core.services.common.ServiceHostManagementService.STAT_NAME_THREAD_COUNT;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.net.URI;
@@ -39,11 +40,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import com.dcentralized.core.common.BasicTestCase;
 import com.dcentralized.core.common.FileUtils;
@@ -71,6 +67,11 @@ import com.dcentralized.core.services.common.ServiceHostManagementService.AutoBa
 import com.dcentralized.core.services.common.ServiceHostManagementService.BackupType;
 import com.dcentralized.core.services.common.ServiceHostManagementService.RestoreRequest;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.IndexedMetadataExampleService;
+
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestServiceHostManagementService extends BasicTestCase {
 

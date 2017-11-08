@@ -27,11 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.gson.JsonObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.FileUtils;
 import com.dcentralized.core.common.Operation;
@@ -45,6 +40,12 @@ import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestNodeGroupManager;
 import com.dcentralized.core.common.test.VerificationHost;
+
+import com.google.gson.JsonObject;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This test will not run unless xenon.sandboxRoot is defined. It is meant to be run from CI or manually when making

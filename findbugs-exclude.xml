@@ -7,6 +7,9 @@
          <Bug pattern="UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
          <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
          <Bug pattern="UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD"/>
+         <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
+         <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+         <Bug pattern="DM_EXIT"/>
          <Bug pattern="EI_EXPOSE_REP2"/>
        </Or>
      </Match>

@@ -23,10 +23,10 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Test;
 
 public class TestUriUtils {
 

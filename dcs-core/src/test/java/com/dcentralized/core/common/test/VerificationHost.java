@@ -64,17 +64,6 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
 import javax.xml.bind.DatatypeConverter;
 
-import io.netty.handler.codec.http2.Http2SecurityUtil;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolNames;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.apache.lucene.store.LockObtainFailedException;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.Claims;
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.DeferredResult;
@@ -128,6 +117,18 @@ import com.dcentralized.core.services.common.QueryValidationTestService.QueryVal
 import com.dcentralized.core.services.common.ServiceHostLogService.LogServiceState;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.TaskService;
+
+
+import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.ssl.ApplicationProtocolConfig;
+import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.apache.lucene.store.LockObtainFailedException;
+import org.junit.rules.TemporaryFolder;
 
 public class VerificationHost extends ExampleServiceHost {
 

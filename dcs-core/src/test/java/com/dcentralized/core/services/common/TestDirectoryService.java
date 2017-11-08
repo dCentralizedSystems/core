@@ -22,15 +22,15 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.ServiceHost.ServiceHostState;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestDirectoryService extends BasicReusableHostTestCase {
 

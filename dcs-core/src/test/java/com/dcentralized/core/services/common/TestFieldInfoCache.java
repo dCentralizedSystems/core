@@ -25,6 +25,7 @@ import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexOptions;
+
 import org.junit.Test;
 
 /**

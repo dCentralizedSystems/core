@@ -40,9 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Service.Action;
@@ -73,6 +70,9 @@ import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UserGroupService;
 import com.dcentralized.core.services.common.UserGroupService.UserGroupState;
 import com.dcentralized.core.services.common.UserService.UserState;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestAuthorization extends BasicTestCase {
 
@@ -778,7 +778,7 @@ public class TestAuthorization extends BasicTestCase {
         assertNull(this.host.getAuthorizationContext(s, authContext1.getToken()));
         assertNull(this.host.getAuthorizationContext(s, authContext2.getToken()));
     }
-  
+
     @Test
     public void updateAuthzCache() throws Throwable {
         ExecutorService executor = null;

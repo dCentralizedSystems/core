@@ -13,6 +13,10 @@
 
 package com.dcentralized.core.common;
 
+import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.test.TestContext;
+import com.dcentralized.core.common.test.VerificationHost;
+
 import org.junit.Rule;
 import org.junit.rules.ExternalResource;
 import org.junit.rules.RuleChain;
@@ -20,9 +24,6 @@ import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import com.dcentralized.core.common.Operation.CompletionHandler;
-import com.dcentralized.core.common.test.TestContext;
-import com.dcentralized.core.common.test.VerificationHost;
 
 /**
  * BasicTestCase creates and starts a VerificationHost on a random port, using

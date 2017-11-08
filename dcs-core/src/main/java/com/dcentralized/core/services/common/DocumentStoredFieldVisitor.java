@@ -20,10 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.dcentralized.core.common.ServiceDocument;
+
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
-
-import com.dcentralized.core.common.ServiceDocument;
 
 /**
  * Copy of lucene class - the only change is that the doc field is resetable.

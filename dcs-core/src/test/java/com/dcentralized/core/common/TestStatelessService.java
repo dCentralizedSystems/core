@@ -16,12 +16,12 @@ package com.dcentralized.core.common;
 import java.net.URI;
 import java.time.Duration;
 
+import com.dcentralized.core.common.StatelessTestService.ComputeSquare;
+import com.dcentralized.core.common.test.TestContext;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import com.dcentralized.core.common.StatelessTestService.ComputeSquare;
-import com.dcentralized.core.common.test.TestContext;
 
 class StatelessTestService extends StatelessService {
 

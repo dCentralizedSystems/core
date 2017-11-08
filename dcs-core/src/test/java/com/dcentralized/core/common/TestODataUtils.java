@@ -17,9 +17,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 
-import org.junit.Test;
-
 import com.dcentralized.core.services.common.QueryTask;
+
+import org.junit.Test;
 
 public class TestODataUtils {
 

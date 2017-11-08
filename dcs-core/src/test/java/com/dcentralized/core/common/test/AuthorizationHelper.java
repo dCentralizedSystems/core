@@ -13,9 +13,9 @@
 
 package com.dcentralized.core.common.test;
 
-import static org.junit.Assert.assertTrue;
-
 import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
+
+import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 import java.util.Arrays;

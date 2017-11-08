@@ -28,8 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
-
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.OperationJoin.JoinedCompletionHandler;
@@ -46,6 +44,8 @@ import com.dcentralized.core.services.common.SystemUserService;
 import com.dcentralized.core.services.common.UserGroupService.UserGroupState;
 import com.dcentralized.core.services.common.UserService.UserState;
 import com.dcentralized.core.services.common.authn.AuthenticationConstants;
+
+import org.junit.Test;
 
 public class TestAuthorizationContext extends BasicTestCase {
 

@@ -16,11 +16,11 @@ package com.dcentralized.core.common.jwt;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.jwt.Verifier.InvalidSignatureException;
 import com.dcentralized.core.common.jwt.Verifier.InvalidTokenException;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestVerifier extends TestCase {
 

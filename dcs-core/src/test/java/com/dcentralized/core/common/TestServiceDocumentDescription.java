@@ -18,25 +18,17 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.RequestRouter.Route;
 import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
 import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation.PathParam;
 import com.dcentralized.core.common.Service.Action;
-import com.dcentralized.core.common.ServiceConfigUpdateRequest;
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceDocumentDescription;
-import com.dcentralized.core.common.ServiceDocumentQueryResult;
-import com.dcentralized.core.common.ServiceHost;
-import com.dcentralized.core.common.StatelessService;
-import com.dcentralized.core.common.UriUtils;
-import com.dcentralized.core.common.Utils;
+
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.NodeGroupService.JoinPeerRequest;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestServiceDocumentDescription {
 

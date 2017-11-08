@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.dcentralized.core.common.Utils;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.dcentralized.core.common.Utils;
 
 public class TestDeserializeArrayJsonMapper {
     private static final String EXPECTED_SER =

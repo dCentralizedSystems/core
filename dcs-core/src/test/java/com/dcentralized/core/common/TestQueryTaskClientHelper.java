@@ -26,10 +26,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.QueryTaskClientHelper.ResultHandler;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
@@ -39,6 +35,10 @@ import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.QueryTask.Query.Builder;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestQueryTaskClientHelper extends BasicReusableHostTestCase {
     private QueryTaskClientHelper<MinimalTestServiceState> queryHelper;

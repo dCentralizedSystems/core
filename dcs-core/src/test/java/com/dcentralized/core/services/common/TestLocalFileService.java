@@ -23,10 +23,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.EnumSet;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.FileUtils;
 import com.dcentralized.core.common.Operation;
@@ -34,6 +30,10 @@ import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestRequestSender;
 import com.dcentralized.core.services.common.LocalFileService.LocalFileServiceState;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 
 public class TestLocalFileService extends BasicReusableHostTestCase {

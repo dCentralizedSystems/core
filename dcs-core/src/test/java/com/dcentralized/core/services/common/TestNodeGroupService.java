@@ -47,12 +47,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
 import com.dcentralized.core.common.AuthorizationSetupHelper;
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.FactoryService;
@@ -114,6 +108,12 @@ import com.dcentralized.core.services.common.ResourceGroupService.PatchQueryRequ
 import com.dcentralized.core.services.common.ResourceGroupService.ResourceGroupState;
 import com.dcentralized.core.services.common.RoleService.RoleState;
 import com.dcentralized.core.services.common.UserService.UserState;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestNodeGroupService {
 

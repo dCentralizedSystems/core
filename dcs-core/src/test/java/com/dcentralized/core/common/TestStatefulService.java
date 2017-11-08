@@ -13,12 +13,12 @@
 
 package com.dcentralized.core.common;
 
+import static com.dcentralized.core.common.Operation.PRAGMA_DIRECTIVE_NO_FORWARDING;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
-import static com.dcentralized.core.common.Operation.PRAGMA_DIRECTIVE_NO_FORWARDING;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -34,10 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
 
 import com.dcentralized.core.common.DefaultHandlerTestService.DefaultHandlerState;
 import com.dcentralized.core.common.ExampleVersionRetentionService.ExampleVersionRetentionState;
@@ -57,6 +53,10 @@ import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.After;
+import org.junit.Rule;
+import org.junit.Test;
 
 class DeleteVerificationTestService extends StatefulService {
 

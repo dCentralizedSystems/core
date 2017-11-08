@@ -31,11 +31,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import com.dcentralized.core.common.ServiceStats.ServiceStat;
+
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import com.dcentralized.core.common.ServiceStats.ServiceStat;
 
 /**
  * Declare this as a @Rule to your unit test. As it is bound to the test lifecycle all measurements taken will be

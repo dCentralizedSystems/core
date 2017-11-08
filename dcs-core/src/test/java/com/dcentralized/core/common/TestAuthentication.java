@@ -13,13 +13,14 @@
 
 package com.dcentralized.core.common;
 
+import static com.dcentralized.core.common.TestAuthentication.TestAuthenticationService.RANDOM_COOKIE;
+import static com.dcentralized.core.common.TestAuthentication.TestAuthenticationService.RANDOM_CUSTOM_HEADER;
+import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-import static com.dcentralized.core.common.TestAuthentication.TestAuthenticationService.RANDOM_COOKIE;
-import static com.dcentralized.core.common.TestAuthentication.TestAuthenticationService.RANDOM_CUSTOM_HEADER;
-import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
 
 import java.security.GeneralSecurityException;
 import java.time.Duration;
@@ -29,11 +30,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
-import io.netty.handler.codec.http.cookie.Cookie;
-import org.junit.After;
-import org.junit.Test;
 
 import com.dcentralized.core.common.Claims.Builder;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
@@ -55,6 +51,11 @@ import com.dcentralized.core.services.common.authn.AuthenticationConstants;
 import com.dcentralized.core.services.common.authn.AuthenticationRequest;
 import com.dcentralized.core.services.common.authn.AuthenticationRequest.AuthenticationRequestType;
 import com.dcentralized.core.services.common.authn.BasicAuthenticationService;
+
+import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import org.junit.After;
+import org.junit.Test;
 
 public class TestAuthentication {
 

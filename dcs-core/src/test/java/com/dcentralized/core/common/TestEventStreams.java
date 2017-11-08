@@ -22,6 +22,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
+import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+import com.dcentralized.core.common.test.TestContext;
+import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
+import com.dcentralized.core.services.common.EventStreamService;
+
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
 import org.junit.After;
@@ -29,12 +35,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import com.dcentralized.core.common.test.ExampleService;
-import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
-import com.dcentralized.core.common.test.TestContext;
-import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
-import com.dcentralized.core.services.common.EventStreamService;
 
 public class TestEventStreams extends BasicReusableHostTestCase {
     private static final List<ServerSentEvent> EVENTS = Arrays.asList(

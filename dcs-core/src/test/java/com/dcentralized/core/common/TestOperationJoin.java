@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import org.junit.Before;
-import org.junit.Test;
-
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.services.common.MinimalTestService;
+
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestOperationJoin extends BasicReusableHostTestCase {
     private List<Service> services;

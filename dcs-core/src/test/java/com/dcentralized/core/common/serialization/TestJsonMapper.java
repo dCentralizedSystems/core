@@ -37,11 +37,6 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-import com.google.gson.JsonElement;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceHost.Arguments;
 import com.dcentralized.core.common.TestGsonConfiguration;
@@ -49,6 +44,11 @@ import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.QueryTask.Query.Builder;
+
+import com.google.gson.JsonElement;
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class TestJsonMapper {
     private static final int NUM_THREADS = 2;

@@ -13,11 +13,11 @@
 
 package com.dcentralized.core.common;
 
+import static com.dcentralized.core.common.Service.STAT_NAME_OPERATION_DURATION;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-
-import static com.dcentralized.core.common.Service.STAT_NAME_OPERATION_DURATION;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
-
-import org.junit.Test;
 
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Service.Action;
@@ -46,6 +44,8 @@ import com.dcentralized.core.services.common.MinimalFactoryTestService;
 import com.dcentralized.core.services.common.MinimalTestService;
 import com.dcentralized.core.services.common.ServiceHostManagementService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
+
+import org.junit.Test;
 
 /**
  * Test GetDocument when ServiceDocument specified an illegal type
