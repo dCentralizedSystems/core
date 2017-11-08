@@ -10,6 +10,7 @@
          <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME"/>
          <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
          <Bug pattern="DM_EXIT"/>
+         <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ"/>
          <Bug pattern="EI_EXPOSE_REP2"/>
        </Or>
      </Match>
