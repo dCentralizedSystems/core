@@ -3,4 +3,5 @@
 
 set -ex
 
-mvn install -P coverage
+mvn install
+
