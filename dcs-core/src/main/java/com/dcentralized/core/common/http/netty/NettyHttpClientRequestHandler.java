@@ -228,7 +228,8 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             String orig = res.getQuery();
             if (orig != null && !orig.isEmpty()) {
                 String decodedQuery = QueryStringDecoder.decodeComponent(orig);
-                if (!orig.equals(decodedQuery)) {
+                // intentional string reference comparison
+                if (orig != decodedQuery) {
                     // something was really decoded, rebuild with the decoded query
                     res = new URI(
                             res.getScheme(),
