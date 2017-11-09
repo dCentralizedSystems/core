@@ -459,7 +459,6 @@ public class ServiceHost implements ServiceRequestSender {
 
         public URI documentIndexReference;
         public URI authorizationServiceReference;
-        public URI transactionServiceReference;
         public String id;
         public boolean isPeerSynchronizationEnabled;
         public int peerSynchronizationTimeLimitSeconds;
@@ -577,6 +576,8 @@ public class ServiceHost implements ServiceRequestSender {
 
     private final ConcurrentSkipListSet<String> coreServices = new ConcurrentSkipListSet<>();
     private final ConcurrentHashMap<String, Class<? extends Service>> privilegedServiceTypes = new ConcurrentHashMap<>();
+
+    private final Set<Path> resolvedUiPaths = new ConcurrentSkipListSet<>();
 
     private final Set<String> pendingServiceDeletions = Collections
             .synchronizedSet(new HashSet<String>());
@@ -1741,7 +1742,13 @@ public class ServiceHost implements ServiceRequestSender {
                     Utils.toString(e));
         }
 
+
         if (pathToURIPath.isEmpty() || rootDir == null || baseUriPath == null) {
+            return;
+        }
+
+        if (!this.resolvedUiPaths.add(baseUriPath)) {
+            // UI resources already loaded
             return;
         }
 
@@ -1795,7 +1802,7 @@ public class ServiceHost implements ServiceRequestSender {
             Path resourcePath = path.resolve(entry.suffix);
             Path uriPath = baseUriPath.resolve(entry.suffix);
             Path outputPath = this.copyResourceToSandbox(entry.url, resourcePath);
-            if (res == null) {
+            if (res == null && outputPath != null) {
                 String os = outputPath.toString();
                 res = Paths.get(os.substring(0, os.length() - entry.suffix.toString().length()));
             }
