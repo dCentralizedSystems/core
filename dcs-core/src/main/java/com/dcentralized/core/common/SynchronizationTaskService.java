@@ -40,8 +40,8 @@ public class SynchronizationTaskService
     public static final String STAT_NAME_CHILD_SYNCH_RETRY_COUNT = "childSynchRetryCount";
     public static final String STAT_NAME_SYNCH_RETRY_COUNT = "synchRetryCount";
 
-    public static final String PROPERTY_NAME_MAX_CHILD_SYNCH_RETRY_COUNT =
-            Utils.PROPERTY_NAME_PREFIX + "SynchronizationTaskService.MAX_CHILD_SYNCH_RETRY_COUNT";
+    public static final String PROPERTY_NAME_MAX_CHILD_SYNCH_RETRY_COUNT = Utils.PROPERTY_NAME_PREFIX
+            + "SynchronizationTaskService.MAX_CHILD_SYNCH_RETRY_COUNT";
 
     /**
      * Maximum synch-task retry limit.
@@ -51,10 +51,10 @@ public class SynchronizationTaskService
     public static final int MAX_CHILD_SYNCH_RETRY_COUNT = Integer.getInteger(
             PROPERTY_NAME_MAX_CHILD_SYNCH_RETRY_COUNT, 8);
 
-
     public static SynchronizationTaskService create(Supplier<Service> childServiceInstantiator) {
         if (childServiceInstantiator.get() == null) {
-            throw new IllegalArgumentException("childServiceInstantiator created null child service");
+            throw new IllegalArgumentException(
+                    "childServiceInstantiator created null child service");
         }
         SynchronizationTaskService taskService = new SynchronizationTaskService();
         taskService.childServiceInstantiator = childServiceInstantiator;
@@ -89,7 +89,6 @@ public class SynchronizationTaskService
          * This value is immutable and gets set once in handleStart.
          */
         public EnumSet<ServiceOption> childOptions;
-
 
         /**
          * Document index link used by the child service
@@ -324,7 +323,8 @@ public class SynchronizationTaskService
         }
         boolean isMembershipTimeSet = (putTask.membershipUpdateTimeMicros != null);
         boolean hasReplicationOption = currentTask.childOptions.contains(ServiceOption.REPLICATION);
-        if (!isMembershipTimeSet && hasReplicationOption || isMembershipTimeSet && !hasReplicationOption) {
+        if (!isMembershipTimeSet && hasReplicationOption
+                || isMembershipTimeSet && !hasReplicationOption) {
             put.fail(new IllegalArgumentException("membershipUpdateTimeMicros not set correctly: "
                     + putTask.membershipUpdateTimeMicros));
             return null;
@@ -361,14 +361,17 @@ public class SynchronizationTaskService
      */
     @Override
     protected boolean validateTransition(
-            Operation patch, SynchronizationTaskService.State currentTask, SynchronizationTaskService.State patchBody) {
+            Operation patch, SynchronizationTaskService.State currentTask,
+            SynchronizationTaskService.State patchBody) {
         boolean validTransition = super.validateTransition(patch, currentTask, patchBody);
         if (!validTransition) {
             return false;
         }
 
-        if (!TaskState.isInProgress(currentTask.taskInfo) && !TaskState.isInProgress(patchBody.taskInfo)) {
-            patch.fail(new IllegalArgumentException("Task stage cannot transitioned to same stopped state"));
+        if (!TaskState.isInProgress(currentTask.taskInfo)
+                && !TaskState.isInProgress(patchBody.taskInfo)) {
+            patch.fail(new IllegalArgumentException(
+                    "Task stage cannot transitioned to same stopped state"));
             return false;
         }
 
@@ -406,9 +409,11 @@ public class SynchronizationTaskService
             updateState(task, body);
         }
 
-        logInfo("Transitioning task from %s-%s to %s-%s, Services synchronized: %d",
-                currentStage, currentSubStage, task.taskInfo.stage, task.subStage, task.synchCompletionCount);
-
+        if (this.isDetailedLoggingEnabled) {
+            logInfo("Transitioning task from %s-%s to %s-%s, Services synchronized: %d",
+                    currentStage, currentSubStage, task.taskInfo.stage, task.subStage,
+                    task.synchCompletionCount);
+        }
         boolean isTaskFinished = TaskState.isFinished(task.taskInfo);
         if (isTaskFinished) {
             // Since the synch-task finished, we will mark the factory
@@ -485,7 +490,8 @@ public class SynchronizationTaskService
                         return;
                     }
 
-                    URI queryTaskUri = UriUtils.buildUri(this.getHost(), ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
+                    URI queryTaskUri = UriUtils.buildUri(this.getHost(),
+                            ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
                     task.queryPageReference = UriUtils.buildUri(queryTaskUri, rsp.nextPageLink);
 
                     sendSelfPatch(task, TaskState.TaskStage.STARTED,
@@ -538,7 +544,8 @@ public class SynchronizationTaskService
 
     private void handleSynchronizeStage(State task, boolean verifyOwnership) {
         if (task.queryPageReference == null) {
-            sendSelfPatch(task, TaskState.TaskStage.STARTED, subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
+            sendSelfPatch(task, TaskState.TaskStage.STARTED,
+                    subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
             return;
         }
 
@@ -567,7 +574,8 @@ public class SynchronizationTaskService
 
             ServiceDocumentQueryResult rsp = o.getBody(QueryTask.class).results;
             if (rsp.documentCount == 0 || rsp.documentLinks.isEmpty()) {
-                sendSelfPatch(task, TaskState.TaskStage.STARTED, subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
+                sendSelfPatch(task, TaskState.TaskStage.STARTED,
+                        subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
                 return;
             }
             List<String> list = new ArrayList<>(rsp.documentLinks);
@@ -581,7 +589,8 @@ public class SynchronizationTaskService
                 .setCompletion(c));
     }
 
-    private void synchronizeChildrenInQueryPage(State task, ServiceDocumentQueryResult rsp, List<String> documentLinks, int retryCount, int totalServiceCount) {
+    private void synchronizeChildrenInQueryPage(State task, ServiceDocumentQueryResult rsp,
+            List<String> documentLinks, int retryCount, int totalServiceCount) {
         if (getHost().isStopping()) {
             sendSelfCancellationPatch(task, "host is stopping");
             return;
@@ -627,7 +636,8 @@ public class SynchronizationTaskService
                     if (retryCount < MAX_CHILD_SYNCH_RETRY_COUNT) {
                         synchronized (this) {
                             if (!getHost().isStopping()) {
-                                logWarning("Retrying synchronization for %d failed services", failedServices.size());
+                                logWarning("Retrying synchronization for %d failed services",
+                                        failedServices.size());
 
                                 scheduleRetry(
                                         () -> synchronizeChildrenInQueryPage(
@@ -644,11 +654,13 @@ public class SynchronizationTaskService
                         }
                     } else {
                         if (!getHost().isStopping()) {
-                            logSevere("Synchronization failed for %d services", failedServices.size());
+                            logSevere("Synchronization failed for %d services",
+                                    failedServices.size());
                         }
                         adjustStat(STAT_NAME_CHILD_SYNCH_FAILURE_COUNT, failedServices.size());
                         task.synchCompletionCount += (totalServiceCount - failedServices.size());
-                        sendSelfFailurePatch(task, "Too many retries in synchronizing child services");
+                        sendSelfFailurePatch(task,
+                                "Too many retries in synchronizing child services");
                         return;
                     }
                 } else {
@@ -668,7 +680,8 @@ public class SynchronizationTaskService
             task.synchCompletionCount += totalServiceCount;
 
             if (task.queryPageReference == null) {
-                sendSelfPatch(task, TaskState.TaskStage.STARTED, subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
+                sendSelfPatch(task, TaskState.TaskStage.STARTED,
+                        subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
                 return;
             }
             sendSelfPatch(task, TaskState.TaskStage.STARTED, subStageSetter(SubStage.SYNCHRONIZE));
@@ -719,7 +732,7 @@ public class SynchronizationTaskService
         long delay = getHost().getMaintenanceIntervalMicros();
         ServiceStats.ServiceStat stat = getStat(statNameRetryCount);
         if (stat != null && stat.latestValue > 0) {
-            return (1 << ((long)stat.latestValue)) * delay;
+            return (1 << ((long) stat.latestValue)) * delay;
         }
 
         return delay;
@@ -745,10 +758,12 @@ public class SynchronizationTaskService
                             NodeSelectorService.SelectOwnerResponse.class);
 
                     if (!rsp.isLocalHostOwner) {
-                        logWarning("Current node %s is no longer owner for the factory %s. Cancelling synchronization",
+                        logWarning(
+                                "Current node %s is no longer owner for the factory %s. Cancelling synchronization",
                                 this.getHost().getId(), task.factorySelfLink);
 
-                        sendSelfCancellationPatch(task, "Local node is no longer owner for this factory.");
+                        sendSelfCancellationPatch(task,
+                                "Local node is no longer owner for this factory.");
                         return;
                     }
 
@@ -832,7 +847,8 @@ public class SynchronizationTaskService
                         parentOp.complete();
                     }
                     if (e != null) {
-                        logSevere("Setting factory availability failed with error %s", e.getMessage());
+                        logSevere("Setting factory availability failed with error %s",
+                                e.getMessage());
                         sendSelfFailurePatch(task, "Failed to set Factory Availability");
                         return;
                     }
@@ -844,7 +860,8 @@ public class SynchronizationTaskService
     }
 
     @Override
-    protected void sendSelfPatch(State taskState, TaskState.TaskStage stage, Consumer<State> updateTaskState) {
+    protected void sendSelfPatch(State taskState, TaskState.TaskStage stage,
+            Consumer<State> updateTaskState) {
         taskState.failureMessage = "";
         super.sendSelfPatch(taskState, stage, updateTaskState);
     }
