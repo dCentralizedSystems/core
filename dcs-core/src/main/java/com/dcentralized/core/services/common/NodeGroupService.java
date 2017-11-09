@@ -445,7 +445,7 @@ public class NodeGroupService extends StatefulService {
             NodeGroupState remotePeerState) {
 
         if (UriUtils.isHostEqual(getHost(), joinBody.memberGroupReference)) {
-            logInfo("Skipping self join");
+            logFine("Skipping self join");
             // we tried joining ourself, abort;
             joinOp.complete();
             return;
@@ -512,7 +512,7 @@ public class NodeGroupService extends StatefulService {
         // Pass 2, merge remote group state with ours, send self to peer
         sendRequest(Operation.createPatch(getUri()).setBody(remotePeerState));
 
-        logInfo("Sending POST to %s to insert self: %s",
+        logFine("Sending POST to %s to insert self: %s",
                 joinBody.memberGroupReference, Utils.toJson(self));
 
         Operation insertSelfToPeer = Operation
@@ -604,7 +604,7 @@ public class NodeGroupService extends StatefulService {
             body.locationQuorum = 1;
         }
         if (getHost().getLocation() != null) {
-            logInfo("Setting node %s location to %s, location quorum is %d",
+            logFine("Setting node %s location to %s, location quorum is %d",
                     body.id, getHost().getLocation(), body.locationQuorum);
             if (body.customProperties == null) {
                 body.customProperties = new HashMap<>();
@@ -748,7 +748,7 @@ public class NodeGroupService extends StatefulService {
                         : updateTime;
                 if (remotePeer.status != NodeStatus.UNAVAILABLE) {
                     logWarning("Sending patch to peer %s failed with %s; marking as UNAVAILABLE",
-                            remotePeer.id, Utils.toString(e));
+                            remotePeer.id, e.toString());
                     remotePeer.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
                     remotePeer.documentVersion++;
                 }
@@ -867,7 +867,7 @@ public class NodeGroupService extends StatefulService {
                     continue;
                 }
                 if (!isLocalNode) {
-                    logInfo("Adding new peer %s (%s), status %s", remoteEntry.id,
+                    logFine("Adding new peer %s (%s), status %s", remoteEntry.id,
                             remoteEntry.groupReference, remoteEntry.status);
                 }
                 // we found a new peer, through the gossip PATCH. Add to our state
@@ -924,7 +924,7 @@ public class NodeGroupService extends StatefulService {
                     && remoteEntry.documentExpirationTimeMicros == 0) {
                 remoteEntry.documentExpirationTimeMicros = Utils.fromNowMicrosUtc(
                         localState.config.nodeRemovalDelayMicros);
-                logInfo("Set expiration at %d for unavailable node %s(%s)",
+                logWarning("Set expiration at %d for unavailable node %s(%s)",
                         remoteEntry.documentExpirationTimeMicros,
                         remoteEntry.id,
                         remoteEntry.groupReference);
@@ -957,7 +957,7 @@ public class NodeGroupService extends StatefulService {
 
             if (expirationMicros > 0 && now > expirationMicros) {
                 changes.add(NodeGroupChange.PEER_STATUS_CHANGE);
-                logInfo("Removing expired unavailable node %s(%s)", l.id, l.groupReference);
+                logWarning("Removing expired unavailable node %s(%s)", l.id, l.groupReference);
                 missingNodes.add(l.id);
             }
         }
@@ -971,7 +971,7 @@ public class NodeGroupService extends StatefulService {
                 remotePeerState.membershipUpdateTimeMicros,
                 isModified ? now : localState.membershipUpdateTimeMicros);
         if (isModified) {
-            logInfo("State updated, merge with %s, self %s, %d",
+            logFine("State updated, merge with %s, self %s, %d",
                     remotePeerState.documentOwner,
                     localState.documentOwner,
                     localState.membershipUpdateTimeMicros);

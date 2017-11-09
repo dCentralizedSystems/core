@@ -766,7 +766,7 @@ public class ServiceHost implements ServiceRequestSender {
             ForkJoinWorkerThread res = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
             res.setName(getUri() + "/" + res.getName());
             return res;
-        }, null, false);
+        }, null, true);
 
         this.scheduledExecutor = Executors.newScheduledThreadPool(Utils.DEFAULT_THREAD_COUNT,
                 new NamedThreadFactory(getUri() + "/scheduled"));
