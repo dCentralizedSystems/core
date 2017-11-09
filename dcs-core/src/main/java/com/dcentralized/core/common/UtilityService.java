@@ -899,6 +899,7 @@ public class UtilityService implements Service {
     @Override
     public void adjustStat(ServiceStat stat, double delta) {
         allocateStats();
+        findStat(stat.name, true, stat);
         synchronized (stat) {
             stat.latestValue += delta;
             stat.version++;
