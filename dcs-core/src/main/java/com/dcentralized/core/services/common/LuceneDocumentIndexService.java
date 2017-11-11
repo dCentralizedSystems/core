@@ -1648,7 +1648,7 @@ public class LuceneDocumentIndexService extends StatelessService {
                 expandLinks(o, op);
             });
         }
-        getHost().queryServiceUris(selfLink, op);
+        getHost().queryServices(null, null, null, selfLink, op);
     }
 
     /**

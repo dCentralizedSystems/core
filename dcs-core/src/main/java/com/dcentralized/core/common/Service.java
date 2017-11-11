@@ -223,11 +223,6 @@ public interface Service extends ServiceRequestSender {
         DOCUMENT_OWNER,
 
         /**
-         * Set by runtime. Service has one or more pending transactions.
-         */
-        TRANSACTION_PENDING,
-
-        /**
          * Set by runtime. Service is stateless.
          */
         STATELESS,

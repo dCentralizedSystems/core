@@ -4893,34 +4893,65 @@ public class ServiceHost implements ServiceRequestSender {
         nss.selectAndForward(op, req);
     }
 
-    /**
-     * Queries services in the AVAILABLE stage using a simple exact or prefix match on the supplied
-     * self link
-     */
-    public void queryServiceUris(String servicePath, Operation get) {
-        // TODO Use Radix trees for efficient prefix searches. This is not
-        // urgent since we consider queries directly on the host instead of the
-        // document index, to be rare
+    public void queryServices(String match, Operation get) {
+        queryServices(null, null, null, match, get);
+    }
 
+    /**
+     * Queries services in the AVAILABLE stage based on the provided options and
+     * simple match pattern
+     */
+    public void queryServices(EnumSet<ServiceOption> options,
+            EnumSet<ServiceOption> matchAllOptions,
+            EnumSet<ServiceOption> exclusionOptions, String match, Operation get) {
         ServiceDocumentQueryResult r = new ServiceDocumentQueryResult();
 
-        boolean doPrefixMatch = servicePath.endsWith(UriUtils.URI_WILDCARD_CHAR);
-        servicePath = servicePath.replace(UriUtils.URI_WILDCARD_CHAR, "");
+        boolean doPrefixMatch =  false;
+        boolean doContainsMatch = false;
 
-        for (Service s : this.attachedServices.values()) {
+        if (match != null) {
+            doContainsMatch = match.startsWith(UriUtils.URI_WILDCARD_CHAR);
+            doPrefixMatch = match.endsWith(UriUtils.URI_WILDCARD_CHAR);
+            match = match.replace(UriUtils.URI_WILDCARD_CHAR, "");
+        }
+
+        loop: for (Service s : this.attachedServices.values()) {
             if (s.getProcessingStage() != ProcessingStage.AVAILABLE) {
                 continue;
             }
             if (s.hasOption(ServiceOption.UTILITY)) {
                 continue;
             }
-            String path = s.getSelfLink();
-            if (doPrefixMatch) {
-                if (!path.startsWith(servicePath)) {
+
+            if (exclusionOptions != null) {
+                for (ServiceOption exOp : exclusionOptions) {
+                    if (s.hasOption(exOp)) {
+                        continue loop;
+                    }
+                }
+            }
+
+            String servicePath = s.getSelfLink();
+            if (matchAllOptions != null) {
+                boolean hasAllOptions = true;
+                for (ServiceOption option : matchAllOptions) {
+                    if (option != null && !s.hasOption(option)) {
+                        hasAllOptions = false;
+                        break;
+                    }
+                }
+                if (!hasAllOptions) {
                     continue;
                 }
-            } else {
-                if (!path.equals(servicePath)) {
+            } else if (options != null) {
+                boolean hasOption = false;
+                for (ServiceOption option : options) {
+                    if (option != null && s.hasOption(option)) {
+                        hasOption = true;
+                        break;
+                    }
+                }
+                if (!hasOption) {
                     continue;
                 }
             }
@@ -4941,69 +4972,22 @@ public class ServiceHost implements ServiceRequestSender {
                 }
             }
 
-            r.documentLinks.add(path);
-        }
-        r.documentOwner = getId();
-        r.documentCount = (long) r.documentLinks.size();
-        get.setBodyNoCloning(r).complete();
-    }
-
-    public void queryServiceUris(EnumSet<ServiceOption> options, boolean matchAllOptions,
-            Operation get) {
-        queryServiceUris(options, matchAllOptions, get, null);
-    }
-
-    /**
-     * Queries services in the AVAILABLE stage based on the provided options, excluding all
-     * UTILITY services.
-     *
-     * @param options options that must match
-     * @param matchAllOptions true : all options must match,  false : any option must match
-     * @param get
-     * @param exclusionOptions if not-null, exclude services that have any of the excluded options
-     */
-    public void queryServiceUris(EnumSet<ServiceOption> options, boolean matchAllOptions,
-            Operation get, EnumSet<ServiceOption> exclusionOptions) {
-        ServiceDocumentQueryResult r = new ServiceDocumentQueryResult();
-
-        loop: for (Service s : this.attachedServices.values()) {
-            if (s.getProcessingStage() != ProcessingStage.AVAILABLE) {
-                continue;
-            }
-            if (s.hasOption(ServiceOption.UTILITY)) {
-                continue;
-            }
-
-            if (exclusionOptions != null) {
-                for (ServiceOption exOp : exclusionOptions) {
-                    if (s.hasOption(exOp)) {
-                        continue loop;
+            if (match != null) {
+                if (doPrefixMatch) {
+                    if (!servicePath.startsWith(match)) {
+                        continue;
+                    }
+                } else if (doContainsMatch) {
+                    if (!servicePath.contains(match)) {
+                        continue;
+                    }
+                } else {
+                    if (!servicePath.equals(match)) {
+                        continue;
                     }
                 }
             }
-
-            String servicePath = s.getSelfLink();
-
-            if (matchAllOptions) {
-                boolean hasAllOptions = true;
-
-                for (ServiceOption option : options) {
-                    if (option != null && !s.hasOption(option)) {
-                        hasAllOptions = false;
-                        break;
-                    }
-                }
-                if (hasAllOptions) {
-                    r.documentLinks.add(servicePath);
-                }
-            } else {
-                for (ServiceOption option : options) {
-                    if (option != null && s.hasOption(option)) {
-                        r.documentLinks.add(servicePath);
-                        break;
-                    }
-                }
-            }
+            r.documentLinks.add(servicePath);
         }
         r.documentOwner = getId();
         r.documentCount = (long) r.documentLinks.size();

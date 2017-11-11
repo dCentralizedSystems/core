@@ -23,7 +23,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,27 +79,6 @@ public class Operation implements Cloneable {
         long documentStoreCompletionTimeMicros;
         long handlerCompletionTimeMicros;
         long operationCompletionTimeMicros;
-    }
-
-    /**
-     * Operation metadata being sent to the transaction coordinator.
-     */
-    public static class TransactionContext {
-
-        /**
-         * Action the service received
-         */
-        public Action action;
-
-        /**
-         * Set of pending transactions on the same service
-         */
-        public Set<String> coordinatorLinks;
-
-        /**
-         * Notify whether the service completed (true) or failed (false) the operation
-         */
-        public boolean isSuccessful;
     }
 
     static class RemoteContext {
@@ -324,7 +302,6 @@ public class Operation implements Cloneable {
         public int statusCode;
         public EnumSet<OperationOption> options;
         public String contextId;
-        public String transactionId;
         public String userInfo;
 
         public static final ServiceDocumentDescription DESCRIPTION = Operation.SerializedOperation

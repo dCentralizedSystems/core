@@ -2071,7 +2071,7 @@ public class TestLuceneDocumentIndexService {
                         this.host.completeIteration();
                     }
                 });
-        h.queryServiceUris(EnumSet.of(ServiceOption.FACTORY_ITEM), false, get);
+        h.queryServices(EnumSet.of(ServiceOption.FACTORY_ITEM), null, null,null, get);
         this.host.testWait();
     }
 
@@ -3475,7 +3475,7 @@ public class TestLuceneDocumentIndexService {
                 rsp[0] = o.getBody(ServiceDocumentQueryResult.class);
                 ctx.complete();
             });
-            this.host.queryServiceUris(factoryUri.getPath() + "/*", op);
+            this.host.queryServices(null, null, null, factoryUri.getPath() + "/*", op);
             this.host.testWait(ctx);
             for (String link : rsp[0].documentLinks) {
                 ProcessingStage ps = this.host.getServiceStage(link);

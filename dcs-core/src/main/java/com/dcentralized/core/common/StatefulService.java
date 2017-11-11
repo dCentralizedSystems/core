@@ -16,8 +16,6 @@ package com.dcentralized.core.common;
 import java.net.URI;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -46,7 +44,6 @@ public class StatefulService implements Service {
         public transient OperationProcessingChain opProcessingChain;
         public String nodeSelectorLink = ServiceUriPaths.DEFAULT_NODE_SELECTOR;
         public String documentIndexLink = ServiceUriPaths.CORE_DOCUMENT_INDEX;
-        public Set<String> txCoordinatorLinks;
     }
 
     private static class RuntimeContext {
@@ -1526,8 +1523,7 @@ public class StatefulService implements Service {
         if (option != ServiceOption.HTML_USER_INTERFACE
                 && option != ServiceOption.DOCUMENT_OWNER
                 && option != ServiceOption.PERIODIC_MAINTENANCE
-                && option != ServiceOption.INSTRUMENTATION
-                && option != ServiceOption.TRANSACTION_PENDING) {
+                && option != ServiceOption.INSTRUMENTATION) {
 
             if (getProcessingStage() != Service.ProcessingStage.CREATED) {
                 throw new IllegalStateException("Service already started");
@@ -2089,55 +2085,6 @@ public class StatefulService implements Service {
             if (this.context.extras == null) {
                 this.context.extras = new AdditionalContext();
             }
-        }
-    }
-
-    /**
-     * Adds the specified coordinator link to this service' pending transactions
-     */
-    void addPendingTransaction(String txCoordinatorLink) {
-        synchronized (this.context) {
-            allocateExtraContext();
-            if (this.context.extras.txCoordinatorLinks == null) {
-                this.context.extras.txCoordinatorLinks = new HashSet<>();
-            }
-            this.context.extras.txCoordinatorLinks.add(txCoordinatorLink);
-        }
-
-        toggleOption(ServiceOption.TRANSACTION_PENDING, true);
-    }
-
-    /**
-     * Removes the specified coordinator link from this service' pending transactions
-     */
-    void removePendingTransaction(String txCoordinatorLink) {
-        boolean toggleTransactionPending = false;
-
-        synchronized (this.context) {
-            allocateExtraContext();
-            if (this.context.extras.txCoordinatorLinks == null) {
-                return;
-            }
-            this.context.extras.txCoordinatorLinks.remove(txCoordinatorLink);
-            toggleTransactionPending = this.context.extras.txCoordinatorLinks.isEmpty();
-        }
-
-        if (toggleTransactionPending) {
-            toggleOption(ServiceOption.TRANSACTION_PENDING, false);
-        }
-    }
-
-    /**
-     * Adds this service pending transaction links to the specified log record
-     * and sets it as the body of the specified operation. The log record
-     * is cloned and thus can be modified safely later on.
-     */
-    Operation setPendingTransactionsAsBody(Operation op, Operation.TransactionContext opLogRecord) {
-        synchronized (this.context) {
-            if (this.context.extras != null) {
-                opLogRecord.coordinatorLinks = this.context.extras.txCoordinatorLinks;
-            }
-            return op.setBody(opLogRecord);
         }
     }
 }

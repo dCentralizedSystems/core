@@ -19,7 +19,6 @@ import com.dcentralized.core.common.AuthorizationSetupHelper;
 import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
-import com.dcentralized.core.services.common.RootNamespaceService;
 
 public class ExampleServiceHost extends ServiceHost {
 
@@ -86,10 +85,6 @@ public class ExampleServiceHost extends ServiceHost {
         // Start the example task service factory: when it receives a task, it will delete
         // all example services
         super.startFactory(ExampleTaskService.class, ExampleTaskService::createFactory);
-
-        // Start the root namespace factory: this will respond to the root URI (/) and list all
-        // the factory services.
-        super.startService(new RootNamespaceService());
 
         // The args are null because many of the tests use this class (via VerificationHost)
         // without providing arguments.

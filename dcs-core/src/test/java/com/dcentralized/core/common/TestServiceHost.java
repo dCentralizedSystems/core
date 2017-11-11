@@ -2181,10 +2181,13 @@ public class TestServiceHost {
     }
 
     @Test
-    public void queryServiceUris() throws Throwable {
+    public void queryServices() throws Throwable {
         setUp(false);
+        this.host.setServiceCacheClearDelayMicros(TimeUnit.MINUTES.toMicros(1));
         int serviceCount = 5;
-        this.host.createExampleServices(this.host, serviceCount, Utils.getNowMicrosUtc());
+        List<URI> childUris = this.host.createExampleServices(this.host,
+                serviceCount,
+                Utils.fromNowMicrosUtc(TimeUnit.MINUTES.toMicros(1)));
 
         EnumSet<ServiceOption> options = EnumSet.of(ServiceOption.INSTRUMENTATION,
                 ServiceOption.OWNER_SELECTION, ServiceOption.FACTORY_ITEM);
@@ -2203,18 +2206,32 @@ public class TestServiceHost {
 
         // use path prefix match
         this.host.testStart(1);
-        this.host.queryServiceUris(ExampleService.FACTORY_LINK + "/*", get.clone());
+        this.host.queryServices(ExampleService.FACTORY_LINK + "/*", get.clone());
         this.host.testWait();
         assertEquals(serviceCount, results[0].documentLinks.size());
         assertEquals((long) serviceCount, (long) results[0].documentCount);
 
+        // use path "contains" match
+        String link = UriUtils.getLastPathSegment(childUris.get(0));
         this.host.testStart(1);
-        this.host.queryServiceUris(options, true, get.clone());
+        this.host.queryServices("*" + link, get.clone());
+        this.host.testWait();
+        assertEquals(1, results[0].documentLinks.size());
+        assertEquals((long) 1, (long) results[0].documentCount);
+
+        // exclude factory children, expect zero results
+        this.host.testStart(1);
+        this.host.queryServices(null, null, EnumSet.of(ServiceOption.FACTORY_ITEM), link, get.clone());
+        this.host.testWait();
+        assertEquals(0, results[0].documentLinks.size());
+        assertEquals((long) 0, (long) results[0].documentCount);
+        this.host.testStart(1);
+        this.host.queryServices(options, options, null, null, get.clone());
         this.host.testWait();
         assertEquals(serviceCount, results[0].documentLinks.size());
         assertEquals((long) serviceCount, (long) results[0].documentCount);
         this.host.testStart(1);
-        this.host.queryServiceUris(options, false, get.clone());
+        this.host.queryServices(options, null, null, null, get.clone());
         this.host.testWait();
         assertTrue(results[0].documentLinks.size() >= serviceCount);
         assertEquals((long) results[0].documentLinks.size(), (long) results[0].documentCount);

@@ -1473,7 +1473,7 @@ public class TestNodeGroupService {
         // This is because we verify, that even without any on demand synchronization,
         // the factory driven synchronization set the services in the proper state
         Set<String> ownerIds = this.host.getNodeStateMap().keySet();
-        List<URI> remainingHosts = new ArrayList<>(this.host.getNodeGroupMap().keySet());
+        List<URI> remainingHosts = new ArrayList<>(this.host.getNodeGroupMap().values());
         verifyDocumentOwnerAndEpoch(exampleStatesPerSelfLink,
                 this.host.getInProcessHostMap().values().iterator().next(),
                 remainingHosts, 0, 1,

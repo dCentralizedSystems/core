@@ -588,8 +588,6 @@ public final class Utils {
             antiReqs = EnumSet.of(ServiceOption.PERIODIC_MAINTENANCE,
                     ServiceOption.INSTRUMENTATION);
             break;
-        case TRANSACTION_PENDING:
-            break;
         case STATELESS:
             antiReqs = EnumSet.of(ServiceOption.PERSISTENCE, ServiceOption.REPLICATION,
                     ServiceOption.OWNER_SELECTION, ServiceOption.STRICT_UPDATE_CHECKING);

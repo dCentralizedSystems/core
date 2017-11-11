@@ -416,12 +416,6 @@ public class ServiceResourceTracker {
             return true;
         }
 
-        if (service.hasOption(ServiceOption.TRANSACTION_PENDING)) {
-            // don't clear cache for services under active transactions, for perf reasons.
-            // transactional cached state will be cleared at the end of transaction
-            return true;
-        }
-
         if (service.hasOption(ServiceOption.PERIODIC_MAINTENANCE)) {
             // Services with periodic maintenance stay resident, for now. We might stop them in the future
             // if they have long periods

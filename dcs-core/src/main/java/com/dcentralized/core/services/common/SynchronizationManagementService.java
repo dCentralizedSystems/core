@@ -179,7 +179,7 @@ public class SynchronizationManagementService extends StatelessService {
                     .sendWith(this);
         });
 
-        this.getHost().queryServiceUris(FACTORY_SERVICE_OPTION, true, operation, null);
+        this.getHost().queryServices(FACTORY_SERVICE_OPTION, null,null, null, operation);
     }
 
     private DeferredResult<Object> sendSynchronizationRequest(String factoryLink, String selectorPath, SynchronizationRequest synchRequest, Operation op) {
