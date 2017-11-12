@@ -457,15 +457,7 @@ public class ServiceResourceTracker {
             cacheClearDelayMicros = 0;
         }
 
-        boolean active = (cacheClearDelayMicros + lastAccessTime) > now;
-        if (!active) {
-            this.host.log(Level.FINE,
-                    "Considering stopping service %s, isOwner: %b, because it was inactive for %f seconds",
-                    s.getSelfLink(), this.host.isDocumentOwner(s),
-                    TimeUnit.MICROSECONDS.toSeconds(now - lastAccessTime));
-        }
-
-        return active;
+        return (cacheClearDelayMicros + lastAccessTime) > now;
     }
 
     void retryOnDemandLoadConflict(Operation op, Service s) {

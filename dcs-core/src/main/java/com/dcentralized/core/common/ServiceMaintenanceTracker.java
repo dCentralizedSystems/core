@@ -201,7 +201,7 @@ class ServiceMaintenanceTracker {
         ServiceStats.ServiceStat durationStat = ServiceStatUtils.getOrCreateHistogramStat(s,
                 Service.STAT_NAME_MAINTENANCE_DURATION);
         s.setStat(durationStat, actual);
-        if (limit * 2 < actual) {
+        if (limit * 10 < actual) {
             this.host.log(Level.WARNING,
                     "Service %s exceeded maintenance interval %d. Actual: %d",
                     servicePath, limit, actual);
