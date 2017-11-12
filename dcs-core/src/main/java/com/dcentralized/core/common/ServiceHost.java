@@ -1824,7 +1824,6 @@ public class ServiceHost implements ServiceRequestSender {
             String prefix) {
         File rootDir = new File(new File(this.state.resourceSandboxFileReference), prefix);
         if (!rootDir.exists()) {
-            log(Level.INFO, "Resource directory not found: %s", rootDir.toString());
             return baseUriPath;
         }
 
