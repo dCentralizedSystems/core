@@ -4147,9 +4147,6 @@ public class ServiceHost implements ServiceRequestSender {
             if (link == null) {
                 continue;
             }
-
-            log(Level.INFO, "%s in stage %s, completing %d (%s)", link, getServiceStage(link),
-                    opTemplate.getId(), opTemplate.getContextId());
             final Operation opFinal = opTemplate;
             run(() -> {
                 Operation o = getOperationForServiceAvailability(opFinal, link, doOpClone);
