@@ -875,7 +875,7 @@ public final class FileUtils {
     }
 
     public static Properties readPropertiesFromResource(
-            Class<? extends ServiceHost> typeAssociatedWithResource,
+            Class<?> typeAssociatedWithResource,
             String resourceName) throws IOException {
         URL url = typeAssociatedWithResource
                 .getClassLoader()
