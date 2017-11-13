@@ -876,7 +876,7 @@ public final class FileUtils {
 
     public static Properties readPropertiesFromResource(
             Class<?> typeAssociatedWithResource,
-            String resourceName) throws IOException {
+            String resourceName) {
         URL url = typeAssociatedWithResource
                 .getClassLoader()
                 .getResource(resourceName);
@@ -888,8 +888,7 @@ public final class FileUtils {
         try {
             properties.load(url.openStream());
         } catch (Exception e) {
-            String message = String.format("Unable to load properties from %s", url.toString());
-            throw new IOException(message, e);
+            Utils.logWarning("Unable to load properties from %s", url.toString());
         }
         return properties;
     }
