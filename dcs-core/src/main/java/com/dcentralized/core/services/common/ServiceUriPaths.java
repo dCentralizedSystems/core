@@ -27,9 +27,6 @@ public final class ServiceUriPaths {
     public static final String CORE = "/core";
     public static final String UI_PATH_SUFFIX = "/ui";
 
-    public static final String CORE_WEB_SOCKET_ENDPOINT = CORE + "/ws-endpoint";
-    public static final String WEB_SOCKET_SERVICE_PREFIX = "/ws-service";
-
     public static final String MANAGEMENT = "/management";
     public static final String CORE_MANAGEMENT = CORE + MANAGEMENT;
     public static final String CORE_SYNCHRONIZATION_MANAGEMENT = CORE_MANAGEMENT + "/synch";

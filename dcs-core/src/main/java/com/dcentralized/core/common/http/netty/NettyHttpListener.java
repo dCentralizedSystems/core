@@ -68,6 +68,7 @@ public class NettyHttpListener implements ServiceRequestListener {
 
     public static final String UNKNOWN_CLIENT_REFERER_PATH = "unknown-client";
     public static final int EVENT_LOOP_THREAD_COUNT = 2;
+    public static final int CONNECTION_BACKLOG_MAX_COUNT = 1024;
     private AtomicInteger activeChannelCount = new AtomicInteger();
     private int port;
     private ServiceHost host;
@@ -125,6 +126,8 @@ public class NettyHttpListener implements ServiceRequestListener {
         }
         this.serverChannel = b.bind(addr).sync().channel();
         this.serverChannel.config().setOption(ChannelOption.SO_LINGER, 0);
+        this.serverChannel.config().setOption(ChannelOption.SO_BACKLOG,
+                CONNECTION_BACKLOG_MAX_COUNT);
         this.port = ((InetSocketAddress) this.serverChannel.localAddress()).getPort();
         this.isListening = true;
 

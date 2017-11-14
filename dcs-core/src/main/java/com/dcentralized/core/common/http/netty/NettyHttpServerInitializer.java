@@ -18,7 +18,6 @@ import java.util.logging.Level;
 import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.ServiceHost.ServiceHostState.SslClientAuthMode;
 import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.services.common.ServiceUriPaths;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -208,9 +207,6 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
     }
 
     private void initializeCommon(ChannelPipeline p, SslHandler sslHandler) {
-        p.addLast(WEBSOCKET_HANDLER, new NettyWebSocketRequestHandler(this.host,
-                ServiceUriPaths.CORE_WEB_SOCKET_ENDPOINT,
-                ServiceUriPaths.WEB_SOCKET_SERVICE_PREFIX));
         p.addLast(HTTP_REQUEST_HANDLER,
                 new NettyHttpClientRequestHandler(this.host, this.listener, sslHandler,
                         this.responsePayloadSizeLimit, this.secureAuthCookie));
