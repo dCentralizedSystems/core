@@ -356,14 +356,15 @@ public abstract class FactoryService extends StatelessService {
                 // that decided to mutate the body and re-use, after it called
                 // sendRequest(op.setBody()). Operation clones on setBody() only, not getBody() if
                 // the body is already in native form (not serialized)
-                initialState = Utils.clone(initialState);
+                if (!hasChildOption(ServiceOption.IMMUTABLE)) {
+                    initialState = Utils.clone(initialState);
+                }
             }
 
             String suffix = null;
             if (o.isSynchronizeOwner()) {
                 // If it's a synchronization request, let's re-use the documentSelfLink.
                 suffix = initialState.documentSelfLink;
-
             } else if (this.useBodyForSelfLink) {
                 if (initialState == null) {
                     // If the body of the request was null , fail the request with
