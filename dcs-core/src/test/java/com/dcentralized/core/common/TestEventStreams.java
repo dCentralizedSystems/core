@@ -13,10 +13,14 @@
 
 package com.dcentralized.core.common;
 
+import static org.junit.Assert.assertEquals;
+
 import java.net.ProtocolException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,10 +30,12 @@ import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
+import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.EventStreamService;
 
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,16 +43,41 @@ import org.junit.Rule;
 import org.junit.Test;
 
 public class TestEventStreams extends BasicReusableHostTestCase {
+
     private static final List<ServerSentEvent> EVENTS = Arrays.asList(
             new ServerSentEvent().setData("test1\ntest2"),
             new ServerSentEvent().setEvent("test type").setData("some: data"),
             new ServerSentEvent().setId("id-1").setEvent("test type").setData("data1\ndata2\n"),
-            new ServerSentEvent().setEvent("DONE")
-    );
+            new ServerSentEvent().setEvent("DONE"));
 
     private static final long EVENT_EMIT_PERIOD_MS = 500;
     private static final long INITIAL_DELAY_MS = 100;
     private static final int PARALLELISM = 10;
+
+    public static class SessionClientService extends StatelessService {
+        public static final String SELF_LINK = "session-client";
+        public static final String STAT_NAME_EVENT_COUNT = "sessionClient.eventCount";
+        public static final String STAT_NAME_IS_CONNECTED = "sessionClient.isConnected";
+        private URI serverUri;
+
+        public SessionClientService(URI serverUri) {
+            this.serverUri = serverUri;
+            toggleOption(ServiceOption.INSTRUMENTATION, true);
+        }
+
+        @Override
+        public void handleStart(Operation start) {
+            Operation.createPost(UriUtils.buildUri(this.serverUri, EventStreamService.SELF_LINK))
+                    .setBody(new ServiceDocument())
+                    .setHeadersReceivedHandler(i -> {
+                        setStat(STAT_NAME_IS_CONNECTED, 1.0);
+                        start.complete();
+                    })
+                    .setServerSentEventHandler(i -> adjustStat(STAT_NAME_EVENT_COUNT, 1.0))
+                    .setCompletion((o, e) -> setStat(STAT_NAME_IS_CONNECTED, 0.0))
+                    .sendWith(this);
+        }
+    }
 
     private EventStreamService service;
 
@@ -54,19 +85,23 @@ public class TestEventStreams extends BasicReusableHostTestCase {
 
     public int eventsPerConnection = 100;
 
+    private List<VerificationHost> hostsToCleanup = new ArrayList<>();
+
     @Rule
     public TestResults testResults = new TestResults();
     private EventStreamService torrent;
 
     @Before
     public void setup() throws Throwable {
-        this.service = new EventStreamService(EVENTS, INITIAL_DELAY_MS, EVENT_EMIT_PERIOD_MS, TimeUnit.MILLISECONDS,
+        this.service = new EventStreamService(EVENTS, INITIAL_DELAY_MS, EVENT_EMIT_PERIOD_MS,
+                TimeUnit.MILLISECONDS,
                 PARALLELISM, 1);
         this.host.startService(this.service);
 
         this.torrent = new EventStreamService(EVENTS, 0, 0, TimeUnit.MILLISECONDS, PARALLELISM,
                 (this.eventsPerConnection / EVENTS.size()) + 1);
-        this.host.startService(Operation.createPost(UriUtils.buildUri(this.host, "/torrent")), this.torrent);
+        this.host.startService(Operation.createPost(UriUtils.buildUri(this.host, "/torrent")),
+                this.torrent);
 
         this.host.waitForServiceAvailable("/torrent", EventStreamService.SELF_LINK);
     }
@@ -75,6 +110,8 @@ public class TestEventStreams extends BasicReusableHostTestCase {
     public void tearDown() throws Throwable {
         this.host.stopService(this.service);
         this.host.stopService(this.torrent);
+        this.hostsToCleanup.forEach(VerificationHost::tearDown);
+        this.hostsToCleanup.clear();
     }
 
     @Test
@@ -133,9 +170,9 @@ public class TestEventStreams extends BasicReusableHostTestCase {
         List<Long> timesReceived = new ArrayList<>();
         Operation get = Operation.createGet(this.host, EventStreamService.SELF_LINK)
                 .setHeadersReceivedHandler(op -> {
-                    Assert.assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
+                    assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
                             op.getContentType());
-                    Assert.assertEquals(0, events.size());
+                    assertEquals(0, events.size());
                 })
                 .setServerSentEventHandler(event -> {
                     timesReceived.add(System.currentTimeMillis());
@@ -147,7 +184,7 @@ public class TestEventStreams extends BasicReusableHostTestCase {
         }
         this.host.send(get);
         ctx.await();
-        Assert.assertEquals(EVENTS, events);
+        assertEquals(EVENTS, events);
         double averageDelay = IntStream.range(1, timesReceived.size())
                 .mapToLong(i -> timesReceived.get(i) - timesReceived.get(i - 1))
                 .average().getAsDouble();
@@ -191,7 +228,7 @@ public class TestEventStreams extends BasicReusableHostTestCase {
             this.host.send(get);
         }
         ctx.await();
-        Assert.assertEquals(EVENTS.size() * parallelism, events.size());
+        assertEquals(EVENTS.size() * parallelism, events.size());
     }
 
     @Test
@@ -241,7 +278,7 @@ public class TestEventStreams extends BasicReusableHostTestCase {
             this.doSimpleTest(false);
             Assert.fail("Expected to fail");
         } catch (RuntimeException e) {
-            Assert.assertEquals(message, e.getMessage());
+            assertEquals(message, e.getMessage());
         } finally {
             this.service.setFailException(null);
         }
@@ -255,19 +292,65 @@ public class TestEventStreams extends BasicReusableHostTestCase {
             List<ServerSentEvent> events = new ArrayList<>();
             Operation get = Operation.createGet(this.host, EventStreamService.SELF_LINK)
                     .setHeadersReceivedHandler(op -> {
-                        Assert.assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
+                        assertEquals(Operation.MEDIA_TYPE_TEXT_EVENT_STREAM,
                                 op.getContentType());
                     })
                     .setServerSentEventHandler(events::add);
             get.forceRemote();
             FailureResponse response = this.host.getTestRequestSender().sendAndWaitFailure(get);
-            Assert.assertEquals(EVENTS, events);
+            assertEquals(EVENTS, events);
             Throwable e = response.failure;
             Assert.assertNotNull(e);
-            Assert.assertEquals(ProtocolException.class, e.getClass());
+            assertEquals(ProtocolException.class, e.getClass());
             Assert.assertTrue(e.getMessage().contains(message));
         } finally {
             this.service.setFailException(null);
         }
+    }
+
+    @Test
+    public void testClientDisconnects() throws Throwable {
+        VerificationHost clientHost = VerificationHost.create(0);
+        clientHost.setMaintenanceIntervalMicros(
+                TimeUnit.MILLISECONDS.toMicros(VerificationHost.FAST_MAINT_INTERVAL_MILLIS));
+        clientHost.start();
+        this.hostsToCleanup.add(clientHost);
+
+        clientHost.startServiceAndWait(new SessionClientService(this.host.getUri()),
+                SessionClientService.SELF_LINK, null);
+
+        Map<String, ServiceStats.ServiceStat> stats;
+        URI clientUri = UriUtils.buildUri(clientHost, SessionClientService.SELF_LINK);
+
+        // Verify that client was able to connect to the service
+        stats = this.host.getServiceStats(clientUri);
+        assertEquals(1.0, stats.get(SessionClientService.STAT_NAME_IS_CONNECTED).latestValue, 0);
+
+        // Send some events to the client
+        final int eventCount = 10;
+        List<Operation> patchOps = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            Operation patch = Operation.createPatch(this.host, EventStreamService.SELF_LINK)
+                    .setBody("{ \"key\": \"value\" }");
+            patchOps.add(patch);
+        }
+        this.sender.sendAndWait(patchOps);
+
+        // Verify that the client received the expected number of events
+        this.host.waitFor("Client did not received the expected number of events", () -> {
+            Map<String, ServiceStats.ServiceStat> svcStats = this.host.getServiceStats(clientUri);
+            return svcStats
+                    .get(SessionClientService.STAT_NAME_EVENT_COUNT).latestValue == eventCount;
+        });
+
+        // Stop the client to simulate a disconnect
+        clientHost.tearDown();
+        this.hostsToCleanup.clear();
+
+        // Let's try to send another event to the client.
+        // This time the server should fail because the client is disconnected
+        Operation patch = Operation.createPatch(this.host, EventStreamService.SELF_LINK)
+                .setBody("{ \"key\": \"value\" }");
+        this.sender.sendAndWaitFailure(patch);
     }
 }
