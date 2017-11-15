@@ -4086,6 +4086,7 @@ public class ServiceHost implements ServiceRequestSender {
         synchronized (this.state) {
             for (int i = 0; i < clonedLinks.length; i++) {
                 String link = clonedLinks[i];
+                link = UriUtils.normalizeUriPath(link);
                 Service s = findService(link);
 
                 // service is null if this method is called before even the service is registered
@@ -4111,6 +4112,7 @@ public class ServiceHost implements ServiceRequestSender {
                             link,
                             doOpClone);
                     if (checkReplica) {
+                        String lnk = link;
                         // when local service is not yet started and required to check replicated
                         // service, delay the node-group-service-availability-check until local
                         // service becomes available by nesting the logic to the opTemplate.
@@ -4123,7 +4125,7 @@ public class ServiceHost implements ServiceRequestSender {
                                     NodeGroupUtils
                                             .registerForReplicatedServiceAvailability(this,
                                                     opTemplateClone,
-                                                    link, nodeSelectorPath);
+                                                    lnk, nodeSelectorPath);
                                 });
                             } else {
                                 opTemplateClone.complete();

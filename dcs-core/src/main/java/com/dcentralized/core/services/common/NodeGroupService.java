@@ -909,8 +909,9 @@ public class NodeGroupService extends StatefulService {
 
             if (remoteEntry.documentVersion == currentEntry.documentVersion && needsUpdate) {
                 // pick update with most recent time, even if that is prone to drift and jitter
-                // between nodes
-                if (remoteEntry.documentUpdateTimeMicros < currentEntry.documentUpdateTimeMicros) {
+                // between nodes, except, if the remote entry is the owner for this node status
+                if (!remoteEntry.id.equals(remotePeerState.documentOwner)
+                        && remoteEntry.documentUpdateTimeMicros < currentEntry.documentUpdateTimeMicros) {
                     logWarning(
                             "Ignoring update for %s from peer %s. Local status: %s, remote status: %s",
                             remoteEntry.id, remotePeerState.documentOwner, currentEntry.status,
