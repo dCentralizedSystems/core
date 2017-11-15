@@ -56,6 +56,8 @@ public interface NodeSelectorService extends Service {
         String paramValue = System.getProperty(paramName);
         if (OperationOption.CONNECTION_SHARING.name().equals(paramValue)) {
             return OperationOption.CONNECTION_SHARING;
+        } else if (OperationOption.REMOTE.name().equals(paramValue)) {
+            return OperationOption.REMOTE;
         } else {
             return defaultOpt;
         }

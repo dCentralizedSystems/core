@@ -185,8 +185,9 @@ public class ForwardRequestFilter implements Filter {
         fwdOp.toggleOption(OperationOption.FORWARDED, true);
         fwdOp.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_FORWARDED);
         fwdOp.setConnectionTag(ServiceClient.CONNECTION_TAG_FORWARDING);
-        fwdOp.toggleOption(NodeSelectorService.FORWARDING_OPERATION_OPTION,
-                true);
+        if (NodeSelectorService.FORWARDING_OPERATION_OPTION != null) {
+            fwdOp.toggleOption(NodeSelectorService.FORWARDING_OPERATION_OPTION, true);
+        }
     }
 
     private void retryOrFailRequest(Operation op, Operation fo, Throwable fe,

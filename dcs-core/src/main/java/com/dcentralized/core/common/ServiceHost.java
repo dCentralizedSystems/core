@@ -71,7 +71,6 @@ import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest;
 import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest.ForwardingOption;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
-import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.Service.ProcessingStage;
@@ -3666,14 +3665,6 @@ public class ServiceHost implements ServiceRequestSender {
         if (getOperationTracingLevel().intValue() > Level.FINEST.intValue()) {
             return;
         }
-    }
-
-    void prepareForwardRequest(Operation fwdOp) {
-        fwdOp.toggleOption(OperationOption.FORWARDED, true);
-        fwdOp.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_FORWARDED);
-        fwdOp.setConnectionTag(ServiceClient.CONNECTION_TAG_FORWARDING);
-        fwdOp.toggleOption(NodeSelectorService.FORWARDING_OPERATION_OPTION,
-                true);
     }
 
     private void prepareRequest(Operation op) {
