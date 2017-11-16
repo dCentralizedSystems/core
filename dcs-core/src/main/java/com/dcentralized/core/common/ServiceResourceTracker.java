@@ -314,7 +314,7 @@ public class ServiceResourceTracker {
                 .setBody(state)
                 .disableFailureLogging(true)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_FORWARDING)
+                .toggleOption(Operation.OperationOption.FORWARDING_DISABLED, true)
                 .setReferer(this.host.getUri());
 
         this.host.sendRequest(deleteExp);

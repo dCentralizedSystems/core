@@ -252,6 +252,14 @@ public class Operation implements Cloneable {
          * Set to prevent replication
          */
         REPLICATION_DISABLED,
+
+        /**
+         * Set to prevent forwarding, for local operations only
+         * Use {@link Operation#PRAGMA_DIRECTIVE_NO_FORWARDING} for operations
+         * that will go remote
+         */
+        FORWARDING_DISABLED,
+
         /**
          * Set by request listener to prevent cloning of the body during
          * {@link Operation#setBody(Object)}
@@ -1956,7 +1964,8 @@ public class Operation implements Cloneable {
     }
 
     public boolean isForwardingDisabled() {
-        return hasPragmaDirective(PRAGMA_DIRECTIVE_NO_FORWARDING);
+        return hasOption(OperationOption.FORWARDING_DISABLED)
+                || hasPragmaDirective(PRAGMA_DIRECTIVE_NO_FORWARDING);
     }
 
     /**
