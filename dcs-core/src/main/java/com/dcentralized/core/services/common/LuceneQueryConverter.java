@@ -17,6 +17,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.UriUtils;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryRuntimeContext;
+
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.Term;
@@ -33,12 +39,6 @@ import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.util.BytesRef;
-
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceDocumentDescription;
-import com.dcentralized.core.common.UriUtils;
-import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
-import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryRuntimeContext;
 
 /**
  * Convert {@link QueryTask.QuerySpecification} to native Lucene query.
