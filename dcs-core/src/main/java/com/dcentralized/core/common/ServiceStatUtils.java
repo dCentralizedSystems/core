@@ -180,7 +180,8 @@ public final class ServiceStatUtils {
 
     private static ServiceStat getOrCreateStat(Service service, String name, boolean createHistogram,
             Supplier<TimeSeriesStats> timeSeriesStatsSupplier) {
-        if (!service.hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (!service.hasOption(ServiceOption.INSTRUMENTATION)
+                && !service.hasOption(ServiceOption.CUSTOM_INSTRUMENTATION)) {
             return null;
         }
         ServiceStat stat = service.getStat(name);
