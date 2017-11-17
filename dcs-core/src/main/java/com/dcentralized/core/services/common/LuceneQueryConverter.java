@@ -17,16 +17,12 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import com.dcentralized.core.common.ServiceDocument;
-import com.dcentralized.core.common.ServiceDocumentDescription;
-import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
-import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryRuntimeContext;
-
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.PhraseQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
@@ -38,6 +34,11 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.util.BytesRef;
 
+import com.dcentralized.core.common.ServiceDocument;
+import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.UriUtils;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryRuntimeContext;
 
 /**
  * Convert {@link QueryTask.QuerySpecification} to native Lucene query.
@@ -136,10 +137,24 @@ final class LuceneQueryConverter {
     }
 
     static Query convertToLucenePrefixQuery(QueryTask.Query query) {
+        // if the query is a prefix on a self link that matches all documents, then
+        // special case the query to a MatchAllDocsQuery to avoid looking through
+        // the entire index as the number of terms is equal to the size of the index
+        if ((query.term.propertyName.equals(ServiceDocument.FIELD_NAME_SELF_LINK)) &&
+                query.term.matchValue.equals(UriUtils.URI_PATH_CHAR)) {
+            return new MatchAllDocsQuery();
+        }
         return new PrefixQuery(convertToLuceneTerm(query.term));
     }
 
     static Query convertToLuceneWildcardTermQuery(QueryTask.Query query) {
+        // if the query is a wildcard on a self link that matches all documents, then
+        // special case the query to a MatchAllDocsQuery to avoid looking through
+        // the entire index as the number of terms is equal to the size of the index
+        if ((query.term.propertyName.equals(ServiceDocument.FIELD_NAME_SELF_LINK)) &&
+                query.term.matchValue.equals(UriUtils.URI_WILDCARD_CHAR)) {
+            return new MatchAllDocsQuery();
+        }
         return new WildcardQuery(convertToLuceneTerm(query.term));
     }
 
