@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.Service.ProcessingStage;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceHost.RequestRateInfo;
@@ -2036,7 +2037,7 @@ public class TestServiceHost {
             this.host.send(patch);
             if (i == Math.min(10, requestCount / 2)) {
                 Operation deleteStop = Operation.createDelete(this.host, servicePath)
-                        .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
+                        .toggleOption(OperationOption.INDEXING_DISABLED, true);
                 this.host.send(deleteStop);
             }
         }

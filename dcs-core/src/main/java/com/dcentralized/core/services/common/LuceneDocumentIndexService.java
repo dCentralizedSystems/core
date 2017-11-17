@@ -56,6 +56,7 @@ import com.dcentralized.core.common.NamedThreadFactory;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.OperationContext;
 import com.dcentralized.core.common.QueryFilterUtils;
 import com.dcentralized.core.common.ReflectionUtils;
@@ -2900,7 +2901,8 @@ public class LuceneDocumentIndexService extends StatelessService {
         sendRequest(Operation.createDelete(this, state.documentSelfLink)
                 .setBodyNoCloning(state)
                 .disableFailureLogging(true)
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE));
+                .toggleOption(OperationOption.FORWARDING_DISABLED, true)
+                .toggleOption(OperationOption.INDEXING_DISABLED, true));
     }
 
     private void deleteDocumentsFromIndex(Operation delete, ServiceDocumentDescription desc,

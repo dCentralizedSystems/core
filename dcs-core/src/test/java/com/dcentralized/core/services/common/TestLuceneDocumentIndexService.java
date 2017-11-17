@@ -87,6 +87,7 @@ import com.dcentralized.core.common.TestResults;
 import com.dcentralized.core.common.TestUtilityService;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.test.AuthTestUtils;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleImmutableService;
@@ -1886,7 +1887,7 @@ public class TestLuceneDocumentIndexService {
         // Lets try stop now, then delete, on a service that should be on demand loaded
         this.host.log("Stopping service before expiration: %s", serviceToDelete.getPath());
         Operation stopDelete = Operation.createDelete(serviceToDelete)
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
+                .toggleOption(OperationOption.INDEXING_DISABLED, true)
                 .setCompletion(this.host.getCompletion());
         this.host.sendAndWait(stopDelete);
 
@@ -2108,8 +2109,8 @@ public class TestLuceneDocumentIndexService {
         // perform deletes mimicking ODL stop
         List<Operation> deletes = states.stream().map(state ->
                 Operation.createDelete(this.host, state.documentSelfLink)
-                        .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
-                        .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_FORWARDING)
+                .toggleOption(OperationOption.FORWARDING_DISABLED, true)
+                .toggleOption(OperationOption.INDEXING_DISABLED, true)
         ).collect(toList());
         sender.sendAndWait(deletes);
 

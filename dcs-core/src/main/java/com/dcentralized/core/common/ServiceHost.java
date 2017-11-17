@@ -71,6 +71,7 @@ import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest;
 import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest.ForwardingOption;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.Service.ProcessingStage;
@@ -2902,11 +2903,14 @@ public class ServiceHost implements ServiceRequestSender {
                 boolean needsIndexing = false;
 
                 if (isServiceIndexed(s) && !s.hasOption(ServiceOption.FACTORY)) {
+                    boolean skipIndexing = post
+                            .hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
+                            || post.hasOption(OperationOption.INDEXING_DISABLED);
                     // we only index if this is a synchronization request from
                     // a remote peer (unless it's of the same version of the last one in
                     // the index), or this is a new "create", brand new service start.
                     if ((post.isSynchronizePeer() || hasClientSuppliedInitialState) &&
-                            !post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)) {
+                            !skipIndexing) {
                         needsIndexing = true;
                     }
                 }
@@ -3881,7 +3885,7 @@ public class ServiceHost implements ServiceRequestSender {
     private void sendServiceStop(final CompletionHandler removeServiceCompletion,
             final Service s) {
         Operation delete = Operation.createDelete(s.getUri())
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
+                .toggleOption(Operation.OperationOption.INDEXING_DISABLED, true)
                 .toggleOption(Operation.OperationOption.FORWARDING_DISABLED, true)
                 .setCompletion(removeServiceCompletion)
                 .setReferer(getUri());
@@ -3900,11 +3904,13 @@ public class ServiceHost implements ServiceRequestSender {
 
     public static boolean isServiceStop(Operation op) {
         return op.getAction() == Action.DELETE
-                && op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
+                && (op.hasOption(OperationOption.INDEXING_DISABLED)
+                        || op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE));
     }
 
     public static boolean isServiceDeleteAndStop(Operation op) {
         return op.getAction() == Action.DELETE
+                && !op.hasOption(OperationOption.INDEXING_DISABLED)
                 && !op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
     }
 

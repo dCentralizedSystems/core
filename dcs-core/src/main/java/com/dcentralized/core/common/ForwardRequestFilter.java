@@ -42,8 +42,7 @@ public class ForwardRequestFilter implements Filter {
             return FilterReturnCode.CONTINUE_PROCESSING;
         }
 
-        if (op.getAction() == Action.DELETE &&
-                op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)) {
+        if (ServiceHost.isServiceStop(op)) {
             // this is a request to stop the local service instance - do not forward
             return FilterReturnCode.CONTINUE_PROCESSING;
         }

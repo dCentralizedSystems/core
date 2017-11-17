@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.InstrumentationContext;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
 import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
 import com.dcentralized.core.common.RequestRouter.Route.SupportLevel;
@@ -948,7 +949,8 @@ public class StatefulService implements Service {
                     return;
                 }
             } else {
-                if (op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)) {
+                if (op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
+                        || op.hasOption(OperationOption.INDEXING_DISABLED)) {
                     // Directive indicates this update should have no persistence side-effects. Do not
                     // forward to peers. This is often due to local stop from host shutting down.
                     return;

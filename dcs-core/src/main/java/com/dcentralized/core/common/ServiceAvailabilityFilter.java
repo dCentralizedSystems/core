@@ -107,8 +107,7 @@ public class ServiceAvailabilityFilter implements Filter {
 
         // service is not attached. maybe we should start it on demand.
 
-        if (op.getAction() == Action.DELETE &&
-                op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)) {
+        if (ServiceHost.isServiceStop(op)) {
             // local stop - do not start on demand - complete and return
             op.complete();
             return FilterReturnCode.SUCCESS_STOP_PROCESSING;

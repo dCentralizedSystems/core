@@ -311,9 +311,9 @@ public class ServiceResourceTracker {
     private void stopServiceAndClearFromCache(Service s, ServiceDocument state) {
         // Issue DELETE to stop the service and clear it from cache
         Operation deleteExp = Operation.createDelete(this.host, s.getSelfLink())
-                .setBody(state)
+                .setBodyNoCloning(state)
                 .disableFailureLogging(true)
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE)
+                .toggleOption(Operation.OperationOption.INDEXING_DISABLED, true)
                 .toggleOption(Operation.OperationOption.FORWARDING_DISABLED, true)
                 .setReferer(this.host.getUri());
 

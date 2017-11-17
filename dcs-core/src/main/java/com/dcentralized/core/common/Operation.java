@@ -264,6 +264,13 @@ public class Operation implements Cloneable {
         FORWARDING_DISABLED,
 
         /**
+         * Set to prevent indexing, for local operations only
+         * Use {@link Operation#PRAGMA_DIRECTIVE_NO_INDEX_UPDATE} for operations
+         * that will go remote
+         */
+        INDEXING_DISABLED,
+
+        /**
          * Set by request listener to prevent cloning of the body during
          * {@link Operation#setBody(Object)}
          */
