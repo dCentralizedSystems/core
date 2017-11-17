@@ -89,6 +89,9 @@ public class Operation implements Cloneable {
         X509Certificate[] peerCertificateChain;
         String connectionTag;
         Map<String, String> cookies;
+        Consumer<ServerSentEvent> serverSentEventHandler;
+        Consumer<Operation> headersReceivedHandler;
+        URI parentUri;
     }
 
     /**
@@ -465,7 +468,7 @@ public class Operation implements Cloneable {
             + "rpl-phase";
     public static final String REPLICATION_QUORUM_HEADER = HEADER_NAME_PREFIX
             + "rpl-quorum";
-    public static final String REPLICATION_PARENT_HEADER = HEADER_NAME_PREFIX + "rpl-parent";
+
     public static final String REPLICATION_QUORUM_HEADER_VALUE_ALL = HEADER_NAME_PREFIX
             + "all";
 
@@ -664,12 +667,7 @@ public class Operation implements Cloneable {
     private InstrumentationContext instrumentationCtx;
     private short retryCount;
     private short retriesRemaining;
-
     private EnumSet<OperationOption> options = EnumSet.of(OperationOption.KEEP_ALIVE);
-
-    private volatile Consumer<ServerSentEvent> serverSentEventHandler;
-
-    private volatile Consumer<Operation> headersReceivedHandler;
 
     public static Operation create(SerializedOperation ctx, ServiceHost host) {
         Operation op = new Operation();
@@ -835,6 +833,9 @@ public class Operation implements Cloneable {
                         this.remoteCtx.peerCertificateChain.length);
             }
             clone.remoteCtx.connectionTag = this.remoteCtx.connectionTag;
+            clone.remoteCtx.parentUri = this.remoteCtx.parentUri;
+            clone.remoteCtx.headersReceivedHandler = this.remoteCtx.headersReceivedHandler;
+            clone.remoteCtx.serverSentEventHandler = this.remoteCtx.serverSentEventHandler;
         }
 
         return clone;
@@ -1077,7 +1078,8 @@ public class Operation implements Cloneable {
      * @return operation
      */
     public Operation setServerSentEventHandler(Consumer<ServerSentEvent> serverSentEventHandler) {
-        this.serverSentEventHandler = serverSentEventHandler;
+        allocateRemoteContext();
+        this.remoteCtx.serverSentEventHandler = serverSentEventHandler;
         return this;
     }
 
@@ -1089,10 +1091,12 @@ public class Operation implements Cloneable {
      * @return
      */
     public Operation nestServerSentEventHandler(Consumer<ServerSentEvent> serverSentEventHandler) {
-        if (this.serverSentEventHandler != null) {
-            serverSentEventHandler = serverSentEventHandler.andThen(this.serverSentEventHandler);
+        allocateRemoteContext();
+        if (this.remoteCtx.serverSentEventHandler != null) {
+            serverSentEventHandler = serverSentEventHandler
+                    .andThen(this.remoteCtx.serverSentEventHandler);
         }
-        return this.setServerSentEventHandler(serverSentEventHandler);
+        return setServerSentEventHandler(serverSentEventHandler);
     }
 
     /**
@@ -1101,7 +1105,8 @@ public class Operation implements Cloneable {
      * @return operation
      */
     public Operation setHeadersReceivedHandler(Consumer<Operation> handler) {
-        this.headersReceivedHandler = handler;
+        allocateRemoteContext();
+        this.remoteCtx.headersReceivedHandler = handler;
         return this;
     }
 
@@ -1113,10 +1118,10 @@ public class Operation implements Cloneable {
      * @return
      */
     public Operation nestHeadersReceivedHandler(Consumer<Operation> handler) {
-        if (this.headersReceivedHandler != null) {
-            handler = handler.andThen(this.headersReceivedHandler);
+        if (this.remoteCtx.headersReceivedHandler != null) {
+            handler = handler.andThen(this.remoteCtx.headersReceivedHandler);
         }
-        return this.setHeadersReceivedHandler(handler);
+        return setHeadersReceivedHandler(handler);
     }
 
     public CompletionHandler getCompletion() {
@@ -1248,7 +1253,7 @@ public class Operation implements Cloneable {
      * @param event The event to send.
      */
     public void sendServerSentEvent(ServerSentEvent event) {
-        if (this.serverSentEventHandler == null) {
+        if (this.remoteCtx == null || this.remoteCtx.serverSentEventHandler == null) {
             return;
         }
 
@@ -1256,7 +1261,7 @@ public class Operation implements Cloneable {
         OperationContext originalContext = OperationContext.getOperationContext();
         try {
             OperationContext.setFrom(this);
-            this.serverSentEventHandler.accept(event);
+            this.remoteCtx.serverSentEventHandler.accept(event);
         } catch (Exception outer) {
             Utils.logWarning("Uncaught failure inside serverSentEventHandler: %s", Utils.toString(outer));
         } finally {
@@ -1270,7 +1275,7 @@ public class Operation implements Cloneable {
      * This effectively enables streaming.
      */
     public void sendHeaders() {
-        if (this.headersReceivedHandler == null) {
+        if (this.remoteCtx == null || this.remoteCtx.headersReceivedHandler == null) {
             return;
         }
 
@@ -1278,7 +1283,7 @@ public class Operation implements Cloneable {
         OperationContext originalContext = OperationContext.getOperationContext();
         try {
             OperationContext.setFrom(this);
-            this.headersReceivedHandler.accept(this);
+            this.remoteCtx.headersReceivedHandler.accept(this);
         } catch (Exception outer) {
             Utils.logWarning("Uncaught failure inside headersReceivedHandler: %s", Utils.toString(outer));
         } finally {
@@ -2002,5 +2007,15 @@ public class Operation implements Cloneable {
      */
     void linkSerializedState(byte[] data) {
         this.linkedSerializedState = data;
+    }
+
+    Operation setParentUri(URI parentUri) {
+        allocateRemoteContext();
+        this.remoteCtx.parentUri = parentUri;
+        return this;
+    }
+
+    public URI getParentUri() {
+        return this.remoteCtx == null ? null : this.remoteCtx.parentUri;
     }
 }

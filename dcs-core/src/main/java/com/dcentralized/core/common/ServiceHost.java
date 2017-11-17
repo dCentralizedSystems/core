@@ -2963,9 +2963,8 @@ public class ServiceHost implements ServiceRequestSender {
                     return;
                 }
 
-                String factoryPath = post.getAndRemoveRequestHeaderAsIs(
-                        Operation.REPLICATION_PARENT_HEADER);
-                post.setUri(UriUtils.buildUri(this, factoryPath));
+                URI factoryUri = post.getParentUri();
+                post.setUri(factoryUri);
 
                 ServiceDocument initialState = post.getBody(s.getStateType());
                 final ServiceDocument clonedInitState = Utils.clone(initialState);
@@ -2974,7 +2973,7 @@ public class ServiceHost implements ServiceRequestSender {
                 // was fixed up by this instance. Restore self link to be just the child suffix "hint", removing the
                 // factory prefix added upstream.
                 String originalLink = clonedInitState.documentSelfLink;
-                clonedInitState.documentSelfLink = originalLink.replace(factoryPath, "");
+                clonedInitState.documentSelfLink = UriUtils.getLastPathSegment(originalLink);
 
                 post.nestCompletion((replicatedOp) -> {
                     clonedInitState.documentSelfLink = originalLink;

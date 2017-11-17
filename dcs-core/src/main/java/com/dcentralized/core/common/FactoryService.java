@@ -45,8 +45,8 @@ public abstract class FactoryService extends StatelessService {
         public EnumSet<ServiceOption> childOptions = EnumSet.noneOf(ServiceOption.class);
     }
 
-    public static final String PROPERTY_NAME_MAX_SYNCH_RETRY_COUNT =
-            Utils.PROPERTY_NAME_PREFIX + "FactoryService.MAX_SYNCH_RETRY_COUNT";
+    public static final String PROPERTY_NAME_MAX_SYNCH_RETRY_COUNT = Utils.PROPERTY_NAME_PREFIX
+            + "FactoryService.MAX_SYNCH_RETRY_COUNT";
 
     /**
      * Maximum synch-task retry limit.
@@ -115,7 +115,8 @@ public abstract class FactoryService extends StatelessService {
 
     public static final Integer SELF_QUERY_RESULT_LIMIT = Integer.getInteger(
             Utils.PROPERTY_NAME_PREFIX
-                    + "FactoryService.SELF_QUERY_RESULT_LIMIT", 1000);
+                    + "FactoryService.SELF_QUERY_RESULT_LIMIT",
+            1000);
 
     private boolean useBodyForSelfLink = false;
     private EnumSet<ServiceOption> childOptions;
@@ -242,7 +243,8 @@ public abstract class FactoryService extends StatelessService {
                     if (!this.childOptions.contains(ServiceOption.REPLICATION)) {
                         clonedOp.setCompletion((op, t) -> {
                             if (t != null && !getHost().isStopping()) {
-                                logWarning("Failure in kicking-off synchronization-task: %s", t.getMessage());
+                                logWarning("Failure in kicking-off synchronization-task: %s",
+                                        t.getMessage());
                                 return;
                             }
                         });
@@ -414,13 +416,15 @@ public abstract class FactoryService extends StatelessService {
             o.setBody(initialState);
         }
 
-        if (this.childOptions.contains(ServiceOption.REPLICATION) && !o.isFromReplication()
-                && !o.isForwardingDisabled()) {
-            // We forward requests even if OWNER_SELECTION is not set: It has a minor perf
-            // impact and lets use reuse the synchronization algorithm to replicate the POST
-            // across peers. It also helps with convergence and eventual consistency.
-            forwardRequest(o, childService);
-            return;
+        if (this.childOptions.contains(ServiceOption.REPLICATION) && !o.isFromReplication()) {
+            o.setParentUri(getUri());
+            if (!o.isForwardingDisabled()) {
+                // We forward requests even if OWNER_SELECTION is not set: It has a minor perf
+                // impact and lets use reuse the synchronization algorithm to replicate the POST
+                // across peers. It also helps with convergence and eventual consistency.
+                forwardRequest(o, childService);
+                return;
+            }
         }
 
         // complete request, initiate local service start
@@ -506,8 +510,6 @@ public abstract class FactoryService extends StatelessService {
                             if (rsp.isLocalHostOwner) {
                                 // add parent link header only on requests that target this node, to avoid the overhead
                                 // if we need to forward.
-                                o.addRequestHeader(Operation.REPLICATION_PARENT_HEADER,
-                                        getSelfLink());
                                 completePostRequest(o, childService);
                                 return;
                             }
@@ -528,7 +530,6 @@ public abstract class FactoryService extends StatelessService {
 
                             Operation forwardOp = o.clone().setUri(remotePeerService)
                                     .setCompletion(fc);
-
 
                             ForwardRequestFilter.prepareForwardRequest(forwardOp);
 
@@ -579,7 +580,6 @@ public abstract class FactoryService extends StatelessService {
             task.querySpec.options.remove(QueryOption.EXPAND_CONTENT);
         }
 
-
         // restrict results to same kind and self link prefix as factory children
         String kind = Utils.buildKind(getStateType());
         QueryTask.Query kindClause = new QueryTask.Query()
@@ -594,8 +594,8 @@ public abstract class FactoryService extends StatelessService {
 
         if (task.querySpec.sortTerm != null) {
             String propertyName = task.querySpec.sortTerm.propertyName;
-            PropertyDescription propertyDescription = this.childTemplate
-                    .documentDescription.propertyDescriptions.get(propertyName);
+            PropertyDescription propertyDescription = this.childTemplate.documentDescription.propertyDescriptions
+                    .get(propertyName);
             if (propertyDescription == null) {
                 op.fail(new IllegalArgumentException("Sort term is not a valid property: "
                         + propertyName));
@@ -690,8 +690,10 @@ public abstract class FactoryService extends StatelessService {
                     return;
                 }
 
-                ServiceDocumentQueryResult countResult = os.get(count.getId()).getBody(QueryTask.class).results;
-                ServiceDocumentQueryResult queryResult = os.get(query.getId()).getBody(QueryTask.class).results;
+                ServiceDocumentQueryResult countResult = os.get(count.getId())
+                        .getBody(QueryTask.class).results;
+                ServiceDocumentQueryResult queryResult = os.get(query.getId())
+                        .getBody(QueryTask.class).results;
 
                 if (queryResult.nextPageLink == null) {
                     ODataFactoryQueryResult odataResult = new ODataFactoryQueryResult();
@@ -928,11 +930,13 @@ public abstract class FactoryService extends StatelessService {
         }
 
         if (request.getAction() != Action.GET) {
-            request.fail(new IllegalArgumentException("Action not supported: " + request.getAction()));
+            request.fail(
+                    new IllegalArgumentException("Action not supported: " + request.getAction()));
             return;
         }
 
-        FactoryServiceConfiguration config = Utils.buildServiceConfig(new FactoryServiceConfiguration(), this);
+        FactoryServiceConfiguration config = Utils
+                .buildServiceConfig(new FactoryServiceConfiguration(), this);
         config.childOptions = this.childOptions;
         request.setBodyNoCloning(config).complete();
     }
@@ -979,7 +983,8 @@ public abstract class FactoryService extends StatelessService {
         getHost().selectOwner(this.nodeSelectorLink, this.getSelfLink(), selectOwnerOp);
     }
 
-    private void synchronizeChildServicesAsOwner(Operation maintOp, long membershipUpdateTimeMicros) {
+    private void synchronizeChildServicesAsOwner(Operation maintOp,
+            long membershipUpdateTimeMicros) {
         maintOp.nestCompletion((o, e) -> {
             if (e != null) {
                 logWarning("Synchronization failed: %s", e.toString());
@@ -989,7 +994,8 @@ public abstract class FactoryService extends StatelessService {
         startFactorySynchronizationTask(maintOp, membershipUpdateTimeMicros);
     }
 
-    private void startFactorySynchronizationTask(Operation parentOp, Long membershipUpdateTimeMicros) {
+    private void startFactorySynchronizationTask(Operation parentOp,
+            Long membershipUpdateTimeMicros) {
         SynchronizationTaskService.State task = createSynchronizationTaskState(
                 membershipUpdateTimeMicros);
         Operation post = Operation
@@ -1000,7 +1006,8 @@ public abstract class FactoryService extends StatelessService {
 
                     if (o.getStatusCode() >= Operation.STATUS_CODE_FAILURE_THRESHOLD) {
                         ServiceErrorResponse rsp = o.getBody(ServiceErrorResponse.class);
-                        logTaskFailureWarning("HTTP error on POST to synch task: %s", Utils.toJsonHtml(rsp));
+                        logTaskFailureWarning("HTTP error on POST to synch task: %s",
+                                Utils.toJsonHtml(rsp));
 
                         // Ignore if the request failed because the current synch-request
                         // was considered out-dated by the synchronization-task.
@@ -1045,15 +1052,17 @@ public abstract class FactoryService extends StatelessService {
         adjustStat(STAT_NAME_SYNCH_TASK_RETRY_COUNT, 1);
 
         ServiceStats.ServiceStat stat = getStat(STAT_NAME_SYNCH_TASK_RETRY_COUNT);
-        if (stat != null && stat.latestValue  > 0) {
+        if (stat != null && stat.latestValue > 0) {
             if (stat.latestValue > MAX_SYNCH_RETRY_COUNT) {
-                logSevere("Synchronization task failed after %d tries", (long)stat.latestValue - 1);
+                logSevere("Synchronization task failed after %d tries",
+                        (long) stat.latestValue - 1);
                 adjustStat(STAT_NAME_CHILD_SYNCH_FAILURE_COUNT, 1);
                 return;
             }
         }
 
-        this.selfQueryResultLimit = Math.max(this.selfQueryResultLimit / 2, MIN_SYNCH_QUERY_RESULT_LIMIT);
+        this.selfQueryResultLimit = Math.max(this.selfQueryResultLimit / 2,
+                MIN_SYNCH_QUERY_RESULT_LIMIT);
 
         // Clone the parent operation for reuse outside the schedule call for
         // the original operation to be freed in current thread.
@@ -1081,7 +1090,7 @@ public abstract class FactoryService extends StatelessService {
         long delay = getHost().getMaintenanceIntervalMicros();
         ServiceStats.ServiceStat stat = getStat(STAT_NAME_SYNCH_TASK_RETRY_COUNT);
         if (stat != null && stat.latestValue > 0) {
-            return (1 << ((long)stat.latestValue)) * delay;
+            return (1 << ((long) stat.latestValue)) * delay;
         }
 
         return delay;
@@ -1104,8 +1113,7 @@ public abstract class FactoryService extends StatelessService {
     private void verifyFactoryOwnership(Operation maintOp, SelectOwnerResponse ownerResponse) {
         // Local node thinks it's the owner. Let's confirm that
         // majority of the nodes in the node-group
-        NodeSelectorService.SelectAndForwardRequest request =
-                new NodeSelectorService.SelectAndForwardRequest();
+        NodeSelectorService.SelectAndForwardRequest request = new NodeSelectorService.SelectAndForwardRequest();
         request.key = this.getSelfLink();
 
         Operation broadcastSelectOp = Operation
@@ -1119,13 +1127,16 @@ public abstract class FactoryService extends StatelessService {
                         return;
                     }
 
-                    NodeGroupBroadcastResponse response = op.getBody(NodeGroupBroadcastResponse.class);
+                    NodeGroupBroadcastResponse response = op
+                            .getBody(NodeGroupBroadcastResponse.class);
                     for (Map.Entry<URI, String> r : response.jsonResponses.entrySet()) {
                         NodeSelectorService.SelectOwnerResponse rsp = null;
                         try {
-                            rsp = Utils.fromJson(r.getValue(), NodeSelectorService.SelectOwnerResponse.class);
+                            rsp = Utils.fromJson(r.getValue(),
+                                    NodeSelectorService.SelectOwnerResponse.class);
                         } catch (Exception e) {
-                            logWarning("Exception thrown in de-serializing json response. %s", e.toString());
+                            logWarning("Exception thrown in de-serializing json response. %s",
+                                    e.toString());
 
                             // Ignore if the remote node returned a bad response. Most likely this is because
                             // the remote node is offline and if so, ownership check for the remote node is
@@ -1137,8 +1148,9 @@ public abstract class FactoryService extends StatelessService {
                         }
                         if (!rsp.ownerNodeId.equals(this.getHost().getId())) {
                             logWarning("SelectOwner response from %s does not indicate that " +
-                                            "local node %s is the owner for factory %s. JsonResponse: %s",
-                                    r.getKey().toString(), this.getHost().getId(), this.getSelfLink(), r.getValue());
+                                    "local node %s is the owner for factory %s. JsonResponse: %s",
+                                    r.getKey().toString(), this.getHost().getId(),
+                                    this.getSelfLink(), r.getValue());
                             maintOp.complete();
                             return;
                         }
@@ -1146,10 +1158,12 @@ public abstract class FactoryService extends StatelessService {
 
                     logInfo("%s elected as owner for factory %s. Starting synch ...",
                             getHost().getId(), this.getSelfLink());
-                    synchronizeChildServicesAsOwner(maintOp, ownerResponse.membershipUpdateTimeMicros);
+                    synchronizeChildServicesAsOwner(maintOp,
+                            ownerResponse.membershipUpdateTimeMicros);
                 });
 
-        getHost().broadcastRequest(this.nodeSelectorLink, this.getSelfLink(), true, broadcastSelectOp);
+        getHost().broadcastRequest(this.nodeSelectorLink, this.getSelfLink(), true,
+                broadcastSelectOp);
     }
 
     public abstract Service createServiceInstance() throws Throwable;
