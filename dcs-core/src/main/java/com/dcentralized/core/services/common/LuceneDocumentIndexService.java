@@ -653,7 +653,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void setTimeSeriesStat(String name, EnumSet<AggregationType> type, double v) {
-        if (!this.hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return;
         }
         ServiceStat dayStat = ServiceStatUtils.getOrCreateDailyTimeSeriesStat(this, name, type);
@@ -664,7 +664,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void adjustTimeSeriesStat(String name, EnumSet<AggregationType> type, double delta) {
-        if (!this.hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (!!allowStats()) {
             return;
         }
 
@@ -676,7 +676,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void setTimeSeriesHistogramStat(String name, EnumSet<AggregationType> type, double v) {
-        if (!this.hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (!!allowStats()) {
             return;
         }
         ServiceStat dayStat = ServiceStatUtils.getOrCreateDailyTimeSeriesHistogramStat(this, name,
@@ -1538,7 +1538,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             return false;
         }
 
-        if (qs != null && qs.query != null && this.hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (qs != null && qs.query != null && allowStats()) {
             String queryStat = getQueryStatName(qs.query);
             this.adjustStat(queryStat, 1);
         }
@@ -1575,7 +1575,7 @@ public class LuceneDocumentIndexService extends StatelessService {
         setTimeSeriesHistogramStat(STAT_NAME_QUERY_SINGLE_DURATION_MICROS,
                 AGGREGATION_TYPE_AVG_MAX, TimeUnit.NANOSECONDS.toMicros(durationNanos));
 
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             String factoryLink = UriUtils.getParentPath(selfLink);
             if (factoryLink != null) {
                 String statKey = String.format(STAT_NAME_SINGLE_QUERY_BY_FACTORY_COUNT_FORMAT,
@@ -2055,7 +2055,7 @@ public class LuceneDocumentIndexService extends StatelessService {
                     offset = 0;
                 }
 
-                if (hasOption(ServiceOption.INSTRUMENTATION)) {
+                if (allowStats()) {
                     String statName = options.contains(QueryOption.INCLUDE_ALL_VERSIONS)
                             ? STAT_NAME_QUERY_ALL_VERSIONS_DURATION_MICROS
                             : STAT_NAME_QUERY_DURATION_MICROS;
@@ -2102,7 +2102,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             resultLimit = count - rsp.documentLinks.size();
         } while (resultLimit > 0);
 
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             ServiceStat st = ServiceStatUtils.getOrCreateHistogramStat(this,
                     STAT_NAME_ITERATIONS_PER_QUERY);
             setStat(st, queryCount);
@@ -2596,7 +2596,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     private long getLatestVersion(IndexSearcher s,
             long searcherUpdateTime,
             String link, long version, long documentsUpdatedBeforeInMicros) throws IOException {
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             adjustStat(STAT_NAME_VERSION_CACHE_LOOKUP_COUNT, 1);
         }
 
@@ -2616,7 +2616,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             }
         }
 
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             adjustStat(STAT_NAME_VERSION_CACHE_MISS_COUNT, 1);
         }
 
@@ -2774,7 +2774,7 @@ public class LuceneDocumentIndexService extends StatelessService {
 
             indexDocHelper.addIndexableFieldsToDocument(s, desc);
 
-            if (hasOption(ServiceOption.INSTRUMENTATION)) {
+            if (allowStats()) {
                 int fieldCount = indexDocHelper.getDoc().getFields().size();
                 setTimeSeriesStat(STAT_NAME_INDEXED_FIELD_COUNT, AGGREGATION_TYPE_SUM, fieldCount);
                 ServiceStat st = ServiceStatUtils.getOrCreateHistogramStat(this,
@@ -2942,7 +2942,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     private void addDocumentToIndex(IndexWriter wr, Operation op, Document doc, ServiceDocument sd,
             ServiceDocumentDescription desc) throws IOException {
         long startNanos = 0;
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             startNanos = System.nanoTime();
         }
 
@@ -2980,7 +2980,7 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         wr.addDocument(doc);
 
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             long durationNanos = System.nanoTime() - startNanos;
             setTimeSeriesStat(STAT_NAME_INDEXED_DOCUMENT_COUNT, AGGREGATION_TYPE_SUM, 1);
             setTimeSeriesHistogramStat(STAT_NAME_INDEXING_DURATION_MICROS, AGGREGATION_TYPE_AVG_MAX,
@@ -3330,7 +3330,7 @@ public class LuceneDocumentIndexService extends StatelessService {
                     AGGREGATION_TYPE_AVG_MAX,
                     TimeUnit.NANOSECONDS.toMicros(endNanos - startNanos));
 
-            if (this.hasOption(ServiceOption.INSTRUMENTATION)) {
+            if (allowStats()) {
                 setStat(LuceneDocumentIndexService.STAT_NAME_INDEXED_DOCUMENT_COUNT, w.numDocs());
                 logQueueDepthStat(this.updateQueue, STAT_NAME_FORMAT_UPDATE_QUEUE_DEPTH);
                 logQueueDepthStat(this.queryQueue, STAT_NAME_FORMAT_QUERY_QUEUE_DEPTH);
@@ -3733,7 +3733,7 @@ public class LuceneDocumentIndexService extends StatelessService {
         final int bytesPerLinkEstimate = 64;
         int count = 0;
 
-        if (hasOption(ServiceOption.INSTRUMENTATION)) {
+        if (allowStats()) {
             setStat(STAT_NAME_VERSION_CACHE_ENTRY_COUNT, this.updatesPerLink.size());
         }
         // Note: this code will be updated in the future. It currently calls a host

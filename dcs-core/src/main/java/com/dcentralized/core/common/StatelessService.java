@@ -380,7 +380,7 @@ public class StatelessService implements Service {
         }
     }
 
-    private boolean allowStats() {
+    protected boolean allowStats() {
         return hasOption(Service.ServiceOption.INSTRUMENTATION) ||
                 hasOption(Service.ServiceOption.CUSTOM_INSTRUMENTATION);
     }
