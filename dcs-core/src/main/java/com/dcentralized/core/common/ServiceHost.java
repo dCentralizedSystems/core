@@ -1654,12 +1654,6 @@ public class ServiceHost implements ServiceRequestSender {
                 Operation.createPost(UriUtils.buildUri(this, ServiceUriPaths.SYSTEM_LOG)),
                 new ServiceHostLogService(ServiceHostLogService.DEFAULT_SYSTEM_LOG_NAME));
 
-        // Create service without starting it.
-        // Needed to start the UI resource service associated with the WebSocketService.
-        Service webSocketService = new WebSocketService(null, null);
-        webSocketService.setHost(this);
-        startUiFileContentServices(webSocketService);
-
         // Restore authorization context
         OperationContext.setAuthorizationContext(ctx);
 

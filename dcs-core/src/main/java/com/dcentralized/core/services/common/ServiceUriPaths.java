@@ -14,8 +14,6 @@
 package com.dcentralized.core.services.common;
 
 import com.dcentralized.core.common.UriUtils;
-import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.common.WebSocketService;
 
 public final class ServiceUriPaths {
     public static final String SERVICE_URI_SUFFIX_SYNCHRONIZATION = "synch";
@@ -109,9 +107,6 @@ public final class ServiceUriPaths {
     public static final String CORE_AUTHN_BASIC = UriUtils.buildUriPath(ServiceUriPaths.CORE_AUTHN,
             "basic");
 
-    public static final String CORE_TRANSACTIONS = UriUtils.buildUriPath(ServiceUriPaths.CORE,
-            "transactions");
-
     public static final String UI_RESOURCES = "/user-interface/resources";
 
     public static final String UI_RESOURCE_DEFAULT_FILE = "index.html";
@@ -120,11 +115,6 @@ public final class ServiceUriPaths {
     public static final String UI_SERVICE_HOME = "/home";
     public static final String CUSTOM_UI_BASE_URL = ServiceUriPaths.CORE + "/ui/custom";
     public static final String SAMPLES = "/samples";
-    public static final String DNS = CORE + "/dns";
-
-    public static final String WS_SERVICE_LIB_JS = "/ws-service-lib.js";
-    public static final String WS_SERVICE_LIB_JS_PATH =
-            Utils.buildUiResourceUriPrefixPath(WebSocketService.class) + "/ws-service-lib.js";
 
     /**
      * Swagger discovery service is started on this URI.

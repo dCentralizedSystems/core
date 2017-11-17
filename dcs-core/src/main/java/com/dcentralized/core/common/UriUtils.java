@@ -144,15 +144,6 @@ public final class UriUtils {
         return true;
     }
 
-    public static URI buildTransactionUri(ServiceHost host, String txid) {
-        return buildUri(host.getUri(), ServiceUriPaths.CORE_TRANSACTIONS, txid);
-    }
-
-    public static URI buildTransactionResolutionUri(ServiceHost host, String txid) {
-        return buildUri(host.getUri(), ServiceUriPaths.CORE_TRANSACTIONS, txid,
-                ServiceHost.SERVICE_URI_SUFFIX_CONFIG);
-    }
-
     public static URI buildSubscriptionUri(ServiceHost host, String path) {
         return extendUri(host.getUri(),
                 UriUtils.buildUriPath(path, ServiceHost.SERVICE_URI_SUFFIX_SUBSCRIPTIONS));
