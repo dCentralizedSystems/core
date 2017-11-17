@@ -188,8 +188,29 @@ class MaintenanceVerificationService extends StatefulService {
     }
 }
 
+class CustomStatsService extends StatefulService {
+    public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/tests/custom-stats-services";
+    public static final String STAT_NAME_CUSTOM_GET_COUNT = "customGetCount";
+
+    public static class State extends ServiceDocument {
+        public String name;
+    }
+
+    public CustomStatsService() {
+        super(State.class);
+        toggleOption(ServiceOption.CUSTOM_INSTRUMENTATION, true);
+    }
+
+    @Override
+    public void handleGet(Operation get) {
+        adjustStat(STAT_NAME_CUSTOM_GET_COUNT, 1);
+        get.setBodyNoCloning(getState(get)).complete();
+    }
+}
+
 class IdempotentPostService extends StatefulService {
-    public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/tests/idempotentpostservice";
+    public static final String FACTORY_LINK = ServiceUriPaths.CORE
+            + "/tests/idempotentpostservices";
 
     public static class State extends ServiceDocument {
         public String name;
@@ -844,16 +865,50 @@ public class TestStatefulService extends BasicReusableHostTestCase {
                         IdempotentPostService.State.class));
         this.host.waitForServiceAvailable(IdempotentPostService.FACTORY_LINK);
 
-        IdempotentPostService.State doc = new IdempotentPostService.State();
-        doc.documentSelfLink = "default";
-        doc.name = "testDocument";
+        IdempotentPostService.State initialState = new IdempotentPostService.State();
+        initialState.documentSelfLink = "default";
+        initialState.name = "testDocument";
 
         TestRequestSender sender = this.host.getTestRequestSender();
 
-        Operation post = Operation.createPost(factoryUri).setBody(doc);
+        Operation post = Operation.createPost(factoryUri).setBody(initialState);
         IdempotentPostService.State result = sender.sendAndWait(post, IdempotentPostService.State.class);
         assertNotNull(result);
         assertEquals("testDocument", result.name);
+    }
+
+    @Test
+    public void testCustomStats() throws Throwable {
+        URI factoryUri = UriUtils.buildFactoryUri(host, CustomStatsService.class);
+        this.host.startService(Operation.createPost(factoryUri),
+                FactoryService.create(CustomStatsService.class,
+                        CustomStatsService.State.class));
+        this.host.waitForServiceAvailable(CustomStatsService.FACTORY_LINK);
+
+        CustomStatsService.State initialState = new CustomStatsService.State();
+        initialState.documentSelfLink = "default";
+        initialState.name = "testDocument";
+
+        TestRequestSender sender = this.host.getTestRequestSender();
+
+        Operation post = Operation.createPost(factoryUri).setBody(initialState);
+        CustomStatsService.State result = sender.sendAndWait(post, CustomStatsService.State.class);
+        assertNotNull(result);
+        assertEquals("testDocument", result.name);
+
+        // issue GET to increment custom stats
+        URI instanceUri = UriUtils.buildUri(this.host, result.documentSelfLink);
+        CustomStatsService.State state = sender.sendGetAndWait(
+                instanceUri,
+                CustomStatsService.State.class);
+
+        assertEquals("testDocument", state.name);
+        Map<String, ServiceStat> statEntries = this.host.getServiceStats(instanceUri);
+        assertEquals(1, statEntries.size());
+        ServiceStat customStat = statEntries.get(
+                CustomStatsService.STAT_NAME_CUSTOM_GET_COUNT);
+        assertNotNull(customStat);
+        assertEquals(customStat.version, 1);
     }
 
     /**

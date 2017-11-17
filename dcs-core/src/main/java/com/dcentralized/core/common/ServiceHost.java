@@ -2837,7 +2837,9 @@ public class ServiceHost implements ServiceRequestSender {
 
                 OperationContext opCtx = extractAndApplyContext(post);
                 try {
-                    s.adjustStat(Service.STAT_NAME_CREATE_COUNT, 1);
+                    if (s.hasOption(ServiceOption.INSTRUMENTATION)) {
+                        s.adjustStat(Service.STAT_NAME_CREATE_COUNT, 1);
+                    }
                     s.handleCreate(post);
                 } catch (Exception e) {
                     handleUncaughtException(s, post, e);

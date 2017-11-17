@@ -575,6 +575,9 @@ public final class Utils {
             break;
         case HTML_USER_INTERFACE:
             break;
+        case CUSTOM_INSTRUMENTATION:
+            antiReqs = EnumSet.of(ServiceOption.IMMUTABLE);
+            break;
         case INSTRUMENTATION:
             antiReqs = EnumSet.of(ServiceOption.IMMUTABLE);
             break;

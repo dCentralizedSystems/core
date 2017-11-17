@@ -40,6 +40,12 @@ public interface Service extends ServiceRequestSender {
         INSTRUMENTATION,
 
         /**
+         * Allow custom statistics supplied by the service author. Core runtime tracking will not
+         * be enabled.
+         */
+        CUSTOM_INSTRUMENTATION,
+
+        /**
          * Service runtime periodically invokes the handleMaintenance() handler making sure only one
          * maintenance operation is pending per service instance. If a maintenance operation is not
          * complete by the next maintenance interval a warning is logged.

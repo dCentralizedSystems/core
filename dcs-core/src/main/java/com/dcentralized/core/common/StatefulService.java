@@ -1424,9 +1424,14 @@ public class StatefulService implements Service {
         request.complete();
     }
 
+    private boolean allowStats() {
+        return hasOption(Service.ServiceOption.INSTRUMENTATION) ||
+                hasOption(Service.ServiceOption.CUSTOM_INSTRUMENTATION);
+    }
+
     @Override
     public void setStat(String name, double newValue) {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return;
         }
         allocateUtilityService(true);
@@ -1436,7 +1441,7 @@ public class StatefulService implements Service {
 
     @Override
     public void setStat(ServiceStat s, double newValue) {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return;
         }
         allocateUtilityService(true);
@@ -1445,7 +1450,7 @@ public class StatefulService implements Service {
 
     @Override
     public void adjustStat(ServiceStat s, double delta) {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return;
         }
         allocateUtilityService(true);
@@ -1454,7 +1459,7 @@ public class StatefulService implements Service {
 
     @Override
     public void adjustStat(String name, double delta) {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return;
         }
         allocateUtilityService(true);
@@ -1464,7 +1469,7 @@ public class StatefulService implements Service {
 
     @Override
     public ServiceStat getStat(String name) {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return null;
         }
         if (!allocateUtilityService(true)) {
@@ -1523,6 +1528,7 @@ public class StatefulService implements Service {
         if (option != ServiceOption.HTML_USER_INTERFACE
                 && option != ServiceOption.DOCUMENT_OWNER
                 && option != ServiceOption.PERIODIC_MAINTENANCE
+                && option != ServiceOption.CUSTOM_INSTRUMENTATION
                 && option != ServiceOption.INSTRUMENTATION) {
 
             if (getProcessingStage() != Service.ProcessingStage.CREATED) {
@@ -1925,7 +1931,7 @@ public class StatefulService implements Service {
      * availability.
      */
     public void setAvailable(boolean isAvailable) {
-        this.toggleOption(ServiceOption.INSTRUMENTATION, true);
+        this.toggleOption(ServiceOption.CUSTOM_INSTRUMENTATION, true);
         this.setStat(STAT_NAME_AVAILABLE, isAvailable ? STAT_VALUE_TRUE : STAT_VALUE_FALSE);
     }
 
@@ -1933,7 +1939,7 @@ public class StatefulService implements Service {
      * Value indicating whether GET on /available returns 200 or 503
      */
     public boolean isAvailable() {
-        if (!hasOption(Service.ServiceOption.INSTRUMENTATION)) {
+        if (!allowStats()) {
             return true;
         }
         // processing stage must also indicate service is started
