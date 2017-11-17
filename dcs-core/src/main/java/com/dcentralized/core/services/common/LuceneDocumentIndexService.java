@@ -664,7 +664,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void adjustTimeSeriesStat(String name, EnumSet<AggregationType> type, double delta) {
-        if (!!allowStats()) {
+        if (!allowStats()) {
             return;
         }
 
@@ -676,7 +676,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void setTimeSeriesHistogramStat(String name, EnumSet<AggregationType> type, double v) {
-        if (!!allowStats()) {
+        if (!allowStats()) {
             return;
         }
         ServiceStat dayStat = ServiceStatUtils.getOrCreateDailyTimeSeriesHistogramStat(this, name,
