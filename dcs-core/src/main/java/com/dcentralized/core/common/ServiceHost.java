@@ -3470,7 +3470,7 @@ public class ServiceHost implements ServiceRequestSender {
             return null;
         }
         // now find the helper, given the suffix
-        return s.getUtilityService(uriPath);
+        return s.getUtilityService(uriPath, true);
     }
 
     /**
@@ -4848,13 +4848,16 @@ public class ServiceHost implements ServiceRequestSender {
 
         prepareRequest(request);
 
-        SelectAndForwardRequest body = this.forwardAndReplicateRequests.get();
-        body.targetPath = request.getUri().getPath();
-        body.targetQuery = request.getUri().getQuery();
-        body.key = key;
-        body.options = SelectAndForwardRequest.UNICAST_OPTIONS;
-        body.serviceOptions = null;
-        nss.selectAndForward(request, body);
+        SelectAndForwardRequest req = this.forwardAndReplicateRequests.get();
+        req.targetPath = request.getUri().getPath();
+        req.targetQuery = request.getUri().getQuery();
+        req.key = key;
+        req.options = SelectAndForwardRequest.UNICAST_OPTIONS;
+        req.serviceOptions = null;
+        if (req.response == null) {
+            req.response = new NodeSelectorService.SelectOwnerResponse();
+        }
+        nss.selectAndForward(request, req);
     }
 
     public void replicateRequest(EnumSet<ServiceOption> serviceOptions, ServiceDocument state,
@@ -4884,6 +4887,9 @@ public class ServiceHost implements ServiceRequestSender {
         req.targetQuery = op.getUri().getQuery();
         req.options = SelectAndForwardRequest.REPLICATION_OPTIONS;
         req.serviceOptions = serviceOptions;
+        if (req.response == null) {
+            req.response = new NodeSelectorService.SelectOwnerResponse();
+        }
         nss.selectAndForward(op, req);
     }
 

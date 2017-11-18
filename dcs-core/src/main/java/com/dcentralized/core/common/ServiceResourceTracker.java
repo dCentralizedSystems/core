@@ -489,9 +489,9 @@ public class ServiceResourceTracker {
 
     private boolean hasServiceSoftState(Service service) {
         UtilityService subUtilityService = (UtilityService) service
-                .getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_SUBSCRIPTIONS);
+                .getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_SUBSCRIPTIONS, false);
         UtilityService statsUtilityService = (UtilityService) service
-                .getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_STATS);
+                .getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_STATS, false);
         boolean hasSoftState = false;
         if (subUtilityService != null && subUtilityService.hasSubscribers()) {
             hasSoftState = true;

@@ -513,7 +513,10 @@ public class StatelessService implements Service {
     }
 
     @Override
-    public Service getUtilityService(String uriPath) {
+    public Service getUtilityService(String uriPath, boolean allocate) {
+        if (!allocate && this.utilityService == null) {
+            return null;
+        }
         allocateUtilityService();
         return this.utilityService;
     }

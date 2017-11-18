@@ -325,7 +325,8 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             NodeGroupState localState) {
 
         String keyValue = body.key != null ? body.key : body.targetPath;
-        SelectOwnerResponse response = new SelectOwnerResponse();
+        SelectOwnerResponse response = body.response != null ? body.response
+                : new SelectOwnerResponse();
         response.key = keyValue;
         body.associatedOp = op;
 
@@ -820,12 +821,12 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
     }
 
     @Override
-    public Service getUtilityService(String uriPath) {
+    public Service getUtilityService(String uriPath, boolean allocate) {
         if (uriPath.endsWith(ServiceHost.SERVICE_URI_SUFFIX_REPLICATION)) {
             // update utility with latest set of peers
             return this.replicationUtility;
         } else {
-            return super.getUtilityService(uriPath);
+            return super.getUtilityService(uriPath, allocate);
         }
     }
 }

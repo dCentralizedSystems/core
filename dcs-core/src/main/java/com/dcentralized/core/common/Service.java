@@ -534,7 +534,7 @@ public interface Service extends ServiceRequestSender {
 
     <T extends ServiceDocument> T getState(Operation op);
 
-    Service getUtilityService(String uriPath);
+    Service getUtilityService(String uriPath, boolean allocate);
 
     Class<? extends ServiceDocument> getStateType();
 

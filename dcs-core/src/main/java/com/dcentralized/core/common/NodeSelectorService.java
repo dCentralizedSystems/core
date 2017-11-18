@@ -111,6 +111,13 @@ public interface NodeSelectorService extends Service {
          */
         public transient Operation associatedOp;
 
+        /**
+         * Infrastructure use only.
+         *
+         * Used for thread local requests, to avoid allocation
+         */
+        public transient SelectOwnerResponse response;
+
         public EnumSet<ForwardingOption> options;
 
         public EnumSet<ServiceOption> serviceOptions;

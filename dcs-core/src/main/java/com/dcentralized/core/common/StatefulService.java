@@ -1551,7 +1551,7 @@ public class StatefulService implements Service {
             }
         }
 
-        if (this.context.host == null) {
+        if (this.context.host == null || hasOption(ServiceOption.IMMUTABLE)) {
             return;
         }
 
@@ -1564,9 +1564,9 @@ public class StatefulService implements Service {
             } else {
                 removedOptions = docOwner;
             }
+
             getHost().scheduleServiceOptionToggleMaintenance(getSelfLink(),
                     addedOptions, removedOptions);
-
             if (enable && hasOption(ServiceOption.PERIODIC_MAINTENANCE)) {
                 // kick off maintenance cycle, service is on the new owner node
                 getHost().scheduleServiceMaintenance(this);
@@ -1641,8 +1641,10 @@ public class StatefulService implements Service {
     }
 
     @Override
-    public Service getUtilityService(String uriPath) {
-        allocateUtilityService(true);
+    public Service getUtilityService(String uriPath, boolean allocate) {
+        if (!allocateUtilityService(allocate)) {
+            return null;
+        }
         return this.context.utilityService;
     }
 

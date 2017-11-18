@@ -1079,7 +1079,7 @@ public class UtilityService implements Service {
     }
 
     @Override
-    public Service getUtilityService(String uriPath) {
+    public Service getUtilityService(String uriPath, boolean allocate) {
         return null;
     }
 
