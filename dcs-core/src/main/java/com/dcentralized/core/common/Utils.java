@@ -726,7 +726,7 @@ public final class Utils {
      */
     public static void encodeAndTransferLinkedStateToBody(Operation source, Operation target,
             boolean useBinary) {
-        if (useBinary && source.getAction() != Action.POST) {
+        if (useBinary) {
             try {
                 byte[] encodedBody = Utils.encodeBody(source, source.getLinkedState(),
                         Operation.MEDIA_TYPE_APPLICATION_KRYO_OCTET_STREAM, true);

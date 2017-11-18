@@ -280,6 +280,12 @@ class ServiceSynchronizationTracker {
             synchronizeWithPeers(s, op);
         };
 
+        if (s.hasOption(ServiceOption.IMMUTABLE) && !s.hasOption(ServiceOption.OWNER_SELECTION)) {
+            s.toggleOption(ServiceOption.DOCUMENT_OWNER, true);
+            op.complete();
+            return;
+        }
+
         Operation selectOwnerOp = Operation.createPost(null)
                 .setExpiration(op.getExpirationMicrosUtc())
                 .setCompletion(c);

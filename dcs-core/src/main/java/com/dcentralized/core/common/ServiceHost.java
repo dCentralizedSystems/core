@@ -4800,6 +4800,9 @@ public class ServiceHost implements ServiceRequestSender {
     private ThreadLocal<SelectAndForwardRequest> selectOwnerRequests = ThreadLocal
             .withInitial(SelectAndForwardRequest::new);
 
+    private ThreadLocal<SelectAndForwardRequest> forwardAndReplicateRequests = ThreadLocal
+            .withInitial(SelectAndForwardRequest::new);
+
     /**
      * Convenience method that issues a {@code SelectOwnerRequest} to the node selector service. If
      * the supplied path is null the default selector will be used
@@ -4845,11 +4848,12 @@ public class ServiceHost implements ServiceRequestSender {
 
         prepareRequest(request);
 
-        SelectAndForwardRequest body = new SelectAndForwardRequest();
+        SelectAndForwardRequest body = this.forwardAndReplicateRequests.get();
         body.targetPath = request.getUri().getPath();
         body.targetQuery = request.getUri().getQuery();
         body.key = key;
         body.options = SelectAndForwardRequest.UNICAST_OPTIONS;
+        body.serviceOptions = null;
         nss.selectAndForward(request, body);
     }
 
@@ -4874,7 +4878,7 @@ public class ServiceHost implements ServiceRequestSender {
 
         state.documentOwner = getId();
 
-        SelectAndForwardRequest req = new SelectAndForwardRequest();
+        SelectAndForwardRequest req = this.forwardAndReplicateRequests.get();
         req.key = selectionKey;
         req.targetPath = op.getUri().getPath();
         req.targetQuery = op.getUri().getQuery();
