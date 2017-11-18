@@ -561,6 +561,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
         adjustStat(STAT_NAME_QUEUED_REQUEST_COUNT, 1);
 
         body.associatedOp = null;
+        body.response = null;
         body = Utils.clone(body);
         body.associatedOp = op;
 
