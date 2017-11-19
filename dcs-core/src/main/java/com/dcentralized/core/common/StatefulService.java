@@ -53,7 +53,7 @@ public class StatefulService implements Service {
         public long version;
         public long epoch;
 
-        public EnumSet<ServiceOption> options = EnumSet.noneOf(ServiceOption.class);
+        public EnumSet<ServiceOption> options;
         public Class<? extends ServiceDocument> stateType;
 
         public OperationQueue synchQueue;
@@ -71,10 +71,21 @@ public class StatefulService implements Service {
     private final RuntimeContext context = new RuntimeContext();
 
     public StatefulService(Class<? extends ServiceDocument> stateType) {
+        this(stateType, null);
+    }
+
+    public StatefulService(Class<? extends ServiceDocument> stateType,
+            EnumSet<ServiceOption> options) {
         if (stateType == null) {
             throw new IllegalArgumentException("stateType is required");
         }
         this.context.stateType = stateType;
+        if (options != null) {
+            this.context.options = options;
+        } else {
+            this.context.options = EnumSet.noneOf(ServiceOption.class);
+        }
+
         if (this.context.options.contains(ServiceOption.LIFO_QUEUE)) {
             this.context.operationQueue = OperationQueue
                     .createLifo(Service.OPERATION_QUEUE_DEFAULT_LIMIT);

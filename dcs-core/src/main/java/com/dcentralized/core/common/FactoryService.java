@@ -482,7 +482,9 @@ public abstract class FactoryService extends StatelessService {
     }
 
     private void startChildService(Operation o, Service childService) {
-        o.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_VERSION_CHECK);
+        if (!childService.hasOption(ServiceOption.IMMUTABLE)) {
+            o.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_VERSION_CHECK);
+        }
         getHost().startService(o, childService);
     }
 

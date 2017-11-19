@@ -3376,8 +3376,13 @@ public class ServiceHost implements ServiceRequestSender {
         if (service == null) {
             throw new IllegalArgumentException("service is required");
         }
+        stopService(service.getSelfLink());
+    }
 
-        String path = service.getSelfLink();
+    /**
+     * Infrastructure use only. Service authors should never call this method.
+     */
+    public void stopService(String path) {
         synchronized (this.state) {
             Service existing = this.attachedServices.remove(path);
             if (existing == null) {
@@ -3393,8 +3398,7 @@ public class ServiceHost implements ServiceRequestSender {
             }
 
             this.serviceSynchTracker.removeService(path);
-            this.serviceResourceTracker.clearCachedServiceState(service, null);
-
+            this.serviceResourceTracker.clearCachedServiceState(path, null);
             this.state.serviceCount--;
         }
     }
@@ -4717,7 +4721,8 @@ public class ServiceHost implements ServiceRequestSender {
                         if (previousState != null) {
                             this.serviceResourceTracker.resetCachedServiceState(s, previousState, op);
                         } else {
-                            this.serviceResourceTracker.clearCachedServiceState(s, op);
+                            this.serviceResourceTracker.clearCachedServiceState(s.getSelfLink(),
+                                    op);
                         }
                         op.fail(e);
                         return;

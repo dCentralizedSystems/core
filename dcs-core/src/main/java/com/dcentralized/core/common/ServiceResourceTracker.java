@@ -320,10 +320,8 @@ public class ServiceResourceTracker {
         this.host.sendRequest(deleteExp);
     }
 
-    public void clearCachedServiceState(Service s, Operation op) {
-        String servicePath = s.getSelfLink();
+    public void clearCachedServiceState(String servicePath, Operation op) {
         this.persistedServiceLastAccessTimes.remove(servicePath);
-
         ServiceDocument doc = this.cachedServiceStates.remove(servicePath);
         if (doc != null) {
             updateCacheClearStats();
