@@ -14,6 +14,7 @@
 package com.dcentralized.core.services.common;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -42,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.dcentralized.core.common.CommandLineArgumentParser;
@@ -130,24 +130,18 @@ public class TestQueryTaskService {
         }
         CommandLineArgumentParser.parseFromProperties(this.host);
         CommandLineArgumentParser.parseFromProperties(this);
-        try {
-            this.host.setStressTest(this.host.isStressTest);
-            // disable synchronization so it does not interfere with the various test assumptions
-            // on index stats.
-            this.host.setPeerSynchronizationEnabled(false);
-            this.host.start();
-            if (this.host.isStressTest()) {
-                Utils.setTimeDriftThreshold(TimeUnit.HOURS.toMicros(1));
-            } else {
-                this.host.setMaintenanceIntervalMicros(TimeUnit.MILLISECONDS
-                        .toMicros(VerificationHost.FAST_MAINT_INTERVAL_MILLIS));
-                this.host.toggleServiceOptions(this.host.getDocumentIndexServiceUri(),
-                        EnumSet.of(ServiceOption.INSTRUMENTATION),
-                        null);
-            }
-
-        } catch (Throwable e) {
-            throw new Exception(e);
+        this.host.setStressTest(this.host.isStressTest);
+        // disable synchronization so it does not interfere with the various test assumptions
+        // on index stats.
+        this.host.setPeerSynchronizationEnabled(false);
+        this.host.start();
+        if (this.host.isStressTest()) {
+            Utils.setTimeDriftThreshold(TimeUnit.HOURS.toMicros(1));
+        } else {
+            this.host.setMaintenanceIntervalMicros(TimeUnit.MILLISECONDS
+                    .toMicros(VerificationHost.FAST_MAINT_INTERVAL_MILLIS));
+            this.host.toggleServiceOptions(this.host.getDocumentIndexServiceUri(),
+                    EnumSet.of(ServiceOption.INSTRUMENTATION), null);
         }
     }
 
@@ -756,7 +750,7 @@ public class TestQueryTaskService {
             public ExampleServiceState createInitialDocumentState() {
                 ExampleServiceState initialState = new ExampleServiceState();
                 initialState.name = UUID.randomUUID().toString();
-                initialState.tags = Stream.of("a", "b").collect(Collectors.toSet());
+                initialState.tags = Stream.of("a", "b").collect(toSet());
                 initialState.keyValues = new HashMap<>();
                 initialState.keyValues.put("key", "value");
                 return initialState;
@@ -5256,7 +5250,8 @@ public class TestQueryTaskService {
         sender.sendAndWait(deletes);
 
         // verify no broadcast result page exists (no previous pages created)
-        int broadcastPageCount = getNumOfServices(peer, ServiceUriPaths.CORE_QUERY_BROADCAST_PAGE);
+        int broadcastPageCount = peer
+                .getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_BROADCAST_PAGE).size();
         assertEquals("Expect no broad cast pages", 0, broadcastPageCount);
     }
 
@@ -5269,11 +5264,76 @@ public class TestQueryTaskService {
         } while (task.results.nextPageLink != null);
     }
 
-    private int getNumOfServices(VerificationHost node, String servicePrefix) {
-        Operation dummy = Operation.createGet(null);
-        node.queryServices(UriUtils.buildUriPath(servicePrefix, UriUtils.URI_WILDCARD_CHAR), dummy);
-        List<String> links = dummy.getBody(ServiceDocumentQueryResult.class).documentLinks;
-        return links.size();
+    @Test
+    public void broadcastQueryPageServiceDeletion() throws Throwable {
+        final int nodeCount = 3;
+
+        setUpHost();
+        this.host.setPeerSynchronizationEnabled(true);
+
+        this.host.setUpPeerHosts(nodeCount);
+        this.host.joinNodesAndVerifyConvergence(nodeCount, true);
+
+        URI exampleFactoryUri = UriUtils.buildUri(
+                this.host.getPeerServiceUri(ExampleService.FACTORY_LINK));
+        this.host.waitForReplicatedFactoryServiceAvailable(exampleFactoryUri);
+
+        TestRequestSender sender = this.host.getTestRequestSender();
+        VerificationHost peer = this.host.getPeerHost();
+        Set<VerificationHost> otherNodes = this.host.getInProcessHostMap().values().stream()
+                .filter(node -> peer != node).collect(toSet());
+
+        // create example services
+        URI exampleFactoryURI = UriUtils.buildUri(peer, ExampleService.FACTORY_LINK);
+        List<URI> exampleServices = new ArrayList<>();
+        createExampleServices(exampleFactoryURI, exampleServices);
+
+        // create broadcast query
+        QueryTask task = QueryTask.Builder.createDirectTask()
+                .setQuery(Query.Builder.create().addKindFieldClause(ExampleServiceState.class)
+                        .build())
+                .addOption(QueryOption.BROADCAST)
+                .setResultLimit(2)
+                .build();
+
+        Operation post = Operation.createPost(peer, ServiceUriPaths.CORE_LOCAL_QUERY_TASKS)
+                .setBody(task);
+        QueryTask queryTaskResult = sender.sendAndWait(post, QueryTask.class);
+
+        // Get 1st result page(BroadcastQueryPageService)
+        String firstResultPagePath = queryTaskResult.results.nextPageLink;
+        Operation firstResultPageGet = Operation.createGet(peer,
+                queryTaskResult.results.nextPageLink);
+        sender.sendAndWait(firstResultPageGet, QueryTask.class);
+
+        // On this node, there should be 2 QueryPageService(local query results for 1st broadcast query result and next page)
+        // and 2 BroadcastQueryPageService (1st and 2nd(next) page)
+        List<String> queryPagePaths = peer.getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_PAGE);
+        List<String> broadcastPagePaths = peer
+                .getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_BROADCAST_PAGE);
+        assertEquals(2, queryPagePaths.size());
+        assertEquals(2, broadcastPagePaths.size());
+
+        // in other nodes, there should also have 2 QueryPageServices
+        for (VerificationHost otherNode : otherNodes) {
+            queryPagePaths = otherNode.getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_PAGE);
+            assertEquals(2, queryPagePaths.size());
+        }
+
+        // delete 1st broadcast result page
+        sender.sendAndWait(Operation.createDelete(peer, firstResultPagePath));
+
+        // deletion of broadcast result page should cascade delete associated query result pages
+        queryPagePaths = peer.getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_PAGE);
+        broadcastPagePaths = peer
+                .getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_BROADCAST_PAGE);
+        assertEquals(1, queryPagePaths.size());
+        assertEquals(1, broadcastPagePaths.size());
+
+        for (VerificationHost otherNode : otherNodes) {
+            queryPagePaths = otherNode.getServicePathsByPrefix(ServiceUriPaths.CORE_QUERY_PAGE);
+            assertEquals(1, queryPagePaths.size());
+        }
     }
 
 }

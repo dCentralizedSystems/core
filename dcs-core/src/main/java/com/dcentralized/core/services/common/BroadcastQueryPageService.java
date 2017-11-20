@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.OperationJoin;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentQueryResult;
 import com.dcentralized.core.common.StatelessService;
@@ -90,15 +91,14 @@ public class BroadcastQueryPageService extends StatelessService {
                         }
                         int r = remainingQueries.decrementAndGet();
                         if (r == 0) {
-                            collectPagesAndStartNewServices(responses,
-                                    (response, error) -> {
-                                        if (error != null) {
-                                            get.fail(error);
-                                            return;
-                                        }
-                                        rsp.results = response;
-                                        get.setBodyNoCloning(rsp).complete();
-                                    });
+                            collectPagesAndStartNewServices(responses, (response, error) -> {
+                                if (error != null) {
+                                    get.fail(error);
+                                    return;
+                                }
+                                rsp.results = response;
+                                get.setBodyNoCloning(rsp).complete();
+                            });
                         }
                     });
             this.getHost().sendRequest(op);
@@ -189,5 +189,28 @@ public class BroadcastQueryPageService extends StatelessService {
         }
 
         sendRequest(Operation.createPatch(getUri()).setBody(t).setCompletion(c));
+    }
+
+    @Override
+    public void handleDelete(Operation delete) {
+
+        if (this.pageLinks.isEmpty()) {
+            super.handleDelete(delete);
+            return;
+        }
+
+        // delete associated pages
+        OperationJoin.create(
+                this.pageLinks.stream()
+                        .map(link -> Operation.createDelete(this, link).setReferer(getUri())))
+                .setCompletion((ops, exs) -> {
+                    if (exs != null) {
+                        logWarning(
+                                "Failed to delete query result pages for broadcast query result %s: %s",
+                                getUri(), Utils.toString(exs));
+                    }
+                    // delete itself and complete
+                    super.handleDelete(delete);
+                }).sendWith(this);
     }
 }
