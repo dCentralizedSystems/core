@@ -329,7 +329,7 @@ public class NettyHttpServiceClientTest {
             MinimalTestServiceState body = (MinimalTestServiceState) this.host
                     .buildMinimalTestState();
             // simulate exception to reproduce https connection pool blocking on failure
-            body.id = MinimalTestService.STRING_MARKER_HAS_CONTEXT_ID;
+            body.id = MinimalTestService.STRING_MARKER_FAIL_WITH_PLAIN_TEXT_RESPONSE;
             Operation put = Operation.createPatch(u).setBody(body)
                     .setCompletion((o, e) -> {
                         this.host.completeIteration();

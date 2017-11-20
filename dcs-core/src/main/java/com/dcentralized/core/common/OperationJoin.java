@@ -35,18 +35,17 @@ public class OperationJoin {
     private final ConcurrentHashMap<Long, Operation> operations;
     private ConcurrentHashMap<Long, Throwable> failures;
     JoinedCompletionHandler joinedCompletion;
-    private OperationContext opContext;
+    private Operation.AuthorizationContext authContext;
     private final AtomicInteger pendingCount = new AtomicInteger();
     private final AtomicInteger batchSizeGuard = new AtomicInteger();
     private int batchSize = 0;
     private Iterator<Operation> operationIterator;
     private ServiceRequestSender sender;
     private final Object failuresLock = new Object();
-    private String transactionId;
 
     private OperationJoin() {
         this.operations = new ConcurrentHashMap<>(APPROXIMATE_EXPECTED_CAPACITY);
-        this.opContext = OperationContext.getOperationContext();
+        this.authContext = OperationContext.getAuthorizationContext();
     }
 
     /**
@@ -179,7 +178,7 @@ public class OperationJoin {
             return;
         }
 
-        OperationContext.restoreOperationContext(this.opContext);
+        OperationContext.restoreAuthContext(this.authContext);
         // call each operation completion individually
         for (Operation op : this.operations.values()) {
             Throwable t = null;
@@ -279,23 +278,6 @@ public class OperationJoin {
         return this;
     }
 
-    OperationContext getOperationContext() {
-        return this.opContext;
-    }
-
-    /**
-     * Sets (overwrites) the operation context of this operation join instance
-     *
-     * The visibility of this method is intentionally package-local. It is intended to
-     * only be called by functions in this package, so that we can apply whitelisting
-     * to limit the set of services that is able to set it.
-     *
-     * @param opContext the operation context to set.
-     */
-    void setOperationContext(OperationContext opContext) {
-        this.opContext = opContext;
-    }
-
     public boolean isEmpty() {
         return this.operations.isEmpty();
     }
@@ -310,15 +292,6 @@ public class OperationJoin {
 
     public Operation getOperation(long id) {
         return this.operations.get(id);
-    }
-
-    public String getTransactionId() {
-        return this.transactionId;
-    }
-
-    public OperationJoin setTransactionId(String transactionId) {
-        this.transactionId = transactionId;
-        return this;
     }
 
     @FunctionalInterface
@@ -340,11 +313,11 @@ public class OperationJoin {
     void fail(Throwable t) {
         this.failures = new ConcurrentHashMap<>();
         this.failures.put(this.operations.keys().nextElement(), t);
-        OperationContext origContext = OperationContext.getOperationContext();
-        OperationContext.restoreOperationContext(this.opContext);
+        Operation.AuthorizationContext origContext = OperationContext.getAuthorizationContext();
+        OperationContext.restoreAuthContext(this.authContext);
         for (Operation op : this.operations.values()) {
             op.fail(t);
         }
-        OperationContext.restoreOperationContext(origContext);
+        OperationContext.restoreAuthContext(origContext);
     }
 }

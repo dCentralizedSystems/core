@@ -999,7 +999,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void handleQueryRequest() {
-        OperationContext originalContext = OperationContext.getOperationContext();
+        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         Operation op = pollQueryOperation();
         try {
             this.writerSync.acquire();
@@ -1060,13 +1060,13 @@ public class LuceneDocumentIndexService extends StatelessService {
                 op.fail(e);
             }
         } finally {
-            OperationContext.setFrom(originalContext);
+            OperationContext.restoreAuthContext(authContext);
             this.writerSync.release();
         }
     }
 
     private void handleUpdateRequest() {
-        OperationContext originalContext = OperationContext.getOperationContext();
+        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         Operation op = pollUpdateOperation();
         try {
             this.writerSync.acquire();
@@ -1101,7 +1101,7 @@ public class LuceneDocumentIndexService extends StatelessService {
                 op.fail(e);
             }
         } finally {
-            OperationContext.setFrom(originalContext);
+            OperationContext.restoreAuthContext(authContext);
             this.writerSync.release();
         }
     }
@@ -3886,14 +3886,14 @@ public class LuceneDocumentIndexService extends StatelessService {
                     .setBodyNoCloning(
                             patchBody);
             // Set the authorization context to the user who created the continous query.
-            OperationContext currentContext = OperationContext.getOperationContext();
+            AuthorizationContext authContext = OperationContext.getAuthorizationContext();
             if (activeTask.querySpec.context.subjectLink != null) {
                 setAuthorizationContext(patchOperation,
                         getAuthorizationContextForSubject(
                                 activeTask.querySpec.context.subjectLink));
             }
             sendRequest(patchOperation);
-            OperationContext.restoreOperationContext(currentContext);
+            OperationContext.restoreAuthContext(authContext);
         }
     }
 

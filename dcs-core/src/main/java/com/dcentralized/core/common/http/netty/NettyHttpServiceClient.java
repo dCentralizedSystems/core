@@ -262,7 +262,7 @@ public class NettyHttpServiceClient implements ServiceClient {
         setExpiration(clone);
         setCookies(clone);
 
-        OperationContext ctx = OperationContext.getOperationContext();
+        Operation.AuthorizationContext ctx = OperationContext.getAuthorizationContext();
 
         try {
             // First attempt in process delivery to co-located host
@@ -275,7 +275,7 @@ public class NettyHttpServiceClient implements ServiceClient {
         } finally {
             // we must restore the operation context after each send, since
             // it can be reset by the host, depending on queuing and dispatching behavior
-            OperationContext.restoreOperationContext(ctx);
+            OperationContext.restoreAuthContext(ctx);
         }
     }
 

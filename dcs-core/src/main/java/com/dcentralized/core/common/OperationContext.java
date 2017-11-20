@@ -21,7 +21,7 @@ import com.dcentralized.core.common.Operation.AuthorizationContext;
  * by the service host or the Operation object
  * OperationContext instances are immutable.
  */
-public final class OperationContext implements Cloneable {
+public final class OperationContext {
 
     /**
      * Variable to store the OperationContext in thread-local
@@ -30,48 +30,20 @@ public final class OperationContext implements Cloneable {
             OperationContext::new);
 
     AuthorizationContext authContext;
-    String contextId;
 
     private OperationContext() {
-    }
-
-    public OperationContext clone() {
-        try {
-            return (OperationContext) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError(e);
-        }
-    }
-
-    static OperationContext getOperationContextNoCloning() {
-        return threadOperationContext.get();
-    }
-
-    /**
-     * Variable to store the transactionId in thread-local
-     */
-    public static void setContextId(String contextId) {
-        threadOperationContext.get().contextId = contextId;
-    }
-
-    public static String getContextId() {
-        return threadOperationContext.get().contextId;
     }
 
     static void setAuthorizationContext(AuthorizationContext ctx) {
         threadOperationContext.get().authContext = ctx;
     }
 
-    public static AuthorizationContext getAuthorizationContext() {
-        return threadOperationContext.get().authContext;
+    static OperationContext get() {
+        return threadOperationContext.get();
     }
 
-    /**
-     * Get the OperationContext associated with the thread
-     * @return OperationContext instance
-     */
-    public static OperationContext getOperationContext() {
-        return threadOperationContext.get().clone();
+    public static AuthorizationContext getAuthorizationContext() {
+        return threadOperationContext.get().authContext;
     }
 
     /**
@@ -81,7 +53,6 @@ public final class OperationContext implements Cloneable {
     public static void setFrom(OperationContext opCtx) {
         OperationContext currentOpCtx = threadOperationContext.get();
         currentOpCtx.authContext = opCtx.authContext;
-        currentOpCtx.contextId = opCtx.contextId;
     }
 
     /**
@@ -91,7 +62,6 @@ public final class OperationContext implements Cloneable {
     public static void setFrom(Operation op) {
         OperationContext currentOpCtx = threadOperationContext.get();
         currentOpCtx.authContext = op.getAuthorizationContext();
-        currentOpCtx.contextId = op.getContextId();
     }
 
     /**
@@ -100,16 +70,14 @@ public final class OperationContext implements Cloneable {
     public static void reset() {
         OperationContext opCtx = threadOperationContext.get();
         opCtx.authContext = null;
-        opCtx.contextId = null;
     }
 
     /**
      * Restore the OperationContext associated with this thread to the value passed in
      * @param opCtx OperationContext instance to restore to
      */
-    public static void restoreOperationContext(OperationContext opCtx) {
+    public static void restoreAuthContext(AuthorizationContext authContext) {
         OperationContext currentOpCtx = threadOperationContext.get();
-        currentOpCtx.authContext = opCtx.authContext;
-        currentOpCtx.contextId = opCtx.contextId;
+        currentOpCtx.authContext = authContext;
     }
 }

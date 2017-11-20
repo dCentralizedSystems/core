@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -427,128 +426,6 @@ public class TestServiceModel extends BasicReusableHostTestCase {
                 .setContextId(contextId).forceRemote();
         this.host.send(parentOp);
         this.host.testWait();
-    }
-
-    @Test
-    public void contextIdFlowThroughService() throws Throwable {
-
-        int serviceCount = 40;
-
-        ContextIdTestService.State stateWithContextId = new ContextIdTestService.State();
-        stateWithContextId.taskInfo = new TaskState();
-        stateWithContextId.taskInfo.stage = TaskState.TaskStage.STARTED;
-        stateWithContextId.startContextId = TestProperty.SET_CONTEXT_ID.toString();
-        stateWithContextId.getContextId = UUID.randomUUID().toString();
-        stateWithContextId.patchContextId = UUID.randomUUID().toString();
-        stateWithContextId.putContextId = UUID.randomUUID().toString();
-
-        List<Service> servicesWithContextId = this.host.doThroughputServiceStart(
-                EnumSet.of(TestProperty.SET_CONTEXT_ID),
-                serviceCount,
-                ContextIdTestService.class,
-                stateWithContextId,
-                null,
-                EnumSet.of(ServiceOption.CONCURRENT_UPDATE_HANDLING));
-
-        ContextIdTestService.State stateWithOutContextId = new ContextIdTestService.State();
-        stateWithOutContextId.taskInfo = new TaskState();
-        stateWithOutContextId.taskInfo.stage = TaskState.TaskStage.STARTED;
-
-        List<Service> servicesWithOutContextId = this.host.doThroughputServiceStart(
-                EnumSet.noneOf(TestProperty.class),
-                serviceCount,
-                ContextIdTestService.class,
-                stateWithOutContextId,
-                null,
-                null);
-
-        // test get
-        this.host.testStart(serviceCount * 4);
-        doOperationWithContextId(servicesWithContextId, Action.GET,
-                stateWithContextId.getContextId);
-        doOperationWithContextId(servicesWithContextId, Action.GET,
-                stateWithContextId.getContextId);
-        doOperationWithContextId(servicesWithOutContextId, Action.GET, null);
-        doOperationWithContextId(servicesWithOutContextId, Action.GET, null);
-        this.host.testWait();
-
-        // test put
-        this.host.testStart(serviceCount * 4);
-        doOperationWithContextId(servicesWithContextId, Action.PUT,
-                stateWithContextId.putContextId);
-        doOperationWithContextId(servicesWithContextId, Action.PUT,
-                stateWithContextId.putContextId);
-        doOperationWithContextId(servicesWithOutContextId, Action.PUT, null);
-        doOperationWithContextId(servicesWithOutContextId, Action.PUT, null);
-        this.host.testWait();
-
-        // test patch
-        this.host.testStart(serviceCount * 2);
-        doOperationWithContextId(servicesWithContextId, Action.PATCH,
-                stateWithContextId.patchContextId);
-        doOperationWithContextId(servicesWithOutContextId, Action.PATCH, null);
-        this.host.testWait();
-
-        // check end state
-        doCheckServicesState(servicesWithContextId);
-        doCheckServicesState(servicesWithOutContextId);
-    }
-
-    public void doCheckServicesState(List<Service> services) throws Throwable {
-        for (Service service : services) {
-            ContextIdTestService.State resultState = null;
-            Date expiration = this.host.getTestExpiration();
-
-            while (new Date().before(expiration)) {
-                resultState = this.host.getServiceState(
-                        EnumSet.of(TestProperty.DISABLE_CONTEXT_ID_VALIDATION),
-                        ContextIdTestService.State.class,
-                        service.getUri());
-                if (resultState.taskInfo.stage != TaskState.TaskStage.STARTED) {
-                    break;
-                }
-
-                Thread.sleep(100);
-            }
-            assertNotNull(resultState);
-            assertNotNull(resultState.taskInfo);
-            assertEquals(TaskState.TaskStage.FINISHED, resultState.taskInfo.stage);
-        }
-    }
-
-    public void doOperationWithContextId(List<Service> services, Service.Action action,
-            String contextId) {
-        for (Service service : services) {
-            Operation op;
-            switch (action) {
-            case GET:
-                op = Operation.createGet(service.getUri());
-                break;
-            case PUT:
-                op = Operation.createPut(service.getUri());
-                break;
-            case PATCH:
-                op = Operation.createPatch(service.getUri());
-                break;
-            default:
-                throw new RuntimeException("Unsupported action");
-            }
-
-            op.forceRemote()
-                    .setBody(new ContextIdTestService.State())
-                    .setContextId(contextId)
-                    .setCompletion((o, e) -> {
-                        if (e != null) {
-                            this.host.failIteration(e);
-                            return;
-                        }
-
-                        this.host.completeIteration();
-                    });
-            this.host.send(op);
-        }
-        // reset context id, since its set in the main thread
-        OperationContext.setContextId(null);
     }
 
     @Test

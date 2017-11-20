@@ -954,13 +954,13 @@ public abstract class FactoryService extends StatelessService {
         // Become unavailable until synchronization is complete.
         // If we are not the owner, we stay unavailable
         setAvailable(false);
-        OperationContext opContext = OperationContext.getOperationContext();
+        Operation.AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         // Only one node is responsible for synchronizing the child services of a given factory.
         // Ask the runtime if this is the owner node, using the factory self link as the key.
         Operation selectOwnerOp = maintOp.clone().setExpiration(Utils.fromNowMicrosUtc(
                 getHost().getOperationTimeoutMicros()));
         selectOwnerOp.setCompletion((o, e) -> {
-            OperationContext.restoreOperationContext(opContext);
+            OperationContext.restoreAuthContext(authContext);
             if (e != null) {
                 logWarning("owner selection failed: %s", e.toString());
                 scheduleSynchronizationRetry(maintOp);

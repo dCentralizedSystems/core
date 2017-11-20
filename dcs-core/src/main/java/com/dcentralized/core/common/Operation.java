@@ -693,9 +693,7 @@ public class Operation implements Cloneable {
         // which means that derivative operations will automatically inherit this context.
         // It is set as early as possible since there is a possibility that it is
         // overridden by the service implementation (i.e. when it impersonates).
-        OperationContext opCtx = OperationContext.getOperationContextNoCloning();
-        this.authorizationCtx = opCtx.authContext;
-        this.contextId = opCtx.contextId;
+        this.authorizationCtx = OperationContext.getAuthorizationContext();
     }
 
     static Operation createOperation(Action action, URI uri) {
@@ -1265,7 +1263,7 @@ public class Operation implements Cloneable {
         }
 
         // Keep track of current operation context
-        OperationContext originalContext = OperationContext.getOperationContext();
+        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         try {
             OperationContext.setFrom(this);
             this.remoteCtx.serverSentEventHandler.accept(event);
@@ -1273,7 +1271,7 @@ public class Operation implements Cloneable {
             Utils.logWarning("Uncaught failure inside serverSentEventHandler: %s", Utils.toString(outer));
         } finally {
             // Restore original context
-            OperationContext.setFrom(originalContext);
+            OperationContext.restoreAuthContext(authContext);
         }
     }
 
@@ -1287,7 +1285,7 @@ public class Operation implements Cloneable {
         }
 
         // Keep track of current operation context
-        OperationContext originalContext = OperationContext.getOperationContext();
+        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         try {
             OperationContext.setFrom(this);
             this.remoteCtx.headersReceivedHandler.accept(this);
@@ -1295,7 +1293,7 @@ public class Operation implements Cloneable {
             Utils.logWarning("Uncaught failure inside headersReceivedHandler: %s", Utils.toString(outer));
         } finally {
             // Restore original context
-            OperationContext.setFrom(originalContext);
+            OperationContext.restoreAuthContext(authContext);
         }
     }
 
@@ -1396,7 +1394,7 @@ public class Operation implements Cloneable {
         // Keep track of current operation context so that code AFTER "op.complete()"
         // or "op.fail()" retains its operation context, and is not overwritten by
         // the one associated with "op" (which might be different).
-        OperationContext originalContext = OperationContext.getOperationContext();
+        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         try {
             OperationContext.setFrom(this);
             c.handle(this, e);
@@ -1405,7 +1403,7 @@ public class Operation implements Cloneable {
         }
 
         // Restore original context
-        OperationContext.setFrom(originalContext);
+        OperationContext.restoreAuthContext(authContext);
     }
 
     public boolean hasBody() {

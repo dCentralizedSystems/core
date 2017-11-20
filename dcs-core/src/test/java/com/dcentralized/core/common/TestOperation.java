@@ -597,117 +597,6 @@ public class TestOperation extends BasicReusableHostTestCase {
     }
 
     @Test
-    public void operationWithContextId() throws Throwable {
-        this.services = this.host.doThroughputServiceStart(1,
-                MinimalTestService.class,
-                this.host.buildMinimalTestState(),
-                EnumSet.noneOf(Service.ServiceOption.class), null);
-
-        // issue a patch to verify contextId received in the services matches the one set
-        // by the client on the Operation
-        MinimalTestServiceState body = new MinimalTestServiceState();
-        body.id = MinimalTestService.STRING_MARKER_HAS_CONTEXT_ID;
-        body.stringValue = "request-id";
-
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPatch(this.services.get(0).getUri())
-                .forceRemote()
-                .setBody(body)
-                .setContextId(body.stringValue)
-                .setCompletion((o, e) -> {
-                    if (e != null) {
-                        this.host.failIteration(e);
-                        return;
-                    }
-                    this.host.completeIteration();
-                }));
-        this.host.testWait();
-    }
-
-    @Test
-    public void operationMultiStageFlowWithContextId() throws Throwable {
-        String contextId = UUID.randomUUID().toString();
-        int opCount = Utils.DEFAULT_THREAD_COUNT * 2;
-        AtomicInteger pending = new AtomicInteger(opCount);
-
-        CompletionHandler stageTwoCh = (o, e) -> {
-            if (e != null) {
-                this.host.failIteration(e);
-                return;
-            }
-            String contextIdActual = OperationContext.getContextId();
-            if (!contextId.equals(contextIdActual)) {
-                this.host.failIteration(new IllegalStateException("context id not set"));
-                return;
-            }
-            this.host.completeIteration();
-        };
-
-        CompletionHandler stageOneCh = (o, e) -> {
-            if (e != null) {
-                this.host.failIteration(e);
-                return;
-            }
-            String contextIdActual = OperationContext.getContextId();
-            if (!contextId.equals(contextIdActual)) {
-                this.host.failIteration(new IllegalStateException("context id not set"));
-                return;
-            }
-            int r = pending.decrementAndGet();
-            if (r != 0) {
-                return;
-            }
-
-            // now send some new "child" operations, and expect the ID to flow
-            Operation childOp = Operation.createGet(o.getUri())
-                    .setCompletion(stageTwoCh);
-            this.host.send(childOp);
-        };
-
-        // send N parallel requests, that will all complete in parallel, and should have the
-        // same context id. When they all complete (using a join like stageOne completion above)
-        // we will send another operation, and expect it to carry the proper contextId
-        this.host.testStart(1);
-        for (int i = 0; i < opCount; i++) {
-            Operation op = Operation
-                    .createGet(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK))
-                    .setCompletion(stageOneCh)
-                    .setContextId(contextId);
-            this.host.send(op);
-        }
-        this.host.testWait();
-    }
-
-    @Test
-    public void operationWithoutContextId() throws Throwable {
-        this.services = this.host.doThroughputServiceStart(1,
-                MinimalTestService.class,
-                this.host.buildMinimalTestState(),
-                EnumSet.noneOf(Service.ServiceOption.class), null);
-
-        // issue a patch request to verify the contextId is 'null'
-        MinimalTestServiceState body = new MinimalTestServiceState();
-        body.id = MinimalTestService.STRING_MARKER_HAS_CONTEXT_ID;
-
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPatch(this.services.get(0).getUri())
-                .forceRemote()
-                .setBody(body)
-                .setCompletion((o, e) -> {
-                    if (e != null) {
-                        this.host.completeIteration();
-                        return;
-                    }
-
-                    this.host.failIteration(new IllegalStateException(
-                            "Request should have failed due to missing contextId"));
-                }));
-        this.host.testWait();
-    }
-
-    @Test
     public void testSendWithOnHost() throws Throwable {
         testSendWith((o) -> o.sendWith(this.host));
     }
@@ -729,7 +618,7 @@ public class TestOperation extends BasicReusableHostTestCase {
                 EnumSet.noneOf(Service.ServiceOption.class), null);
 
         MinimalTestServiceState body = new MinimalTestServiceState();
-        body.id = MinimalTestService.STRING_MARKER_HAS_CONTEXT_ID;
+        body.id = "id";
         body.stringValue = "request-id";
 
         this.host.testStart(1);

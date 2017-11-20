@@ -2830,7 +2830,7 @@ public class ServiceHost implements ServiceRequestSender {
                     break;
                 }
 
-                OperationContext opCtx = extractAndApplyContext(post);
+                AuthorizationContext opCtx = replaceAuthContext(post);
                 try {
                     if (s.hasOption(ServiceOption.INSTRUMENTATION)) {
                         s.adjustStat(Service.STAT_NAME_CREATE_COUNT, 1);
@@ -2840,7 +2840,7 @@ public class ServiceHost implements ServiceRequestSender {
                     handleUncaughtException(s, post, e);
                     return;
                 } finally {
-                    OperationContext.restoreOperationContext(opCtx);
+                    OperationContext.restoreAuthContext(opCtx);
                 }
 
                 break;
@@ -2889,14 +2889,14 @@ public class ServiceHost implements ServiceRequestSender {
                     return;
                 }
 
-                opCtx = extractAndApplyContext(post);
+                opCtx = replaceAuthContext(post);
                 try {
                     s.handleStart(post);
                 } catch (Exception e) {
                     handleUncaughtException(s, post, e);
                     return;
                 } finally {
-                    OperationContext.restoreOperationContext(opCtx);
+                    OperationContext.restoreAuthContext(opCtx);
                 }
                 break;
             case INDEXING_INITIAL_STATE:
@@ -3013,10 +3013,10 @@ public class ServiceHost implements ServiceRequestSender {
         }
     }
 
-    private OperationContext extractAndApplyContext(Operation op) {
-        OperationContext opCtx = OperationContext.getOperationContext();
+    private AuthorizationContext replaceAuthContext(Operation op) {
+        AuthorizationContext authCtx = OperationContext.getAuthorizationContext();
         OperationContext.setFrom(op);
-        return opCtx;
+        return authCtx;
     }
 
     boolean isDocumentOwner(Service s) {
@@ -3588,13 +3588,13 @@ public class ServiceHost implements ServiceRequestSender {
     private void queueOrScheduleRequestInternal(Service s, Operation op) {
         if (!s.queueRequest(op)) {
             Runnable r = () -> {
-                OperationContext opCtx = extractAndApplyContext(op);
+                AuthorizationContext opCtx = replaceAuthContext(op);
                 try {
                     s.handleRequest(op);
                 } catch (Exception e) {
                     handleUncaughtException(s, op, e);
                 } finally {
-                    OperationContext.setFrom(opCtx);
+                    OperationContext.restoreAuthContext(opCtx);
                 }
             };
             this.executor.execute(r);
@@ -4470,9 +4470,9 @@ public class ServiceHost implements ServiceRequestSender {
         if (executor.isShutdown()) {
             throw new IllegalStateException("Stopped");
         }
-        OperationContext origContext = OperationContext.getOperationContext();
+        AuthorizationContext authCtx = OperationContext.getAuthorizationContext();
         executor.execute(() -> {
-            OperationContext.setFrom(origContext);
+            OperationContext.restoreAuthContext(authCtx);
             executeRunnableSafe(task);
         });
     }
@@ -4502,9 +4502,9 @@ public class ServiceHost implements ServiceRequestSender {
             throw new IllegalStateException("Stopped");
         }
 
-        OperationContext origContext = OperationContext.getOperationContext();
+        AuthorizationContext origContext = OperationContext.getAuthorizationContext();
         return e.schedule(() -> {
-            OperationContext.setFrom(origContext);
+            OperationContext.restoreAuthContext(origContext);
             executeRunnableSafe(task);
         }, delay, unit);
     }

@@ -14,7 +14,6 @@
 package com.dcentralized.core.services.common;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,7 +39,6 @@ public class MinimalTestService extends StatefulService {
     public static final String STRING_MARKER_FAIL_REQUEST_WITH_CORRUPTED_JSON_RSP = "fail request with corrupted JSON response error body";
     public static final String STRING_MARKER_RETRY_REQUEST = "fail request with error that causes retry";
     public static final String STRING_MARKER_TIMEOUT_REQUEST = "do not complete this request";
-    public static final String STRING_MARKER_HAS_CONTEXT_ID = "check context id";
     public static final String STRING_MARKER_USE_DIFFERENT_CONTENT_TYPE = "change content type on response";
     public static final String STRING_MARKER_URI_HAS_QUERY_AND_FRAGMENT = "check uri has query and fragment";
     public static final String STRING_MARKER_DELAY_COMPLETION = "do a tight loop";
@@ -267,17 +265,6 @@ public class MinimalTestService extends StatefulService {
 
         if (patchBody.id.equals(STRING_MARKER_TIMEOUT_REQUEST)) {
             // we want to induce a timeout, so do NOT complete the patch
-            return;
-        }
-
-        if (patchBody.id.equals(STRING_MARKER_HAS_CONTEXT_ID)
-                && (patch.getContextId() == null
-                || !Objects.equals(patch.getContextId(), patchBody.stringValue))) {
-            patch.fail(new IllegalArgumentException(
-                    String.format(
-                            "Context Id check failed. It was either 'null' or did not match expected value. expected[%s], got[%s]",
-                            patchBody.stringValue,
-                            patch.getContextId())));
             return;
         }
 
