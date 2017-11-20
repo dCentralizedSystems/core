@@ -748,7 +748,6 @@ public class NettyChannelPool {
                 }
 
                 it.remove();
-                LOGGER.warning("Closing expired channel " + c.getKey());
                 c.close();
             }
         }
