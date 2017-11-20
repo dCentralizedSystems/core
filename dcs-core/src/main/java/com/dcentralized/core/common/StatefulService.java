@@ -86,12 +86,25 @@ public class StatefulService implements Service {
             this.context.options = EnumSet.noneOf(ServiceOption.class);
         }
 
-        if (this.context.options.contains(ServiceOption.LIFO_QUEUE)) {
-            this.context.operationQueue = OperationQueue
-                    .createLifo(Service.OPERATION_QUEUE_DEFAULT_LIMIT);
-        } else {
-            this.context.operationQueue = OperationQueue
-                    .createFifo(Service.OPERATION_QUEUE_DEFAULT_LIMIT);
+        if (this.context.options.contains(ServiceOption.IMMUTABLE)) {
+            // lazily allocate operation queue
+            return;
+        }
+        allocateOperationQueue();
+    }
+
+    private void allocateOperationQueue() {
+        synchronized (this.context) {
+            if (this.context.operationQueue != null) {
+                return;
+            }
+            if (this.context.options.contains(ServiceOption.LIFO_QUEUE)) {
+                this.context.operationQueue = OperationQueue
+                        .createLifo(Service.OPERATION_QUEUE_DEFAULT_LIMIT);
+            } else {
+                this.context.operationQueue = OperationQueue
+                        .createFifo(Service.OPERATION_QUEUE_DEFAULT_LIMIT);
+            }
         }
     }
 
@@ -137,6 +150,9 @@ public class StatefulService implements Service {
      */
     @Override
     public boolean queueRequest(Operation op) {
+        if (hasOption(ServiceOption.IMMUTABLE)) {
+            allocateOperationQueue();
+        }
 
         if (checkServiceStopped(op, false)) {
             return true;

@@ -3000,12 +3000,12 @@ public class ServiceHost implements ServiceRequestSender {
                     scheduleServiceMaintenance(s);
                 }
                 post.complete();
-
+                if (isServiceImmutable(s) && s.getCacheClearDelayMicros() == 0) {
+                    stopService(s);
+                }
                 break;
-
             default:
                 break;
-
             }
         } catch (Exception e) {
             log(Level.SEVERE, "Unhandled error: %s", Utils.toString(e));
