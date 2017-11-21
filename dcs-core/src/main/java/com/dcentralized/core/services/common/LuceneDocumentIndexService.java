@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -462,8 +463,8 @@ public class LuceneDocumentIndexService extends StatelessService {
     public static class PaginatedSearcherInfo {
         public long creationTimeMicros;
         public long expirationTimeMicros;
-        public boolean singleUse;
         public IndexSearcher searcher;
+        public int refCount;
     }
 
     public static class DeleteQueryRuntimeContextRequest extends ServiceDocument {
@@ -841,7 +842,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             infoToRemove = removeSearcherInfoUnsafe(nativeSearcher);
         }
 
-        if (infoToRemove == null) {
+        if (infoToRemove == null || infoToRemove.refCount > 0) {
             op.complete();
             return;
         }
@@ -858,37 +859,30 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private PaginatedSearcherInfo removeSearcherInfoUnsafe(IndexSearcher searcher) {
-        PaginatedSearcherInfo infoToRemove = null;
-        Iterator<Entry<Long, PaginatedSearcherInfo>> itr = this.paginatedSearchersByCreationTime
-                .entrySet().iterator();
-        while (itr.hasNext()) {
-            PaginatedSearcherInfo info = itr.next().getValue();
-            if (info.searcher.equals(searcher)) {
-                if (!info.singleUse) {
-                    throw new IllegalStateException(
-                            "Context deletion is supported only for SINGLE_USE queries");
-                }
+        Optional<Entry<Long, PaginatedSearcherInfo>> optional = this.paginatedSearchersByCreationTime
+                .entrySet().stream()
+                .filter(entry -> entry.getValue().searcher.equals(searcher))
+                .findFirst();
 
-                infoToRemove = info;
-                itr.remove();
-                break;
-            }
-        }
-
-        if (infoToRemove == null) {
+        if (!optional.isPresent()) {
             return null;
         }
 
-        long expirationTime = infoToRemove.expirationTimeMicros;
-        List<PaginatedSearcherInfo> expirationList = this.paginatedSearchersByExpirationTime
-                .get(expirationTime);
-        expirationList.remove(infoToRemove);
-        if (expirationList.isEmpty()) {
-            this.paginatedSearchersByExpirationTime.remove(expirationTime);
-        }
+        PaginatedSearcherInfo info = optional.get().getValue();
+        info.refCount--;
+        if (info.refCount == 0) {
+            this.paginatedSearchersByCreationTime.remove(optional.get().getKey());
 
-        this.searcherUpdateTimesMicros.remove(infoToRemove.searcher.hashCode());
-        return infoToRemove;
+            long expirationTime = info.expirationTimeMicros;
+            List<PaginatedSearcherInfo> expirationList = this.paginatedSearchersByExpirationTime
+                    .get(expirationTime);
+            expirationList.remove(info);
+            if (expirationList.isEmpty()) {
+                this.paginatedSearchersByExpirationTime.remove(expirationTime);
+            }
+            this.searcherUpdateTimesMicros.remove(info.searcher.hashCode());
+        }
+        return info;
     }
 
     private void handleBackup(Operation op) throws Exception {
@@ -1206,9 +1200,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             throws IOException {
 
         boolean doNotRefresh = queryOptions.contains(QueryOption.DO_NOT_REFRESH);
-        boolean singleUse = queryOptions.contains(QueryOption.SINGLE_USE);
-        if (singleUse || (!doNotRefresh && kindScope == null)) {
-            return createPaginatedQuerySearcher(expirationMicros, w, singleUse);
+        if (!doNotRefresh && kindScope == null) {
+            return createPaginatedQuerySearcher(expirationMicros, w);
         }
 
         IndexSearcher searcher;
@@ -1220,7 +1213,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             return searcher;
         }
 
-        return createPaginatedQuerySearcher(expirationMicros, w, false);
+        return createPaginatedQuerySearcher(expirationMicros, w);
     }
 
     private IndexSearcher getOrUpdateExistingSearcher(long newExpirationMicros,
@@ -1237,10 +1230,6 @@ public class LuceneDocumentIndexService extends StatelessService {
                 .values()) {
             if (maxAttempts-- < 0) {
                 break;
-            }
-
-            if (i.singleUse) {
-                continue;
             }
 
             // check the searcher for kindScope update time
@@ -1266,6 +1255,7 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         long currentExpirationMicros = info.expirationTimeMicros;
         if (newExpirationMicros <= currentExpirationMicros) {
+            info.refCount++;
             return info.searcher;
         }
 
@@ -1291,11 +1281,12 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         expirationList.add(info);
 
+        info.refCount++;
         return info.searcher;
     }
 
-    private IndexSearcher createPaginatedQuerySearcher(long expirationMicros, IndexWriter w,
-            boolean singleUse) throws IOException {
+    private IndexSearcher createPaginatedQuerySearcher(long expirationMicros, IndexWriter w)
+            throws IOException {
         if (w == null) {
             throw new IllegalStateException("Writer not available");
         }
@@ -1310,8 +1301,8 @@ public class LuceneDocumentIndexService extends StatelessService {
         PaginatedSearcherInfo info = new PaginatedSearcherInfo();
         info.creationTimeMicros = now;
         info.expirationTimeMicros = expirationMicros;
-        info.singleUse = singleUse;
         info.searcher = s;
+        info.refCount = 1;
 
         synchronized (this.searchSync) {
             this.paginatedSearchersByCreationTime.put(info.creationTimeMicros, info);
@@ -3689,7 +3680,7 @@ public class LuceneDocumentIndexService extends StatelessService {
         long now = Utils.getNowMicrosUtc();
         applyMemoryLimitToDocumentUpdateInfo();
 
-        Map<Long, List<PaginatedSearcherInfo>> entriesToClose = new HashMap<>();
+        List<PaginatedSearcherInfo> toClose = new ArrayList<>();
         long activePaginatedQueries;
         synchronized (this.searchSync) {
             Iterator<Entry<Long, List<PaginatedSearcherInfo>>> itr = this.paginatedSearchersByExpirationTime
@@ -3701,13 +3692,15 @@ public class LuceneDocumentIndexService extends StatelessService {
                     break;
                 }
 
-                List<PaginatedSearcherInfo> expirationList = entry.getValue();
-                for (PaginatedSearcherInfo info : expirationList) {
-                    this.paginatedSearchersByCreationTime.remove(info.creationTimeMicros);
-                    this.searcherUpdateTimesMicros.remove(info.searcher.hashCode());
+                for (PaginatedSearcherInfo info : entry.getValue()) {
+                    info.refCount--;
+                    if (info.refCount == 0) {
+                        this.paginatedSearchersByCreationTime.remove(info.creationTimeMicros);
+                        this.searcherUpdateTimesMicros.remove(info.searcher.hashCode());
+                        toClose.add(info);
+                    }
                 }
 
-                entriesToClose.put(expirationMicros, expirationList);
                 itr.remove();
             }
 
@@ -3717,13 +3710,11 @@ public class LuceneDocumentIndexService extends StatelessService {
         setTimeSeriesStat(STAT_NAME_ACTIVE_PAGINATED_QUERIES, AGGREGATION_TYPE_AVG_MAX,
                 activePaginatedQueries);
 
-        for (Entry<Long, List<PaginatedSearcherInfo>> entry : entriesToClose.entrySet()) {
-            for (PaginatedSearcherInfo info : entry.getValue()) {
-                logFine("Closing paginated query searcher, expired at %d", entry.getKey());
-                try {
-                    info.searcher.getIndexReader().close();
-                } catch (Exception ignored) {
-                }
+        for (PaginatedSearcherInfo info : toClose) {
+            logFine("Closing paginated query searcher, expired at %d", info.expirationTimeMicros);
+            try {
+                info.searcher.getIndexReader().close();
+            } catch (Exception ignored) {
             }
         }
     }
