@@ -859,6 +859,7 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private PaginatedSearcherInfo removeSearcherInfoUnsafe(IndexSearcher searcher) {
+
         Optional<Entry<Long, PaginatedSearcherInfo>> optional = this.paginatedSearchersByCreationTime
                 .entrySet().stream()
                 .filter(entry -> entry.getValue().searcher.equals(searcher))
@@ -882,6 +883,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             }
             this.searcherUpdateTimesMicros.remove(info.searcher.hashCode());
         }
+
         return info;
     }
 
@@ -1264,12 +1266,14 @@ public class LuceneDocumentIndexService extends StatelessService {
         List<PaginatedSearcherInfo> expirationList = this.paginatedSearchersByExpirationTime.get(
                 currentExpirationMicros);
         if (expirationList == null || !expirationList.contains(info)) {
-            throw new IllegalStateException("Searcher not found in expiration list");
-        }
-
-        expirationList.remove(info);
-        if (expirationList.isEmpty()) {
             this.paginatedSearchersByExpirationTime.remove(currentExpirationMicros);
+            logWarning("Searcher not found in expiration list: %s",
+                    this.paginatedSearchersByExpirationTime.toString());
+        } else {
+            expirationList.remove(info);
+            if (expirationList.isEmpty()) {
+                this.paginatedSearchersByExpirationTime.remove(currentExpirationMicros);
+            }
         }
 
         info.expirationTimeMicros = newExpirationMicros;
