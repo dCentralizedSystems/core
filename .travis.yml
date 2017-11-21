@@ -3,6 +3,9 @@ sudo: required
 install: true
 dist: trusty
 
+git:
+  depth: 1000
+
 jdk:
   - oraclejdk8
 
