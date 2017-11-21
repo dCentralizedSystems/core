@@ -1127,7 +1127,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             task.querySpec.context.nativeSort = luceneSort;
         }
 
-        if (qs.options.contains(QueryOption.CONTINUOUS)) {
+        if (qs.options.contains(QueryOption.CONTINUOUS) ||
+                qs.options.contains(QueryOption.CONTINIOUS_STOP_MATCH)) {
             if (handleContinuousQueryTaskPatch(op, task, qs)) {
                 return;
             }
@@ -1556,10 +1557,23 @@ public class LuceneDocumentIndexService extends StatelessService {
 
     private void queryIndexSingle(String selfLink, Operation op, Long version)
             throws Exception {
+        try {
+            ServiceDocument sd = getDocumentAtVersion(selfLink, version);
+            if (sd == null) {
+                op.complete();
+                return;
+            }
+            op.setBodyNoCloning(sd).complete();
+        } catch (CancellationException e) {
+            op.fail(e);
+        }
+    }
+
+    private ServiceDocument getDocumentAtVersion(String selfLink, Long version)
+            throws Exception {
         IndexWriter w = this.writer;
         if (w == null) {
-            op.fail(new CancellationException("Index writer is null"));
-            return;
+            throw new CancellationException("Index writer is null");
         }
 
         IndexSearcher s = createOrRefreshSearcher(selfLink, null, 1, w, false);
@@ -1579,8 +1593,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             }
         }
         if (hits.totalHits == 0) {
-            op.complete();
-            return;
+            return null;
         }
 
         DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor();
@@ -1594,12 +1607,10 @@ public class LuceneDocumentIndexService extends StatelessService {
         }
 
         if (hasExpired) {
-            op.complete();
-            return;
+            return null;
         }
 
-        ServiceDocument sd = getStateFromLuceneDocument(visitor, selfLink);
-        op.setBodyNoCloning(sd).complete();
+        return getStateFromLuceneDocument(visitor, selfLink);
     }
 
     /**
@@ -3854,14 +3865,17 @@ public class LuceneDocumentIndexService extends StatelessService {
 
             QueryTask activeTask = taskEntry.getValue();
             QueryFilter filter = activeTask.querySpec.context.filter;
-            if (desc == null) {
-                if (!QueryFilterUtils.evaluate(filter, latestState, getHost())) {
-                    continue;
-                }
-            } else {
-                if (!filter.evaluate(latestState, desc)) {
-                    continue;
-                }
+            boolean notify = false;
+            if (activeTask.querySpec.options.contains(QueryOption.CONTINUOUS)) {
+                notify = evaluateQuery(desc, filter, latestState);
+            }
+            if (!notify
+                    && activeTask.querySpec.options.contains(QueryOption.CONTINIOUS_STOP_MATCH)) {
+                notify = evaluateQuery(desc, filter,
+                        getPreviousStateForDoc(activeTask, latestState));
+            }
+            if (!notify) {
+                continue;
             }
 
             QueryTask patchBody = new QueryTask();
@@ -3890,6 +3904,36 @@ public class LuceneDocumentIndexService extends StatelessService {
             sendRequest(patchOperation);
             OperationContext.restoreAuthContext(authContext);
         }
+    }
+
+    private boolean evaluateQuery(ServiceDocumentDescription desc, QueryFilter filter,
+            ServiceDocument serviceState) {
+        if (serviceState == null) {
+            return false;
+        }
+        if (desc == null) {
+            if (!QueryFilterUtils.evaluate(filter, serviceState, getHost())) {
+                return false;
+            }
+        } else if (!filter.evaluate(serviceState, desc)) {
+            return false;
+        }
+        return true;
+    }
+
+    private ServiceDocument getPreviousStateForDoc(QueryTask activeTask,
+            ServiceDocument latestState) {
+        boolean hasPreviousVersion = latestState.documentVersion > 0 ? true : false;
+        ServiceDocument previousState = null;
+        try {
+            if (hasPreviousVersion) {
+                previousState = getDocumentAtVersion(latestState.documentSelfLink,
+                        latestState.documentVersion - 1);
+            }
+        } catch (Exception e) {
+            logWarning("Exception getting previous state: %s", e.getMessage());
+        }
+        return previousState;
     }
 
     void setWriterUpdateTimeMicros(long writerUpdateTimeMicros) {
