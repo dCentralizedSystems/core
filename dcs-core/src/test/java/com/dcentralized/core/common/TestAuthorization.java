@@ -830,6 +830,7 @@ public class TestAuthorization extends BasicTestCase {
                                     ctx.fail(new IllegalStateException("Example service creation failed thrice"));
                                     return;
                                 }
+                                Thread.sleep(100);
                             }
                         }
                         this.host.sendAndWaitExpectSuccess(
