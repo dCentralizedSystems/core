@@ -13,7 +13,11 @@
 
 package com.dcentralized.core.services.common;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -25,7 +29,6 @@ import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexOptions;
-
 import org.junit.Test;
 
 /**
@@ -91,6 +94,62 @@ public class TestFieldInfoCache {
             infosArray[i] = makeFieldInfo(i);
         }
         return infosArray;
+    }
+
+    @Test
+    public void testEqual() {
+        FieldInfo f1 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, 1, Collections.emptyMap(), 7, 7);
+
+        FieldInfo f2 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, 1, Collections.emptyMap(), 7, 7);
+
+        assertEquals(FieldInfoCache.hashCode(f1), FieldInfoCache.hashCode(f2));
+        assertTrue(FieldInfoCache.equals(f1, f2));
+    }
+
+    @Test
+    public void testNoEqualDocValue() {
+        FieldInfo f1 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, -1, Collections.emptyMap(), 7, 7);
+
+        FieldInfo f2 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, 1, Collections.emptyMap(), 7, 7);
+
+        assertNotEquals(FieldInfoCache.hashCode(f1), FieldInfoCache.hashCode(f2));
+        assertFalse(FieldInfoCache.equals(f1, f2));
+    }
+
+    @Test
+    public void testNoEqualNumber() {
+        FieldInfo f1 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, -1, Collections.emptyMap(), 7, 7);
+
+        FieldInfo f2 = new FieldInfo("f1",
+                2, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, -1, Collections.emptyMap(), 7, 7);
+
+        assertNotEquals(FieldInfoCache.hashCode(f1), FieldInfoCache.hashCode(f2));
+        assertFalse(FieldInfoCache.equals(f1, f2));
+    }
+
+    @Test
+    public void testNoEqualName() {
+        FieldInfo f1 = new FieldInfo("f1",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, -1, Collections.emptyMap(), 7, 7);
+
+        FieldInfo f2 = new FieldInfo("f2",
+                1, false, false, true, IndexOptions.NONE,
+                DocValuesType.NUMERIC, -1, Collections.emptyMap(), 7, 7);
+
+        assertNotEquals(FieldInfoCache.hashCode(f1), FieldInfoCache.hashCode(f2));
+        assertFalse(FieldInfoCache.equals(f1, f2));
     }
 
     private FieldInfo makeFieldInfo(int number) {
