@@ -648,6 +648,12 @@ public class AuthorizationContextServiceHelper {
             gets.add(get);
         }
 
+        if (gets.size() == 0) {
+            op.fail(new IllegalStateException(
+                    "missing resource group links for " + claims.getSubject()));
+            return;
+        }
+
         OperationJoin join = OperationJoin.create(gets);
         join.setCompletion(handler);
         join.sendWith(context.authContextService.getHost());
