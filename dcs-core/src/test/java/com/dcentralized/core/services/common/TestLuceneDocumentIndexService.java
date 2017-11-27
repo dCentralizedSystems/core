@@ -129,6 +129,7 @@ class FaultInjectionLuceneDocumentIndexService extends LuceneDocumentIndexServic
             try {
                 IndexSearcher s = info.searcher;
                 s.getIndexReader().close();
+                this.searcherUpdateTimesMicros.remove(s.hashCode());
             } catch (Throwable ignored) {
             }
         }
