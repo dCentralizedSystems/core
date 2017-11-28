@@ -558,7 +558,7 @@ public class TestSynchronizationTaskService extends BasicTestCase {
         ServiceStats.ServiceStat newStat = getServiceAvailableStat(factoryLink, sender,
                 newFactoryOwner);
         if (factoryOwner.equals(newFactoryOwner)) {
-            assertTrue(newStat.accumulatedValue - stat.accumulatedValue >= 1);
+            assertEquals(1.0, newStat.accumulatedValue - stat.accumulatedValue, 0);
         } else {
             assertEquals(1.0, newStat.accumulatedValue, 0);
         }
