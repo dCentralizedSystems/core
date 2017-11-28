@@ -48,11 +48,11 @@ public class BasicReusableHostTestCase {
 
     protected TestRequestSender sender;
 
-    public int requestCount = 1000;
+    public int requestCount = 10;
 
     public long serviceCount = 10;
 
-    public long iterationCount = 5;
+    public long iterationCount = 2;
 
     public long testDurationSeconds = 0;
 

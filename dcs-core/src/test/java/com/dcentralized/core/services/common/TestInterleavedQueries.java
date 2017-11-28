@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.QueryTaskClientHelper;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceConfigUpdateRequest;
 import com.dcentralized.core.common.TestResults;
@@ -31,7 +32,9 @@ import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.services.common.QueryTask.Query.Occurance;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
 
 import org.junit.Before;
@@ -60,8 +63,6 @@ public class TestInterleavedQueries extends BasicReusableHostTestCase {
     public TestInterleavedQueries() {
         // These values picked for IDE configuration: short test,
         // default heap size of 256m
-
-        this.requestCount = 100;
         this.operationTimeoutMillis = 350;
         this.errorThreshold = 5;
     }
@@ -153,7 +154,7 @@ public class TestInterleavedQueries extends BasicReusableHostTestCase {
         }
 
         // create some initial documents
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 10; i++) {
             ExampleServiceState doc = createBigState(keys);
             Operation postDocument = Operation.createPost(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK))
                     .setBody(doc);
@@ -194,10 +195,76 @@ public class TestInterleavedQueries extends BasicReusableHostTestCase {
         writeResults(start, i, errors);
     }
 
+    /**
+     * What is the throughput if there are no writes but only reads?
+     *
+     * @throws Throwable
+     */
+    @Test
+    public void testSearcherReuse() throws Throwable {
+        // assume there are 50 documentKinds each having 20 fields
+        final int fieldCount = 50 * 20;
+        List<String> keys = new ArrayList<>(fieldCount);
+        for (int i = 0; i < fieldCount; i++) {
+            keys.add("key-" + UUID.randomUUID());
+        }
+
+        this.host.log("Creating initial documents");
+        // create some initial documents
+        for (int i = 0; i < this.serviceCount; i++) {
+            ExampleServiceState doc = createBigState(keys);
+            Operation postDocument = Operation
+                    .createPost(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK))
+                    .setBody(doc);
+
+            this.host.getTestRequestSender().sendAndWait(postDocument);
+        }
+
+        this.host.log("Start queries");
+        TestContext context = this.host.testCreate(this.requestCount);
+        long start = System.nanoTime();
+
+        int i;
+        for (i = 0; i < this.requestCount; i++) {
+            final int ifinal = i;
+            this.host.log("Processing request %s", i);
+
+            QueryTask task = makeQueryTask();
+            task.querySpec.options.add(QueryOption.EXPAND_CONTENT);
+
+            // don't expire tasks anytime soon: expiring them before the test is over will skew the test
+            task.documentExpirationTimeMicros = Utils
+                    .fromNowMicrosUtc(TimeUnit.MINUTES.toMicros(30));
+
+            Operation postTask = Operation
+                    .createPost(UriUtils.buildUri(this.host, ServiceUriPaths.CORE_QUERY_TASKS))
+                    .setBody(task);
+            this.host.getTestRequestSender().sendAndWait(postTask);
+
+            QueryTaskClientHelper.create(ExampleServiceState.class)
+                    .setQueryTask(task)
+                    .setResultHandler((queryElementResult, failure) -> {
+                        ExampleServiceState obj = queryElementResult.getResult();
+                        if (queryElementResult.hasResult()) {
+                            if (obj.documentSelfLink.hashCode() % 100 == 0) {
+                                // print every 100th doc, just showing progress
+                                this.host.log("Processed a document: " + obj.name);
+                            }
+                        } else {
+                            this.host.log("Completed request " + ifinal);
+                            context.completeIteration();
+                        }
+                    })
+                    .sendWith(this.host);
+        }
+
+        context.await();
+        writeResults(start, i, 0);
+    }
+
     private void writeResults(long start, int opCount, int errors) {
         double durationSeconds = (System.nanoTime() - start) / 1_000_000_000.0;
         double tput = opCount / durationSeconds;
-
 
         this.testResults.getReport().lastValue("ops", opCount);
         this.testResults.getReport().lastValue("time", durationSeconds);
