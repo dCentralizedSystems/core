@@ -283,7 +283,8 @@ public class UtilityService implements Service {
                 return;
             }
             op.fail(Operation.STATUS_CODE_UNAVAILABLE);
-        } else if (op.getAction() == Action.PATCH || op.getAction() == Action.PUT) {
+        } else if (op.getAction() == Action.PATCH || op.getAction() == Action.PUT
+                || op.getAction() == Action.POST) {
             if (!op.hasBody()) {
                 op.fail(new IllegalArgumentException("body is required"));
                 return;

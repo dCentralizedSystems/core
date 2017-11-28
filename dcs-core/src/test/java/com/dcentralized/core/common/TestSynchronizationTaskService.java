@@ -53,11 +53,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+
 public class TestSynchronizationTaskService extends BasicTestCase {
     public static class SynchRetryExampleService extends StatefulService {
         public static final String FACTORY_LINK = ServiceUriPaths.CORE + "/test-retry-examples";
 
-        public static final FactoryService createFactory() {
+        public static FactoryService createFactory() {
             return FactoryService.create(SynchRetryExampleService.class);
         }
 
@@ -103,14 +104,10 @@ public class TestSynchronizationTaskService extends BasicTestCase {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        System.setProperty(
-                SynchronizationTaskService.PROPERTY_NAME_SYNCHRONIZATION_LOGGING, "true");
     }
 
     @AfterClass
     public static void tearDownClass() throws Exception {
-        System.setProperty(
-                SynchronizationTaskService.PROPERTY_NAME_SYNCHRONIZATION_LOGGING, "false");
     }
 
     @Override
@@ -145,6 +142,11 @@ public class TestSynchronizationTaskService extends BasicTestCase {
         URI exampleFactoryUri = UriUtils.buildUri(
                 this.host.getPeerServiceUri(ExampleService.FACTORY_LINK));
         this.host.waitForReplicatedFactoryServiceAvailable(exampleFactoryUri);
+
+        // expire node that went away quickly to avoid alot of log spam from gossip failures
+        NodeGroupService.NodeGroupConfig cfg = new NodeGroupService.NodeGroupConfig();
+        cfg.nodeRemovalDelayMicros = TimeUnit.SECONDS.toMicros(1);
+        this.host.setNodeGroupConfig(cfg);
 
         for (VerificationHost h : this.host.getInProcessHostMap().values()) {
             h.addPrivilegedService(InMemoryLuceneDocumentIndexService.class);
@@ -496,11 +498,8 @@ public class TestSynchronizationTaskService extends BasicTestCase {
                 exampleStates.stream().collect(Collectors.toMap(s -> s.documentSelfLink, s -> s));
 
         ExampleServiceState state = exampleStatesMap.entrySet().iterator().next().getValue();
-
-        VerificationHost owner = this.host.getInProcessHostMap().values().stream()
-                .filter(host -> host.getId().contentEquals(state.documentOwner)).findFirst()
-                .orElseThrow(() -> new RuntimeException("couldn't find owner node"));
-
+        VerificationHost owner = this.host.getOwnerPeer(state.documentSelfLink,
+                ServiceUriPaths.DEFAULT_NODE_SELECTOR);
 
         // Send updates to all services and check consistency after owner stops
         for (ExampleServiceState st : exampleStates) {
@@ -520,9 +519,29 @@ public class TestSynchronizationTaskService extends BasicTestCase {
                 exampleStatesMap.size(),
                 0, this.nodeCount);
 
-        // Stop the current owner and make sure that new owner is selected and state is consistent
+        // Get current synchronization count.
+        this.host.waitFor("", () -> {
+            VerificationHost factoryOwner = this.host.getOwnerPeer(factoryLink,
+                    ServiceUriPaths.DEFAULT_NODE_SELECTOR);
+            ServiceStats.ServiceStat stat = getServiceAvailableStat(factoryLink, sender,
+                    factoryOwner);
+            return stat.accumulatedValue >= 1;
+        });
+
+        VerificationHost factoryOwner = this.host.getOwnerPeer(factoryLink,
+                ServiceUriPaths.DEFAULT_NODE_SELECTOR);
+        ServiceStats.ServiceStat stat = getServiceAvailableStat(factoryLink, sender, factoryOwner);
+
+        // Stop the current owner and make sure that new owner is selected and state is consistent after synchronization.
         this.host.stopHost(owner);
-        VerificationHost peer = this.host.getPeerHost();
+        VerificationHost newPeer = this.host.getPeerHost();
+
+        this.host.waitFor("Node did not expired", () -> {
+            NodeGroupService.NodeGroupState ngs = sender.sendAndWait(
+                    Operation.createGet(newPeer, ServiceUriPaths.DEFAULT_NODE_GROUP),
+                    NodeGroupService.NodeGroupState.class);
+            return ngs.nodes.size() == 2;
+        });
 
         this.host.waitForReplicatedFactoryChildServiceConvergence(
                 this.host.getNodeGroupToFactoryMap(factoryLink),
@@ -531,13 +550,31 @@ public class TestSynchronizationTaskService extends BasicTestCase {
                 exampleStatesMap.size(),
                 0, this.nodeCount - 1);
 
-        // Verify that state is consistent after original owner node stopped.
-        Operation op = Operation.createGet(peer, state.documentSelfLink);
-        ExampleServiceState newState = sender.sendAndWait(op, ExampleServiceState.class);
+        // Verify that synchronization was triggered only one time.
+        ExampleServiceState newState = sender.sendAndWait(
+                Operation.createGet(newPeer, state.documentSelfLink), ExampleServiceState.class);
+        VerificationHost newFactoryOwner = this.host.getOwnerPeer(factoryLink,
+                ServiceUriPaths.DEFAULT_NODE_SELECTOR);
+        ServiceStats.ServiceStat newStat = getServiceAvailableStat(factoryLink, sender,
+                newFactoryOwner);
+        if (factoryOwner.equals(newFactoryOwner)) {
+            assertTrue(newStat.accumulatedValue - stat.accumulatedValue >= 1);
+        } else {
+            assertEquals(1.0, newStat.accumulatedValue, 0);
+        }
 
+        // Verify that state is consistent after original owner node stopped.
         assertNotNull(newState);
         assertEquals((Long) (state.counter + patchCount), newState.counter);
         assertNotEquals(newState.documentOwner, state.documentOwner);
+    }
+
+    private ServiceStats.ServiceStat getServiceAvailableStat(String factoryLink,
+            TestRequestSender sender, VerificationHost newOwner) {
+        URI factoryOwnerServiceStatsUri = UriUtils.buildStatsUri(newOwner, factoryLink);
+        Operation statsOp = Operation.createGet(factoryOwnerServiceStatsUri);
+        ServiceStats stats = sender.sendAndWait(statsOp, ServiceStats.class);
+        return stats.entries.get(Service.STAT_NAME_AVAILABLE);
     }
 
     private VerificationHost restartHost(VerificationHost hostToRestart) throws Throwable {
@@ -939,4 +976,5 @@ public class TestSynchronizationTaskService extends BasicTestCase {
         assertEquals("Expect no query pages", 0, queryPageCountAfter);
         assertEquals("Expect no broad cast pages", 0, broadcastPageCountAfter);
     }
+
 }
