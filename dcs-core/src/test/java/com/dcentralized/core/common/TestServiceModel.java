@@ -629,6 +629,7 @@ public class TestServiceModel extends BasicReusableHostTestCase {
             uris.add(UriUtils.extendUri(nsOwner.getUri(), "/1/subscriptions"));
 
             EnumSet<Action> actions = EnumSet.allOf(Action.class);
+            actions.remove(Action.HEAD);
             verifyAllActions(uris, actions, false);
 
             // these should all fail, utility service suffix
@@ -647,6 +648,7 @@ public class TestServiceModel extends BasicReusableHostTestCase {
             uris.add(UriUtils.extendUri(this.host.getUri(), "/1/2/3/?k=v&k1=v1"));
             uris.add(UriUtils.extendUri(this.host.getUri(), "/1/2/3/?k=v&k1=v1"));
             actions = EnumSet.allOf(Action.class);
+            actions.remove(Action.HEAD);
             verifyAllActions(uris, actions, true);
         }
 
@@ -679,7 +681,7 @@ public class TestServiceModel extends BasicReusableHostTestCase {
                         .setAction(a)
                         .setCompletion(c);
 
-                if (a != Action.GET && a != Action.OPTIONS) {
+                if (a != Action.GET && a != Action.OPTIONS && a != Action.HEAD) {
                     op.setBody(new ServiceDocument());
                 }
                 this.host.send(op);

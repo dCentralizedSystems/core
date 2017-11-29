@@ -177,6 +177,8 @@ public class StatelessService implements Service {
                     handlePatch(op);
                 } else if (op.getAction() == Action.PUT) {
                     handlePut(op);
+                } else {
+                    Operation.failActionNotSupported(op);
                 }
             }
         } catch (Exception e) {

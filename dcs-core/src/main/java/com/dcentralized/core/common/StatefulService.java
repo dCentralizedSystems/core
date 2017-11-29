@@ -283,7 +283,7 @@ public class StatefulService implements Service {
                 || a == Action.POST) {
             stopped = queueUpdateRequestInternal(op, stopped);
         } else {
-            if (a == Action.OPTIONS) {
+            if (a == Action.OPTIONS || a == Action.HEAD) {
                 return false;
             } else if (hasOption(ServiceOption.CONCURRENT_GET_HANDLING)) {
                 // Indexed services serve GET directly from document store so they
@@ -761,7 +761,8 @@ public class StatefulService implements Service {
         }
 
         ServiceDocument linkedState = op.getLinkedState();
-        boolean isStateUpdated = op.getAction() != Action.GET && op.getAction() != Action.OPTIONS;
+        boolean isStateUpdated = op.getAction() != Action.GET && op.getAction() != Action.OPTIONS
+                && op.getAction() != Action.HEAD;
 
         if (op.isFromReplication()) {
             isStateUpdated = true;
@@ -1111,7 +1112,8 @@ public class StatefulService implements Service {
     }
 
     private void publish(Operation op) {
-        if (op.getAction() == Action.GET || op.getAction() == Action.OPTIONS) {
+        if (op.getAction() == Action.GET || op.getAction() == Action.OPTIONS
+                || op.getAction() == Action.HEAD) {
             return;
         }
         if (op.isNotificationDisabled()) {
@@ -1226,7 +1228,7 @@ public class StatefulService implements Service {
             return;
         }
 
-        if (op.getAction() == Action.OPTIONS) {
+        if (op.getAction() == Action.OPTIONS || op.getAction() == Action.HEAD) {
             return;
         }
 

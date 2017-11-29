@@ -32,6 +32,7 @@ public final class ServiceStatUtils {
     static final String PUT_DURATION = Action.PUT + Service.STAT_NAME_OPERATION_DURATION;
     static final String DELETE_DURATION = Action.DELETE + Service.STAT_NAME_OPERATION_DURATION;
     static final String OPTIONS_DURATION = Action.OPTIONS + Service.STAT_NAME_OPERATION_DURATION;
+    static final String HEAD_DURATION = Action.HEAD + Service.STAT_NAME_OPERATION_DURATION;
 
     static final String GET_REQUEST_COUNT = Action.GET + Service.STAT_NAME_REQUEST_COUNT;
     static final String POST_REQUEST_COUNT = Action.POST + Service.STAT_NAME_REQUEST_COUNT;
@@ -39,6 +40,7 @@ public final class ServiceStatUtils {
     static final String PUT_REQUEST_COUNT = Action.PUT + Service.STAT_NAME_REQUEST_COUNT;
     static final String DELETE_REQUEST_COUNT = Action.DELETE + Service.STAT_NAME_REQUEST_COUNT;
     static final String OPTIONS_REQUEST_COUNT = Action.OPTIONS + Service.STAT_NAME_REQUEST_COUNT;
+    static final String HEAD_REQUEST_COUNT = Action.HEAD + Service.STAT_NAME_REQUEST_COUNT;
 
     static final String GET_QLATENCY = Action.GET + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
     static final String POST_QLATENCY = Action.POST + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
@@ -46,6 +48,7 @@ public final class ServiceStatUtils {
     static final String PUT_QLATENCY = Action.PUT + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
     static final String DELETE_QLATENCY = Action.DELETE + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
     static final String OPTIONS_QLATENCY = Action.OPTIONS + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
+    static final String HEAD_QLATENCY = Action.HEAD + Service.STAT_NAME_OPERATION_QUEUEING_LATENCY;
 
     static final String GET_HANDLER_LATENCY = Action.GET + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
     static final String POST_HANDLER_LATENCY = Action.POST + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
@@ -53,6 +56,8 @@ public final class ServiceStatUtils {
     static final String PUT_HANDLER_LATENCY = Action.PUT + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
     static final String DELETE_HANDLER_LATENCY = Action.DELETE + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
     static final String OPTIONS_HANDLER_LATENCY = Action.OPTIONS + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
+    static final String HEAD_HANDLER_LATENCY = Action.HEAD
+            + Service.STAT_NAME_SERVICE_HANDLER_LATENCY;
 
     static final EnumSet<AggregationType> AGGREGATION_TYPE_AVG_MAX =
             EnumSet.of(AggregationType.AVG, AggregationType.MAX);
@@ -116,6 +121,8 @@ public final class ServiceStatUtils {
             return DELETE_DURATION;
         case OPTIONS:
             return OPTIONS_DURATION;
+        case HEAD:
+            return HEAD_DURATION;
         default:
             throw new IllegalArgumentException("Unknown action " + a);
         }
@@ -135,6 +142,8 @@ public final class ServiceStatUtils {
             return DELETE_REQUEST_COUNT;
         case OPTIONS:
             return OPTIONS_REQUEST_COUNT;
+        case HEAD:
+            return HEAD_REQUEST_COUNT;
         default:
             throw new IllegalArgumentException("Unknown action " + a);
         }
@@ -154,6 +163,8 @@ public final class ServiceStatUtils {
             return DELETE_QLATENCY;
         case OPTIONS:
             return OPTIONS_QLATENCY;
+        case HEAD:
+            return HEAD_QLATENCY;
         default:
             throw new IllegalArgumentException("Unknown action " + a);
         }
@@ -173,6 +184,8 @@ public final class ServiceStatUtils {
             return DELETE_HANDLER_LATENCY;
         case OPTIONS:
             return OPTIONS_HANDLER_LATENCY;
+        case HEAD:
+            return HEAD_HANDLER_LATENCY;
         default:
             throw new IllegalArgumentException("Unknown action " + a);
         }

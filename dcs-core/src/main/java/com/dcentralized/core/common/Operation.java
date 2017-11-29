@@ -751,6 +751,18 @@ public class Operation implements Cloneable {
         return createOperation(Action.OPTIONS, uri);
     }
 
+    public static Operation createHead(URI uri) {
+        return createOperation(Action.HEAD, uri);
+    }
+
+    public static Operation createHead(Service sender, String targetPath) {
+        return createHead(UriUtils.buildUri(sender.getHost(), targetPath));
+    }
+
+    public static Operation createHead(ServiceHost sender, String targetPath) {
+        return createHead(UriUtils.buildUri(sender, targetPath));
+    }
+
     public static Operation createDelete(Service sender, String targetPath) {
         return createDelete(UriUtils.buildUri(sender.getHost(), targetPath));
     }

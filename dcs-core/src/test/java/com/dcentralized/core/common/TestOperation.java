@@ -178,6 +178,14 @@ public class TestOperation extends BasicReusableHostTestCase {
         verifyOp(link, a, op);
         op = Operation.createOptions(s.getUri());
         verifyOp(s.getSelfLink(), a, op);
+
+        a = Action.HEAD;
+        op = Operation.createHead(this.host, link);
+        verifyOp(link, a, op);
+        op = Operation.createHead(s, link);
+        verifyOp(link, a, op);
+        op = Operation.createHead(s.getUri());
+        verifyOp(s.getSelfLink(), a, op);
     }
 
     private void verifyOp(String link, Action a, Operation op) {

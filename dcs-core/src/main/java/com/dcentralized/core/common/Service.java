@@ -22,7 +22,7 @@ import com.dcentralized.core.common.ServiceStats.ServiceStat;
 
 public interface Service extends ServiceRequestSender {
     enum Action {
-        GET, POST, PATCH, PUT, DELETE, OPTIONS
+        GET, POST, PATCH, PUT, DELETE, OPTIONS, HEAD
     }
 
     /**

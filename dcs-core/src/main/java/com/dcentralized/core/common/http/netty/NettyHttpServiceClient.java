@@ -644,6 +644,8 @@ public class NettyHttpServiceClient implements ServiceClient {
             return HttpMethod.POST;
         case PUT:
             return HttpMethod.PUT;
+        case HEAD:
+            return HttpMethod.HEAD;
         default:
             throw new IllegalArgumentException("unknown method " + a);
 
@@ -751,8 +753,7 @@ public class NettyHttpServiceClient implements ServiceClient {
         } else if (!op.hasReferer()) {
             e = new IllegalArgumentException("Referer is required");
         } else {
-            boolean needsBody = op.getAction() != Action.GET && op.getAction() != Action.DELETE &&
-                    op.getAction() != Action.POST && op.getAction() != Action.OPTIONS;
+            boolean needsBody = op.getAction() == Action.PUT || op.getAction() == Action.PATCH;
             if (!op.hasBody() && needsBody) {
                 e = new IllegalArgumentException("Body is required");
             }
