@@ -337,6 +337,9 @@ class ServiceSynchronizationTracker {
         // NodeSelectorSynchronizationService get persisted locally.
         op.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER);
 
+        boolean synchHistoricalVersions = op
+                .hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_HISTORICAL_VERSIONS);
+
         CompletionHandler c = (o, e) -> {
             if (this.host.isStopping()) {
                 op.fail(new CancellationException("Host is stopping"));
@@ -346,6 +349,14 @@ class ServiceSynchronizationTracker {
             if (e != null) {
                 op.setStatusCode(o.getStatusCode());
                 op.fail(e);
+                return;
+            }
+
+            if (synchHistoricalVersions) {
+                // all historic versions of the service have been synchronized across all nodes,
+                // including this one
+                op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
+                op.complete();
                 return;
             }
 
@@ -407,6 +418,9 @@ class ServiceSynchronizationTracker {
                 .setRetryCount(0)
                 .setReferer(s.getUri())
                 .setCompletion(c);
+        if (synchHistoricalVersions) {
+            synchPost.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_HISTORICAL_VERSIONS);
+        }
         this.host.sendRequest(synchPost);
     }
 

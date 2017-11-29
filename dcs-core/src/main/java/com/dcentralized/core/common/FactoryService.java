@@ -25,6 +25,7 @@ import com.dcentralized.core.common.NodeSelectorService.SelectOwnerResponse;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
+import com.dcentralized.core.common.config.Configuration;
 import com.dcentralized.core.services.common.NodeGroupBroadcastResponse;
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
@@ -1109,6 +1110,10 @@ public abstract class FactoryService extends StatelessService {
         task.queryResultLimit = this.selfQueryResultLimit;
         task.taskInfo = TaskState.create();
         task.taskInfo.isDirect = true;
+        task.synchAllVersions = Configuration.bool(
+                SynchronizationTaskService.class,
+                "SYNCH_ALL_VERSIONS",
+                false);
         return task;
     }
 
