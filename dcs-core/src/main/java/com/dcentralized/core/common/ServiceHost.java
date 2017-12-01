@@ -102,6 +102,7 @@ import com.dcentralized.core.services.common.LuceneDocumentIndexService;
 import com.dcentralized.core.services.common.NodeGroupFactoryService;
 import com.dcentralized.core.services.common.NodeGroupService.JoinPeerRequest;
 import com.dcentralized.core.services.common.NodeGroupUtils;
+import com.dcentralized.core.services.common.NodeSelectorReplicationService;
 import com.dcentralized.core.services.common.ODataQueryService;
 import com.dcentralized.core.services.common.QueryFilter;
 import com.dcentralized.core.services.common.QueryPageForwardingService;
@@ -1550,6 +1551,7 @@ public class ServiceHost implements ServiceRequestSender {
 
         addPrivilegedService(this.managementService.getClass());
         addPrivilegedService(BasicAuthenticationService.class);
+        addPrivilegedService(NodeSelectorReplicationService.class);
 
         // Capture authorization context; this function executes as the system user
         AuthorizationContext ctx = OperationContext.getAuthorizationContext();
