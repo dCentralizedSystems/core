@@ -102,7 +102,8 @@ public class QueryTask extends ServiceDocument {
             DO_NOT_REFRESH,
 
             /**
-             * The query will return the top N results, with N specified through the resultLimit field.
+             * The query will return the top N results, with N specified through the
+             * {@link QuerySpecification#resultLimit} field.
              * The query results will be available in the results field and nextPageLink will be null.
              */
             TOP_RESULTS,
