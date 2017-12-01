@@ -72,6 +72,7 @@ import com.dcentralized.core.common.NodeSelectorState;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.OperationContext;
 import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.Service.ServiceOption;
@@ -1052,7 +1053,15 @@ public class VerificationHost extends ExampleServiceHost {
     }
 
     public Map<String, ServiceStat> getServiceStats(URI serviceUri) {
+        AuthorizationContext ctx = null;
+        if (this.isAuthorizationEnabled()) {
+            ctx = OperationContext.getAuthorizationContext();
+            this.setSystemAuthorizationContext();
+        }
         ServiceStats stats = this.sender.sendStatsGetAndWait(serviceUri);
+        if (this.isAuthorizationEnabled()) {
+            this.setAuthorizationContext(ctx);
+        }
         return stats.entries;
     }
 
