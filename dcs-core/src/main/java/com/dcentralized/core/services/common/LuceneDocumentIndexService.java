@@ -1293,7 +1293,7 @@ public class LuceneDocumentIndexService extends StatelessService {
         }
 
         if (qs.options.contains(QueryOption.CONTINUOUS) ||
-                qs.options.contains(QueryOption.CONTINIOUS_STOP_MATCH)) {
+                qs.options.contains(QueryOption.CONTINUOUS_STOP_MATCH)) {
             if (handleContinuousQueryTaskPatch(op, task, qs)) {
                 return;
             }
@@ -3979,7 +3979,7 @@ public class LuceneDocumentIndexService extends StatelessService {
                 notify = evaluateQuery(desc, filter, latestState);
             }
             if (!notify
-                    && activeTask.querySpec.options.contains(QueryOption.CONTINIOUS_STOP_MATCH)) {
+                    && activeTask.querySpec.options.contains(QueryOption.CONTINUOUS_STOP_MATCH)) {
                 notify = evaluateQuery(desc, filter,
                         getPreviousStateForDoc(activeTask, latestState));
             }
