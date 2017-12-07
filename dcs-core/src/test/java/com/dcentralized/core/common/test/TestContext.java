@@ -28,6 +28,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
+import com.dcentralized.core.common.DeferredResult;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.test.VerificationHost.WaitHandler;
 
@@ -178,6 +179,14 @@ public class TestContext {
 
     public void await() {
         await(() -> {
+        });
+    }
+
+    public void await(DeferredResult<?> deferredResult) {
+        await(() -> {
+            if (deferredResult.isDone()) {
+                this.completeIteration();
+            }
         });
     }
 

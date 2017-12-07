@@ -3197,12 +3197,9 @@ public class TestLuceneDocumentIndexService {
         patchOrDeleteWithExpiration(factoryUri, services, expTime, expectedCount);
         this.host.log("All example services expired");
 
-        // In the long-running test case, sleep for a couple of maintenance intervals in order to
-        // avoid generating unnecessary log spam.
-        if (this.host.isLongDurationTest()) {
-            Thread.sleep(2 * TimeUnit.MICROSECONDS.toMillis(
-                    this.host.getMaintenanceIntervalMicros()));
-        }
+        // sleep 1 maintenance cycle of the index service
+        Thread.sleep(5 * TimeUnit.MICROSECONDS.toMillis(
+                this.host.getMaintenanceIntervalMicros()));
 
         ServiceStat deletedCountBaseline = expiredCountBeforeExpiration;
         ServiceStat forcedMaintenanceCountBaseline = forcedMaintenanceCountBeforeExpiration;
@@ -3333,7 +3330,7 @@ public class TestLuceneDocumentIndexService {
         }
 
         // do not do anything on the services, rely on the maintenance interval to expire them
-        this.host.waitFor("Lucene service maintenanance never expired services", () -> {
+        this.host.waitFor("Lucene service maintenance never expired services", () -> {
             Map<String, ServiceStat> statMap = this.host.getServiceStats(
                     this.host.getDocumentIndexServiceUri());
             ServiceStat maintExpiredCount = statMap
