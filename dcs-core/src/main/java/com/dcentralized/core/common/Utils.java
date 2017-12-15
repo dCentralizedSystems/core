@@ -52,6 +52,8 @@ import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.dcentralized.core.common.NodeSelectorService.SelectOwnerResponse;
+import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
@@ -669,6 +671,56 @@ public final class Utils {
 
         // non-windows -> fallback on default impl
         return addr.isReachable((int) timeoutMs);
+    }
+
+    static void checkAndUpdateDocumentOwnership(ServiceHost host, Service service,
+            long expirationTimeMicrosUtc, CompletionHandler ch) {
+        Operation selectOwnerOp = Operation.createPost(null)
+                .setExpiration(expirationTimeMicrosUtc);
+        CompletionHandler c = (o, e) -> {
+            if (e != null) {
+                ch.handle(selectOwnerOp, e);
+                return;
+            }
+
+            SelectOwnerResponse rsp = o.getBody(SelectOwnerResponse.class);
+            service.toggleOption(ServiceOption.DOCUMENT_OWNER, rsp.isLocalHostOwner);
+            ch.handle(selectOwnerOp, null);
+        };
+        selectOwnerOp.setCompletion(c);
+        host.selectOwner(service.getPeerNodeSelectorPath(), service.getSelfLink(), selectOwnerOp);
+    }
+
+    public static void setFactoryAvailabilityIfOwner(ServiceHost host, String factoryLink,
+            String factoryNodeSelectorPath, boolean isAvailable) {
+        Operation selectOwnerOp = Operation.createPost(null)
+                .setExpiration(Utils.fromNowMicrosUtc(host.getOperationTimeoutMicros()))
+                .setCompletion((o, e) -> {
+                    if (e != null) {
+                        host.log(Level.WARNING,
+                                "Owner selection for %s failed: %s; cannot set factory availability",
+                                factoryLink, e.getMessage());
+                        return;
+                    }
+
+                    SelectOwnerResponse rsp = o.getBody(SelectOwnerResponse.class);
+                    if (rsp.isLocalHostOwner) {
+                        ServiceStats.ServiceStat body = new ServiceStats.ServiceStat();
+                        body.name = Service.STAT_NAME_AVAILABLE;
+                        body.latestValue = isAvailable ? Service.STAT_VALUE_TRUE
+                                : Service.STAT_VALUE_FALSE;
+
+                        Operation op = Operation.createPost(
+                                UriUtils.buildAvailableUri(host, factoryLink))
+                                .setBody(body)
+                                .setReferer(host.getUri())
+                                .setConnectionSharing(true)
+                                .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION);
+                        host.sendRequest(op);
+                    }
+                });
+
+        host.selectOwner(factoryNodeSelectorPath, factoryLink, selectOwnerOp);
     }
 
     public static boolean isReachableByPing(SystemHostInfo systemInfo, InetAddress addr,

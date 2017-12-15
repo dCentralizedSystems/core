@@ -38,6 +38,7 @@ import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.StatelessService;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.services.common.NodeGroupService.NodeGroupChange;
 import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
 import com.dcentralized.core.services.common.NodeGroupService.UpdateQuorumRequest;
 
@@ -63,6 +64,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
     private NodeSelectorReplicationService replicationUtility;
 
     private volatile boolean isSynchronizationRequired;
+    private volatile boolean isSetFactoriesAvailabilityRequired;
     private boolean isNodeGroupConverged;
     private int synchQuorumWarningCount;
 
@@ -621,8 +623,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             return false;
         }
 
-        if (!this.isSynchronizationRequired) {
-            // this boolean is set to false on notifications for node group changes
+        if (!this.isSynchronizationRequired && !this.isSetFactoriesAvailabilityRequired) {
             return false;
         }
 
@@ -637,15 +638,22 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             return true;
         }
 
-        if (!getHost().isPeerSynchronizationEnabled()
-                || !this.isSynchronizationRequired) {
+        if (!getHost().isPeerSynchronizationEnabled()) {
             return false;
         }
 
-        this.isSynchronizationRequired = false;
-        logInfo("Scheduling synchronization (%d nodes)", this.cachedGroupState.nodes.size());
-        adjustStat(STAT_NAME_SYNCHRONIZATION_COUNT, 1);
-        getHost().scheduleNodeGroupChangeMaintenance(getSelfLink());
+        if (this.isSynchronizationRequired) {
+            this.isSynchronizationRequired = false;
+            logInfo("Scheduling synchronization (%d nodes)", this.cachedGroupState.nodes.size());
+            adjustStat(STAT_NAME_SYNCHRONIZATION_COUNT, 1);
+            getHost().scheduleNodeGroupChangeMaintenance(getSelfLink());
+        }
+
+        if (this.isSetFactoriesAvailabilityRequired) {
+            this.isSetFactoriesAvailabilityRequired = false;
+            logInfo("Setting factories availability on owner node");
+            getHost().setFactoriesAvailabilityIfOwner(true);
+        }
         return false;
     }
 
@@ -767,9 +775,15 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
                 // and will be expired after 5 minutes if it does not come back online within that time period.
                 if (ngs.lastChanges != null &&
                         ngs.lastChanges.size() == 1 &&
-                        ngs.lastChanges
-                                .contains(NodeGroupService.NodeGroupChange.PEER_UNAVAILABLE)) {
+                        (ngs.lastChanges.contains(NodeGroupChange.PEER_UNAVAILABLE) ||
+                                ngs.lastChanges.contains(NodeGroupChange.PEER_EXPIRED))) {
                     this.isSynchronizationRequired = false;
+                    if (ngs.lastChanges.contains(NodeGroupChange.PEER_EXPIRED)) {
+                        // synchronization is not required, but we need to set factories' availability
+                        // on hosts that own them because ownership has changed, and clients might
+                        // dependent on up-to-date factory availability
+                        this.isSetFactoriesAvailabilityRequired = true;
+                    }
                 }
             }
         }
