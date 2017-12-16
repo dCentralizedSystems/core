@@ -130,7 +130,7 @@ public final class Configuration {
     }
 
     /**
-     * Same as {@link #string(Class, String, String)} but without exposing senstivie information in the
+     * Same as {@link #string(Class, String, String)} but without exposing sensitive information in the
      * logs.
      *
      * @param subsystem
