@@ -31,14 +31,8 @@ import com.dcentralized.core.common.Service.ProcessingStage;
  * service host for all operation related maintenance.
  */
 public class OperationTracker {
-    public static ConcurrentSkipListSet<Operation> createOperationSet() {
-        return new ConcurrentSkipListSet<>(new Comparator<Operation>() {
-            @Override
-            public int compare(Operation o1, Operation o2) {
-                return Long.compare(o1.getId(),
-                        o2.getId());
-            }
-        });
+    private static ConcurrentSkipListSet<Operation> createOperationSet() {
+        return new ConcurrentSkipListSet<>(Comparator.comparingLong(Operation::getId));
     }
 
     private ServiceHost host;
@@ -115,14 +109,14 @@ public class OperationTracker {
                 this.host.log(Level.WARNING,
                         "Service %s available, but has pending start operations", link);
                 processPendingServiceStartOperations(link, ProcessingStage.AVAILABLE, s);
-                break;
+                continue;
             }
 
             if (s == null || s.getProcessingStage() == ProcessingStage.STOPPED) {
                 this.host.log(Level.WARNING,
                         "Service %s has stopped, but has pending start operations", link);
                 processPendingServiceStartOperations(link, ProcessingStage.STOPPED, null);
-                break;
+                continue;
             }
 
             Iterator<Operation> it = pendingOps.iterator();
@@ -139,7 +133,7 @@ public class OperationTracker {
                 this.host.log(Level.WARNING,
                         "Service %s available, but has pending start operations", link);
                 this.host.processPendingServiceAvailableOperations(s, null, false);
-                break;
+                continue;
             }
 
             Iterator<Operation> it = pendingOps.iterator();
