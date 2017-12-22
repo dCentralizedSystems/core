@@ -1633,6 +1633,12 @@ public class ServiceHost implements ServiceRequestSender {
             }
         }
 
+        // check point depends on index service
+        // synchronization task service may lookup check point
+        CheckpointFactoryService service = new CheckpointFactoryService();
+        service.setUseBodyForSelfLink(true);
+        startCoreServicesSynchronously(service);
+
         List<Service> coreServices = new ArrayList<>();
         coreServices.add(this.managementService);
         coreServices.add(new ODataQueryService());
