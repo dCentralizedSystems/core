@@ -69,6 +69,7 @@ import javax.net.ssl.TrustManagerFactory;
 import com.dcentralized.core.common.FileUtils.ResourceEntry;
 import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest;
 import com.dcentralized.core.common.NodeSelectorService.SelectAndForwardRequest.ForwardingOption;
+import com.dcentralized.core.common.NodeSelectorService.SelectOwnerResponse;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Operation.OperationOption;
@@ -4868,6 +4869,13 @@ public class ServiceHost implements ServiceRequestSender {
         this.serviceSynchTracker.selectServiceOwnerAndSynchState(s, op);
     }
 
+    /**
+     * Find {@link NodeSelectorService} from given or default path.
+     *
+     * @param path    path to the NodeSelectorService. default path is used when it is null. Nullable.
+     * @param request passed operation is failed if no service is found on the path. Nullable.
+     * @return a node selector service
+     */
     NodeSelectorService findNodeSelectorService(String path,
             Operation request) {
         if (path == null) {
@@ -4876,10 +4884,30 @@ public class ServiceHost implements ServiceRequestSender {
 
         Service s = this.findService(path);
         if (s == null) {
-            request.fail(new ServiceNotFoundException());
+            if (request != null) {
+                request.fail(new ServiceNotFoundException());
+            }
             return null;
         }
         return (NodeSelectorService) s;
+    }
+
+    /**
+     * Infrastructure use only
+     *
+     * This method uses cached node group state; therefore, caller needs to make sure that the
+     * node group state is in available before calling this method. Otherwise, this may return
+     * non available owner node id.
+     */
+    public SelectOwnerResponse findOwnerNode(String selectorPath, String path) {
+
+        NodeSelectorService nss = findNodeSelectorService(selectorPath, null);
+        if (nss == null) {
+            // nss is null if it failed to find a node selector
+            return null;
+        }
+
+        return nss.findOwnerNode(path);
     }
 
     public void broadcastRequest(String selectorPath, boolean excludeThisHost, Operation request) {

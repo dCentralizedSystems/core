@@ -53,6 +53,7 @@ import java.util.stream.Stream;
 
 import com.dcentralized.core.common.FileUtils;
 import com.dcentralized.core.common.NamedThreadFactory;
+import com.dcentralized.core.common.NodeSelectorService.SelectOwnerResponse;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
@@ -2614,17 +2615,17 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private boolean processQueryResultsForOwnerSelection(String json, ServiceDocument state) {
-        String documentOwner;
+        String documentSelfLink;
         if (state == null) {
-            documentOwner = Utils.fromJson(json, ServiceDocument.class).documentOwner;
+            documentSelfLink = Utils.fromJson(json, ServiceDocument.class).documentSelfLink;
         } else {
-            documentOwner = state.documentOwner;
+            documentSelfLink = state.documentSelfLink;
         }
+        SelectOwnerResponse ownerResponse = getHost().findOwnerNode(getPeerNodeSelectorPath(),
+                documentSelfLink);
+
         // omit the result if the documentOwner is not the same as the local owner
-        if (documentOwner != null && !documentOwner.equals(getHost().getId())) {
-            return false;
-        }
-        return true;
+        return ownerResponse != null && ownerResponse.isLocalHostOwner;
     }
 
     private ServiceDocument processQueryResultsForSelectLinks(IndexSearcher s,

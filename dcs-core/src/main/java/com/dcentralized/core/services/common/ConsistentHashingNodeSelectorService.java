@@ -320,49 +320,69 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
     }
 
     /**
+     * Infrastructure use only
+     *
+     * This method uses cached {@link NodeGroupState}; therefore, caller needs to make sure the
+     * nodegroup state is stable before calling this method.
+     */
+    @Override
+    public SelectOwnerResponse findOwnerNode(String path) {
+        return selectNodes(path, this.cachedGroupState);
+    }
+
+    /**
      * Uses the squared difference between the key and the server id of each member node to select a
      * node. Both the key and the nodes are hashed
      */
-    private void selectAndForward(SelectAndForwardRequest body, Operation op,
+    private void selectAndForward(SelectAndForwardRequest forwardRequest, Operation op,
             NodeGroupState localState) {
 
-        String keyValue = body.key != null ? body.key : body.targetPath;
-        SelectOwnerResponse response = body.response != null ? body.response
-                : new SelectOwnerResponse();
-        response.key = keyValue;
-        body.associatedOp = op;
+        String keyValue = forwardRequest.key != null ? forwardRequest.key
+                : forwardRequest.targetPath;
+        forwardRequest.associatedOp = op;
 
-        if (queueRequestIfNodeGroupIsUnavailable(localState, body)) {
+        if (queueRequestIfNodeGroupIsUnavailable(localState, forwardRequest)) {
             return;
         }
 
-        if (this.cachedState.replicationFactor == null && body.options != null
-                && body.options.contains(ForwardingOption.BROADCAST)) {
+        if (this.cachedState.replicationFactor == null && forwardRequest.options != null
+                && forwardRequest.options.contains(ForwardingOption.BROADCAST)) {
+            SelectOwnerResponse response = new SelectOwnerResponse();
+            response.key = keyValue;
             response.selectedNodes = localState.nodes.values();
-            if (body.options.contains(ForwardingOption.REPLICATE)) {
-                replicateRequest(op, body, response);
+            if (forwardRequest.options.contains(ForwardingOption.REPLICATE)) {
+                replicateRequest(op, forwardRequest, response);
                 return;
             }
-            broadcast(op, body, response);
+            broadcast(op, forwardRequest, response);
             return;
         }
 
         // select nodes and update response
-        selectNodes(op, response, localState);
+        SelectOwnerResponse response = selectNodes(keyValue, localState);
 
-        if (body.targetPath == null) {
+        int quorum = this.cachedState.membershipQuorum;
+        int availableNodeCount = response.availableNodeCount;
+        if (availableNodeCount < quorum) {
+            op.fail(new IllegalStateException(
+                    "Available nodes: " + availableNodeCount + ", quorum:" + quorum));
+            return;
+        }
+
+        if (forwardRequest.targetPath == null) {
             op.setBodyNoCloning(response).complete();
             return;
         }
 
-        if (body.options != null && body.options.contains(ForwardingOption.BROADCAST)) {
-            if (body.options.contains(ForwardingOption.REPLICATE)) {
+        if (forwardRequest.options != null
+                && forwardRequest.options.contains(ForwardingOption.BROADCAST)) {
+            if (forwardRequest.options.contains(ForwardingOption.REPLICATE)) {
                 if (op.getAction() == Action.DELETE) {
                     response.selectedNodes = localState.nodes.values();
                 }
-                replicateRequest(op, body, response);
+                replicateRequest(op, forwardRequest, response);
             } else {
-                broadcast(op, body, response);
+                broadcast(op, forwardRequest, response);
             }
             return;
         }
@@ -371,7 +391,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
         URI remoteService = UriUtils.buildServiceUri(response.ownerNodeGroupReference.getScheme(),
                 response.ownerNodeGroupReference.getHost(),
                 response.ownerNodeGroupReference.getPort(),
-                body.targetPath, body.targetQuery, null);
+                forwardRequest.targetPath, forwardRequest.targetQuery, null);
 
         Operation fwdOp = op.clone()
                 .setCompletion(
@@ -387,12 +407,11 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
         getHost().getClient().send(fwdOp.setUri(remoteService));
     }
 
-    private void selectNodes(Operation op,
-            SelectOwnerResponse response,
-            NodeGroupState localState) {
+    private SelectOwnerResponse selectNodes(String key, NodeGroupState localState) {
         NodeState self = localState.nodes.get(getHost().getId());
-        int quorum = this.cachedState.membershipQuorum;
         int availableNodes = localState.nodes.size();
+        SelectOwnerResponse response = new SelectOwnerResponse();
+        response.key = key;
 
         if (availableNodes == 1) {
             response.ownerNodeId = self.id;
@@ -401,7 +420,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             response.selectedNodes = localState.nodes.values();
             response.membershipUpdateTimeMicros = localState.membershipUpdateTimeMicros;
             response.availableNodeCount = 1;
-            return;
+            return response;
         }
 
         int neighbourCount = 1;
@@ -430,17 +449,14 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             closestNodes.put(distance, m);
         }
 
-        if (availableNodes < quorum) {
-            op.fail(new IllegalStateException("Available nodes: " + availableNodes + ", quorum:" + quorum));
-            return;
-        }
-
         NodeState closest = closestNodes.firstEntry().getValue();
         response.ownerNodeId = closest.id;
         response.isLocalHostOwner = response.ownerNodeId.equals(getHost().getId());
         response.ownerNodeGroupReference = closest.groupReference;
         response.selectedNodes = closestNodes.values();
         response.membershipUpdateTimeMicros = localState.membershipUpdateTimeMicros;
+
+        return response;
     }
 
     private void broadcast(Operation op, SelectAndForwardRequest req,
@@ -563,7 +579,6 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
         adjustStat(STAT_NAME_QUEUED_REQUEST_COUNT, 1);
 
         body.associatedOp = null;
-        body.response = null;
         body = Utils.clone(body);
         body.associatedOp = op;
 
@@ -654,6 +669,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             logInfo("Setting factories availability on owner node");
             getHost().setFactoriesAvailabilityIfOwner(true);
         }
+
         return false;
     }
 
