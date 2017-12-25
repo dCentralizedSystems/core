@@ -96,6 +96,7 @@ public class ServiceDocumentQueryResult extends ServiceDocument {
 
     /**
      * Duration of the query execution.
+     * When this is a result of broadcast query, it is the max query time among child queries.
      */
     public Long queryTimeMicros;
 
