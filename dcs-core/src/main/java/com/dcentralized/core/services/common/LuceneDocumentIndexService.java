@@ -1018,7 +1018,7 @@ public class LuceneDocumentIndexService extends StatelessService {
         Operation op = Operation.createGet(getUri());
         EnumSet<QueryOption> options = EnumSet.of(QueryOption.INCLUDE_ALL_VERSIONS);
         IndexSearcher s = new IndexSearcher(DirectoryReader.open(this.writer, true, true));
-        queryIndexPaginated(op, options, s, tq, null, Integer.MAX_VALUE, 0, null, rsp, null,
+        queryIndexPaginated(op, options, s, tq, null, Integer.MAX_VALUE, 0, null, null, rsp, null,
                 Utils.getNowMicrosUtc());
     }
 
@@ -1328,7 +1328,8 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         if (!queryIndex(s, op, null, qs.options, luceneQuery, lucenePage,
                 qs.resultLimit,
-                task.documentExpirationTimeMicros, task.indexLink, rsp, qs)) {
+                task.documentExpirationTimeMicros, task.indexLink, task.nodeSelectorLink, rsp,
+                qs)) {
             op.setBodyNoCloning(rsp).complete();
         }
     }
@@ -1560,7 +1561,7 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         ServiceDocumentQueryResult rsp = new ServiceDocumentQueryResult();
         rsp.documentLinks = new ArrayList<>();
-        if (queryIndex(null, get, selfLink, options, tq, null, resultLimit, 0, null, rsp,
+        if (queryIndex(null, get, selfLink, options, tq, null, resultLimit, 0, null, null, rsp,
                 null)) {
             return;
         }
@@ -1623,6 +1624,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             int count,
             long expiration,
             String indexLink,
+            String nodeSelectorPath,
             ServiceDocumentQueryResult rsp,
             QuerySpecification qs) throws Exception {
         if (options == null) {
@@ -1671,10 +1673,11 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         ServiceDocumentQueryResult result;
         if (options.contains(QueryOption.COUNT)) {
-            result = queryIndexCount(options, s, tq, rsp, qs, queryStartTimeMicros);
+            result = queryIndexCount(options, s, tq, rsp, qs, queryStartTimeMicros,
+                    nodeSelectorPath);
         } else {
             result = queryIndexPaginated(op, options, s, tq, page, count, expiration, indexLink,
-                    rsp, qs, queryStartTimeMicros);
+                    nodeSelectorPath, rsp, qs, queryStartTimeMicros);
         }
 
         result.documentOwner = getHost().getId();
@@ -1975,7 +1978,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             // for each group generate a query page link
             String pageLink = createNextPage(op, s, qs, lucenePerGroupQuery, sort,
                     null, 0, null,
-                    task.documentExpirationTimeMicros, task.indexLink, false);
+                    task.documentExpirationTimeMicros, task.indexLink, task.nodeSelectorLink,
+                    false);
 
             rsp.nextPageLinksPerGroup.put(groupValue, pageLink);
         }
@@ -1986,7 +1990,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             if (groups.totalGroupedHitCount > 0) {
                 rsp.nextPageLink = createNextPage(op, s, qs, tq, sort,
                         null, 0, groupLimit + groupOffset,
-                        task.documentExpirationTimeMicros, task.indexLink, page != null);
+                        task.documentExpirationTimeMicros, task.indexLink, task.nodeSelectorLink,
+                        page != null);
             }
         }
 
@@ -1999,7 +2004,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             Query termQuery,
             ServiceDocumentQueryResult response,
             QuerySpecification querySpec,
-            long queryStartTimeMicros)
+            long queryStartTimeMicros,
+            String nodeSelectorPath)
             throws Exception {
 
         if (queryOptions.contains(QueryOption.INCLUDE_ALL_VERSIONS)) {
@@ -2034,7 +2040,7 @@ public class LuceneDocumentIndexService extends StatelessService {
 
             after = processQueryResults(querySpec, queryOptions, resultLimit, searcher,
                     response,
-                    results.scoreDocs, start, false);
+                    results.scoreDocs, start, nodeSelectorPath, false);
 
             long now = Utils.getNowMicrosUtc();
             setTimeSeriesHistogramStat(STAT_NAME_RESULT_PROCESSING_DURATION_MICROS,
@@ -2057,9 +2063,11 @@ public class LuceneDocumentIndexService extends StatelessService {
             int count,
             long expiration,
             String indexLink,
+            String nodeSelectorPath,
             ServiceDocumentQueryResult rsp,
             QuerySpecification qs,
             long queryStartTimeMicros) throws Exception {
+
         ScoreDoc[] hits;
         ScoreDoc after = null;
         boolean hasExplicitLimit = count != Integer.MAX_VALUE;
@@ -2161,7 +2169,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             if (shouldProcessResults) {
                 start = end;
                 bottom = processQueryResults(qs, options, count, s, rsp, hits,
-                        queryStartTimeMicros, true);
+                        queryStartTimeMicros, nodeSelectorPath, true);
                 end = Utils.getNowMicrosUtc();
 
                 // remove docs for offset
@@ -2215,12 +2223,12 @@ public class LuceneDocumentIndexService extends StatelessService {
                     if (hasPage) {
                         int numOfHits = hitCount + offset;
                         createNextPageLink = checkNextPageHasEntry(bottom, options, s,
-                                tq, sort, numOfHits, qs, queryStartTimeMicros);
+                                tq, sort, numOfHits, qs, queryStartTimeMicros, nodeSelectorPath);
                     }
 
                     if (createNextPageLink) {
                         rsp.nextPageLink = createNextPage(op, s, qs, tq, sort, bottom,
-                                offset, null, expiration, indexLink, hasPage);
+                                offset, null, expiration, indexLink, nodeSelectorPath, hasPage);
                     }
                     break;
                 }
@@ -2265,7 +2273,8 @@ public class LuceneDocumentIndexService extends StatelessService {
             Sort sort,
             int count,
             QuerySpecification qs,
-            long queryStartTimeMicros) throws Exception {
+            long queryStartTimeMicros,
+            String nodeSelectorPath) throws Exception {
 
         boolean hasValidNextPageEntry = false;
 
@@ -2293,7 +2302,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             rspForNextPage.documents = new HashMap<>();
             // use resultLimit == 1 as even one found result means there has to be a next page
             after = processQueryResults(qs, options, 1, s, rspForNextPage, hits,
-                    queryStartTimeMicros, false);
+                    queryStartTimeMicros, nodeSelectorPath, false);
 
             if (rspForNextPage.documentCount > 0) {
                 hasValidNextPageEntry = true;
@@ -2317,6 +2326,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             Integer groupOffset,
             long expiration,
             String indexLink,
+            String nodeSelectorPath,
             boolean hasPage) {
 
         String nextPageId = Utils.getNowMicrosUtc() + "";
@@ -2391,13 +2401,14 @@ public class LuceneDocumentIndexService extends StatelessService {
             setAuthorizationContext(startPost, ctx);
         }
 
-        getHost().startService(startPost, new QueryPageService(spec, indexLink));
+        getHost().startService(startPost, new QueryPageService(spec, indexLink, nodeSelectorPath));
         return nextLink;
     }
 
     private ScoreDoc processQueryResults(QuerySpecification qs, EnumSet<QueryOption> options,
             int resultLimit, IndexSearcher s, ServiceDocumentQueryResult rsp, ScoreDoc[] hits,
             long queryStartTimeMicros,
+            String nodeSelectorPath,
             boolean populateResponse) throws Exception {
 
         ScoreDoc lastDocVisited = null;
@@ -2528,7 +2539,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             }
 
             if (options.contains(QueryOption.OWNER_SELECTION)) {
-                if (!processQueryResultsForOwnerSelection(json, state)) {
+                if (!processQueryResultsForOwnerSelection(json, state, nodeSelectorPath)) {
                     continue;
                 }
             }
@@ -2614,14 +2625,19 @@ public class LuceneDocumentIndexService extends StatelessService {
         s.doc(docId, visitor);
     }
 
-    private boolean processQueryResultsForOwnerSelection(String json, ServiceDocument state) {
+    private boolean processQueryResultsForOwnerSelection(String json, ServiceDocument state,
+            String nodeSelectorPath) {
         String documentSelfLink;
         if (state == null) {
             documentSelfLink = Utils.fromJson(json, ServiceDocument.class).documentSelfLink;
         } else {
             documentSelfLink = state.documentSelfLink;
         }
-        SelectOwnerResponse ownerResponse = getHost().findOwnerNode(getPeerNodeSelectorPath(),
+        // when node-selector is not specified via query, use the one for index-service which may be null
+        if (nodeSelectorPath == null) {
+            nodeSelectorPath = getPeerNodeSelectorPath();
+        }
+        SelectOwnerResponse ownerResponse = getHost().findOwnerNode(nodeSelectorPath,
                 documentSelfLink);
 
         // omit the result if the documentOwner is not the same as the local owner
