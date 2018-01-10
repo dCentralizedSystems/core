@@ -2579,6 +2579,26 @@ public class TestServiceHost {
         this.host.getTestRequestSender().sendAndWait(get);
     }
 
+    @Test
+    public void findLocalRootNamespaceServiceViaURI() throws Throwable {
+        setUp(false);
+
+        this.host.startServiceAndWait(MinimalTestService.class, "");
+
+        // full URI for the localhost (ex: http://127.0.0.1:50000)
+        URI rootUri = this.host.getUri();
+
+        // ex: http://127.0.0.1:50000/
+        URI rootUriWithPath = UriUtils.buildUri(this.host.getUri(), UriUtils.URI_PATH_CHAR);
+
+        // Accessing localhost with URI will short-circuit the call to direct method invocation. (No netty layer)
+        // This should resolve the RootNamespaceService
+        this.host.getTestRequestSender().sendAndWait(Operation.createGet(rootUri));
+
+        // same for the URI with path-character
+        this.host.getTestRequestSender().sendAndWait(Operation.createGet(rootUriWithPath));
+    }
+
     @After
     public void tearDown() throws IOException {
         LuceneDocumentIndexService.setIndexFileCountThresholdForWriterRefresh(
