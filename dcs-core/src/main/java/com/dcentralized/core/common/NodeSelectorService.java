@@ -37,7 +37,7 @@ public interface NodeSelectorService extends Service {
             "NodeSelectorService.FORWARDING_OPERATION_OPTION", OperationOption.CONNECTION_SHARING);
 
     public static final OperationOption REPLICATION_OPERATION_OPTION = getOperationOption(
-            "NodeSelectorService.REPLICATION_OPERATION_OPTION", null);
+            "NodeSelectorService.REPLICATION_OPERATION_OPTION", OperationOption.CONNECTION_SHARING);
 
     public static final int REPLICATION_TAG_CONNECTION_LIMIT = Integer.getInteger(
             Utils.PROPERTY_NAME_PREFIX
