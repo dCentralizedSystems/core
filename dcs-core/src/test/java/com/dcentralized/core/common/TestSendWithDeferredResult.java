@@ -13,6 +13,7 @@
 
 package com.dcentralized.core.common;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionException;
@@ -23,7 +24,9 @@ import java.util.stream.IntStream;
 import com.dcentralized.core.common.ServiceHost.ServiceNotFoundException;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
+import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
+import com.dcentralized.core.services.common.MinimalTestService;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,6 +105,33 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
             .whenComplete(this.host.getCompletionDeferred());
         this.host.testWait();
         Assert.assertEquals(1, invocationCounter.get());
+    }
+
+    @Test
+    public void testSendWithDeferredResultWithNoResponseBody() throws Throwable {
+        MinimalTestServiceState initialState = this.host.buildMinimalTestState(10);
+
+        Service service = this.host.doThroughputServiceStart(
+                1, MinimalTestService.class, initialState,
+                EnumSet.noneOf(Service.ServiceOption.class), null).get(0);
+
+        // patch with same state to receive status NOT MODIFIED(304) and empty body
+        MinimalTestServiceState patchState = new MinimalTestServiceState();
+        patchState.documentSelfLink = service.getSelfLink();
+        patchState.id = initialState.id;
+
+        this.host.testStart(1);
+
+        DeferredResult<MinimalTestServiceState> deferredResult = this.host
+                .sendWithDeferredResult(
+                        Operation
+                                .createPatch(this.host, patchState.documentSelfLink)
+                                .setBodyNoCloning(patchState),
+                        MinimalTestServiceState.class)
+                .whenComplete(this.host.getCompletionDeferred());
+
+        this.host.testWait();
+        Assert.assertNull(deferredResult.getNow(new MinimalTestServiceState()));
     }
 
     @Test

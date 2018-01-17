@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 dCentralizedSystems, LLC. All Rights Reserved.
+ * Copyright (c) 2014-2018 dCentralizedSystems, LLC. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License.  You may obtain a copy of
@@ -37,7 +37,9 @@ public interface ServiceRequestSender {
      */
     default <T> DeferredResult<T> sendWithDeferredResult(Operation op, Class<T> resultType) {
         return sendWithDeferredResult(op)
-                .thenApply(response -> response.getBody(resultType));
+                .thenApply(response -> response.getBodyRaw() == null
+                        ? null
+                        : response.getBody(resultType));
     }
 
     /**
