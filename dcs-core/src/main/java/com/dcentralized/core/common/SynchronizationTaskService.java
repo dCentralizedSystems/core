@@ -485,9 +485,11 @@ public class SynchronizationTaskService
             updateState(task, body);
         }
 
-        logInfo("Transitioning task from %s-%s to %s-%s, Services synchronized: %d",
-                currentStage, currentSubStage, task.taskInfo.stage, task.subStage,
-                task.synchCompletionCount);
+        if (this.isDetailedLoggingEnabled) {
+            logInfo("Transitioning task from %s-%s to %s-%s, Services synchronized: %d",
+                    currentStage, currentSubStage, task.taskInfo.stage, task.subStage,
+                    task.synchCompletionCount);
+        }
 
         boolean isTaskFinished = TaskState.isFinished(task.taskInfo);
         if (isTaskFinished) {
