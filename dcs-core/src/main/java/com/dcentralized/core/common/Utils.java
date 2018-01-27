@@ -286,29 +286,6 @@ public final class Utils {
     }
 
     /**
-     * Outputs a JSON representation of the given object using useHTMLFormatting to create pretty-printed,
-     * HTML-friendly JSON or compact JSON. If hideSensitiveFields is set the JSON will not include fields
-     * with the annotation {@link PropertyUsageOption#SENSITIVE}.
-     * If hideSensitiveFields is set and the Object is a string with JSON, sensitive fields cannot be discovered will
-     * throw an Exception.
-     *
-     * @deprecated Use {@link #toJson(Set, Object)} instead
-     */
-    @Deprecated
-    public static String toJson(boolean hideSensitiveFields, boolean useHtmlFormatting, Object body)
-            throws IllegalArgumentException {
-        Set<JsonMapper.JsonOptions> options = new HashSet<>();
-        if (hideSensitiveFields) {
-            options.add(JsonMapper.JsonOptions.EXCLUDE_SENSITIVE);
-        }
-        if (!useHtmlFormatting) {
-            options.add(JsonMapper.JsonOptions.COMPACT);
-        }
-
-        return toJson(options, body);
-    }
-
-    /**
      * Outputs {@code body} to a JSON String format based on the provided JSON {@code options}
      *
      * @param options See {@link com.dcentralized.core.common.serialization.JsonMapper.JsonOptions} for
@@ -362,12 +339,16 @@ public final class Utils {
     }
 
     public static String toString(Throwable t) {
-        StringWriter writer = new StringWriter();
-        try (PrintWriter printer = new PrintWriter(writer)) {
-            t.printStackTrace(printer);
-        }
+        if (t == null) {
+            return null;
+        } else {
+            StringWriter writer = new StringWriter();
+            try (PrintWriter printer = new PrintWriter(writer)) {
+                t.printStackTrace(printer);
+            }
 
-        return writer.toString();
+            return writer.toString();
+        }
     }
 
     public static String toString(Map<?, Throwable> exceptions) {
