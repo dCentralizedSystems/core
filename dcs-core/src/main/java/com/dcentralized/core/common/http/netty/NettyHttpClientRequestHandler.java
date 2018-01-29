@@ -212,7 +212,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
         // probably uri contains a userInfo
         if (uriStr.charAt(0) != '/') {
             URI t = new URI(uriStr);
-            res = new URI(
+            res = UriUtils.buildSafeUri(
                     hostUri.getScheme(),
                     t.getUserInfo(),
                     ServiceHost.LOCAL_HOST,
@@ -221,7 +221,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
                     t.getQuery(),
                     t.getFragment());
         } else {
-            res = new URI(hostUri.toString() + uriStr);
+            res = UriUtils.buildSafeUri(hostUri.toString() + uriStr);
         }
 
         if (!request.isForwarded() && !request.isFromReplication()) {
@@ -233,7 +233,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
                 // intentional string reference comparison
                 if (orig != decodedQuery) {
                     // something was really decoded, rebuild with the decoded query
-                    res = new URI(
+                    res = UriUtils.buildSafeUri(
                             res.getScheme(),
                             res.getUserInfo(),
                             res.getHost(),
