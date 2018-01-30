@@ -660,14 +660,19 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
 
         if (this.isSynchronizationRequired) {
             this.isSynchronizationRequired = false;
-            logInfo("Scheduling synchronization (%d nodes)", this.cachedGroupState.nodes.size());
+            if (isDefaultNodeSelector()) {
+                logInfo("Scheduling synchronization (%d nodes)",
+                        this.cachedGroupState.nodes.size());
+            }
             adjustStat(STAT_NAME_SYNCHRONIZATION_COUNT, 1);
             getHost().scheduleNodeGroupChangeMaintenance(getSelfLink());
         }
 
         if (this.isSetFactoriesAvailabilityRequired) {
             this.isSetFactoriesAvailabilityRequired = false;
-            logInfo("Setting factories availability on owner node");
+            if (isDefaultNodeSelector()) {
+                logInfo("Setting factories availability on owner node");
+            }
             getHost().setFactoriesAvailabilityIfOwner(true);
         }
 
@@ -745,10 +750,12 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
             boolean logMsg = isAvailable != isCurrentlyAvailable
                     || (currentState != null && currentState.nodes.size() != ngs.nodes.size());
             if (currentState != null && logMsg) {
-                logInfo("Node count: %d, available: %s, update time: %d (%d)",
-                        ngs.nodes.size(),
-                        isAvailable,
-                        ngs.membershipUpdateTimeMicros, ngs.localMembershipUpdateTimeMicros);
+                if (isDefaultNodeSelector()) {
+                    logInfo("Node count: %d, available: %s, update time: %d (%d)",
+                            ngs.nodes.size(),
+                            isAvailable,
+                            ngs.membershipUpdateTimeMicros, ngs.localMembershipUpdateTimeMicros);
+                }
             }
         } else if (quorumUpdate.membershipQuorum != null) {
             logInfo("Quorum update: %d", quorumUpdate.membershipQuorum);
@@ -867,5 +874,9 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
         } else {
             return super.getUtilityService(uriPath, allocate);
         }
+    }
+
+    private boolean isDefaultNodeSelector() {
+        return this.getSelfLink().equals(ServiceUriPaths.DEFAULT_NODE_SELECTOR);
     }
 }

@@ -1547,7 +1547,7 @@ public class ServiceHost implements ServiceRequestSender {
         scheduleMaintenance();
 
         clearUriAndLogPrefix();
-        log(Level.INFO, "%s listening on %s", userAgent, getUri());
+        log(Level.INFO, "%s(%s) listening on %s", userAgent, getId(), getUri());
 
         return this;
     }
@@ -3956,9 +3956,9 @@ public class ServiceHost implements ServiceRequestSender {
             sendServiceStop(removeServiceCompletion, s);
         }
 
-        log(Level.INFO, "Waiting for DELETE from %d services", servicesToCloseCount);
+        log(Level.FINE, "Waiting for DELETE from %d services", servicesToCloseCount);
         waitForServiceStop(latch);
-        log(Level.INFO, "All non core services stopped", servicesToCloseCount);
+        log(Level.FINE, "All non core services stopped", servicesToCloseCount);
         return privilegedServiceInstances;
     }
 
@@ -3978,9 +3978,9 @@ public class ServiceHost implements ServiceRequestSender {
             sendServiceStop(pc, p);
         }
 
-        log(Level.INFO, "Waiting for DELETE from %d privileged services", servicesToCloseCount);
+        log(Level.FINE, "Waiting for DELETE from %d privileged services", servicesToCloseCount);
         waitForServiceStop(pLatch);
-        log(Level.INFO, "All privileged services stopped");
+        log(Level.FINE, "All privileged services stopped");
     }
 
     private void stopCoreServices() {

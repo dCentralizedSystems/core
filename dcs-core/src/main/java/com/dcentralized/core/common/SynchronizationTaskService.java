@@ -462,7 +462,6 @@ public class SynchronizationTaskService
             return;
         }
 
-        TaskState.TaskStage currentStage = task.taskInfo.stage;
         SubStage currentSubStage = task.subStage;
 
         if (task.subStage == SubStage.RESTART) {
@@ -486,9 +485,10 @@ public class SynchronizationTaskService
         }
 
         if (this.isDetailedLoggingEnabled) {
-            logInfo("Transitioning task from %s-%s to %s-%s, Services synchronized: %d",
-                    currentStage, currentSubStage, task.taskInfo.stage, task.subStage,
-                    task.synchCompletionCount);
+            if (SubStage.SYNCHRONIZE.equals(currentSubStage)) {
+                logFine("SubStage %s, Synchronized: %d",
+                        task.subStage, task.synchCompletionCount);
+            }
         }
 
         boolean isTaskFinished = TaskState.isFinished(task.taskInfo);
