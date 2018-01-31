@@ -75,6 +75,7 @@ import com.dcentralized.core.common.StatelessService;
 import com.dcentralized.core.common.TaskState.TaskStage;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.config.Configuration;
 import com.dcentralized.core.common.serialization.GsonSerializers;
 import com.dcentralized.core.common.serialization.KryoSerializers;
 import com.dcentralized.core.services.common.QueryFilter.QueryFilterException;
@@ -132,20 +133,25 @@ public class LuceneDocumentIndexService extends StatelessService {
 
     public static final String SELF_LINK = ServiceUriPaths.CORE_DOCUMENT_INDEX;
 
-    public static final String PROPERTY_NAME_QUERY_THREAD_COUNT = Utils.PROPERTY_NAME_PREFIX
-            + LuceneDocumentIndexService.class.getSimpleName()
-            + ".QUERY_THREAD_COUNT";
-
-    public static final int QUERY_THREAD_COUNT = Integer.getInteger(
-            PROPERTY_NAME_QUERY_THREAD_COUNT,
+    public static final int QUERY_THREAD_COUNT = Configuration.integer(
+            LuceneDocumentIndexService.class,
+            "QUERY_THREAD_COUNT",
             Utils.DEFAULT_THREAD_COUNT * 2);
 
-    public static final String PROPERTY_NAME_UPDATE_THREAD_COUNT = Utils.PROPERTY_NAME_PREFIX
-            + LuceneDocumentIndexService.class.getSimpleName()
-            + ".UPDATE_THREAD_COUNT";
-    public static final int UPDATE_THREAD_COUNT = Integer.getInteger(
-            PROPERTY_NAME_UPDATE_THREAD_COUNT,
+    public static final int UPDATE_THREAD_COUNT = Configuration.integer(
+            LuceneDocumentIndexService.class,
+            "UPDATE_THREAD_COUNT",
             Utils.DEFAULT_THREAD_COUNT / 2);
+
+    public static final int QUERY_QUEUE_DEPTH = Configuration.integer(
+            LuceneDocumentIndexService.class,
+            "queryQueueDepth",
+            10 * Service.OPERATION_QUEUE_DEFAULT_LIMIT);
+
+    public static final int UPDATE_QUEUE_DEPTH = Configuration.integer(
+            LuceneDocumentIndexService.class,
+            "updateQueueDepth",
+            10 * Service.OPERATION_QUEUE_DEFAULT_LIMIT);
 
     public static final String FILE_PATH_LUCENE = "lucene";
 
@@ -707,16 +713,18 @@ public class LuceneDocumentIndexService extends StatelessService {
         // so its worth caching (plus we only have a very small number of index services
         this.uri = super.getUri();
 
-        this.privateQueryExecutor = new ThreadPoolExecutor(QUERY_THREAD_COUNT, QUERY_THREAD_COUNT,
+        ExecutorService es = new ThreadPoolExecutor(QUERY_THREAD_COUNT, QUERY_THREAD_COUNT,
                 1, TimeUnit.MINUTES,
-                new ArrayBlockingQueue<>(Service.OPERATION_QUEUE_DEFAULT_LIMIT),
+                new ArrayBlockingQueue<>(QUERY_QUEUE_DEPTH),
                 new NamedThreadFactory(getUri() + "/queries"));
+        this.privateQueryExecutor = es;
 
-        this.privateIndexingExecutor = new ThreadPoolExecutor(QUERY_THREAD_COUNT,
-                QUERY_THREAD_COUNT,
+        es = new ThreadPoolExecutor(UPDATE_THREAD_COUNT,
+                UPDATE_THREAD_COUNT,
                 1, TimeUnit.MINUTES,
-                new ArrayBlockingQueue<>(10 * Service.OPERATION_QUEUE_DEFAULT_LIMIT),
+                new ArrayBlockingQueue<>(UPDATE_QUEUE_DEPTH),
                 new NamedThreadFactory(getUri() + "/updates"));
+        this.privateIndexingExecutor = es;
 
         initializeInstance();
 
@@ -1163,109 +1171,109 @@ public class LuceneDocumentIndexService extends StatelessService {
     }
 
     private void handleQueryRequest() {
-        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         Operation op = pollQueryOperation();
+        if (op == null) {
+            return;
+        }
+
+        if (op.getExpirationMicrosUtc() > 0
+                && op.getExpirationMicrosUtc() < Utils.getSystemNowMicrosUtc()) {
+            op.fail(new RejectedExecutionException("Operation has expired"));
+            return;
+        }
+
+        AuthorizationContext originalContext = OperationContext.getAuthorizationContext();
         try {
             this.writerSync.acquire();
-            while (op != null) {
-                if (op.getExpirationMicrosUtc() > 0
-                        && op.getExpirationMicrosUtc() < Utils.getSystemNowMicrosUtc()) {
-                    op.fail(new RejectedExecutionException("Operation has expired"));
-                    return;
-                }
+            OperationContext.setFrom(op);
 
-                OperationContext.setFrom(op);
-                switch (op.getAction()) {
-                case GET:
-                    // handle special GET request. Internal call only. Currently from backup/restore services.
-                    if (!op.isRemote() && op.hasBody()
-                            && op.getBodyRaw() instanceof InternalDocumentIndexInfo) {
-                        InternalDocumentIndexInfo response = new InternalDocumentIndexInfo();
-                        response.indexWriter = this.writer;
-                        response.indexDirectory = this.indexDirectory;
-                        response.luceneIndexService = this;
-                        response.writerSync = this.writerSync;
-                        op.setBodyNoCloning(response).complete();
-                    } else {
-                        handleGetImpl(op);
-                    }
-                    break;
-                case PATCH:
-                    ServiceDocument sd = (ServiceDocument) op.getBodyRaw();
-                    if (sd.documentKind != null) {
-                        if (sd.documentKind.equals(QueryTask.KIND)) {
-                            QueryTask task = (QueryTask) sd;
-                            handleQueryTaskPatch(op, task);
-                            break;
-                        }
-                        if (sd.documentKind.equals(DeleteQueryRuntimeContextRequest.KIND)) {
-                            handleDeleteRuntimeContext(op);
-                            break;
-                        }
-                        if (sd.documentKind.equals(BackupRequest.KIND)) {
-                            handleBackup(op);
-                            break;
-                        }
-                        if (sd.documentKind.equals(RestoreRequest.KIND)) {
-                            handleRestore(op);
-                            break;
-                        }
-                    }
-                    Operation.failActionNotSupported(op);
-                    break;
-                default:
-                    break;
+            switch (op.getAction()) {
+            case GET:
+                // handle special GET request. Internal call only. Currently from backup/restore services.
+                if (!op.isRemote() && op.hasBody()
+                        && op.getBodyRaw() instanceof InternalDocumentIndexInfo) {
+                    InternalDocumentIndexInfo response = new InternalDocumentIndexInfo();
+                    response.indexWriter = this.writer;
+                    response.indexDirectory = this.indexDirectory;
+                    response.luceneIndexService = this;
+                    response.writerSync = this.writerSync;
+                    op.setBodyNoCloning(response).complete();
+                } else {
+                    handleGetImpl(op);
                 }
-                op = pollQueryOperation();
+                break;
+            case PATCH:
+                ServiceDocument sd = (ServiceDocument) op.getBodyRaw();
+                if (sd.documentKind != null) {
+                    if (sd.documentKind.equals(QueryTask.KIND)) {
+                        QueryTask task = (QueryTask) sd;
+                        handleQueryTaskPatch(op, task);
+                        break;
+                    }
+                    if (sd.documentKind.equals(DeleteQueryRuntimeContextRequest.KIND)) {
+                        handleDeleteRuntimeContext(op);
+                        break;
+                    }
+                    if (sd.documentKind.equals(BackupRequest.KIND)) {
+                        handleBackup(op);
+                        break;
+                    }
+                    if (sd.documentKind.equals(RestoreRequest.KIND)) {
+                        handleRestore(op);
+                        break;
+                    }
+                }
+                Operation.failActionNotSupported(op);
+                break;
+            default:
+                break;
             }
         } catch (Exception e) {
             checkFailureAndRecover(e);
-            if (op != null) {
-                op.fail(e);
-            }
+            op.fail(e);
         } finally {
-            OperationContext.restoreAuthContext(authContext);
+            OperationContext.restoreAuthContext(originalContext);
             this.writerSync.release();
         }
     }
 
     private void handleUpdateRequest() {
-        AuthorizationContext authContext = OperationContext.getAuthorizationContext();
         Operation op = pollUpdateOperation();
+        if (op == null) {
+            return;
+        }
+
+        AuthorizationContext originalContext = OperationContext.getAuthorizationContext();
         try {
             this.writerSync.acquire();
-            while (op != null) {
-                OperationContext.setFrom(op);
-                switch (op.getAction()) {
-                case DELETE:
-                    handleDeleteImpl(op);
-                    break;
-                case POST:
-                    Object o = op.getBodyRaw();
-                    if (o != null) {
-                        if (o instanceof UpdateIndexRequest) {
-                            updateIndex(op);
-                            break;
-                        }
-                        if (o instanceof MaintenanceRequest) {
-                            handleMaintenanceImpl(op);
-                            break;
-                        }
+            OperationContext.setFrom(op);
+
+            switch (op.getAction()) {
+            case DELETE:
+                handleDeleteImpl(op);
+                break;
+            case POST:
+                Object o = op.getBodyRaw();
+                if (o != null) {
+                    if (o instanceof UpdateIndexRequest) {
+                        updateIndex(op);
+                        break;
                     }
-                    Operation.failActionNotSupported(op);
-                    break;
-                default:
-                    break;
+                    if (o instanceof MaintenanceRequest) {
+                        handleMaintenanceImpl(op);
+                        break;
+                    }
                 }
-                op = pollUpdateOperation();
+                Operation.failActionNotSupported(op);
+                break;
+            default:
+                break;
             }
         } catch (Exception e) {
             checkFailureAndRecover(e);
-            if (op != null) {
-                op.fail(e);
-            }
+            op.fail(e);
         } finally {
-            OperationContext.restoreAuthContext(authContext);
+            OperationContext.restoreAuthContext(originalContext);
             this.writerSync.release();
         }
     }
