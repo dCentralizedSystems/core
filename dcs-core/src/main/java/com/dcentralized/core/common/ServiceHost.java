@@ -86,6 +86,7 @@ import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
 import com.dcentralized.core.common.ServiceSubscriptionState.ServiceSubscriber;
+import com.dcentralized.core.common.config.Configuration;
 import com.dcentralized.core.common.http.netty.NettyHttpListener;
 import com.dcentralized.core.common.http.netty.NettyHttpServiceClient;
 import com.dcentralized.core.common.jwt.JWTUtils;
@@ -379,6 +380,14 @@ public class ServiceHost implements ServiceRequestSender {
     public static final boolean APPEND_PORT_TO_SANDBOX = System
             .getProperty(PROPERTY_NAME_APPEND_PORT_TO_SANDBOX) == null
             || Boolean.getBoolean(PROPERTY_NAME_APPEND_PORT_TO_SANDBOX);
+
+    /**
+     * Configuration to enable Logging for inbound requests at startup.
+     */
+    private static final boolean ENABLE_REQUEST_LOGGING = Configuration.bool(
+            ServiceHost.class,
+            "ENABLE_REQUEST_LOGGING",
+            false);
 
     /**
      * Request rate limiting configuration and real time statistics
@@ -837,6 +846,11 @@ public class ServiceHost implements ServiceRequestSender {
         this.state.peerSynchronizationTimeLimitSeconds = args.perFactoryPeerSynchronizationLimitSeconds;
         this.state.isPeerSynchronizationEnabled = args.isPeerSynchronizationEnabled;
         this.state.isAuthorizationEnabled = args.isAuthorizationEnabled;
+
+        RequestLoggingInfo requestLoggingInfo = new RequestLoggingInfo();
+        requestLoggingInfo.enabled = ENABLE_REQUEST_LOGGING;
+        setRequestLoggingInfo(requestLoggingInfo);
+
         if (args.authProviderHostUri != null) {
             this.state.authProviderHostURI = new URI(args.authProviderHostUri);
         }
