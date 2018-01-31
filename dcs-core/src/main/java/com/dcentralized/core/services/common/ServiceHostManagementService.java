@@ -40,7 +40,7 @@ public class ServiceHostManagementService extends StatefulService {
             + ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
     public static final String STAT_NAME_AVAILABLE_MEMORY_BYTES_PER_HOUR = STAT_NAME_AVAILABLE_MEMORY_BYTES_PREFIX
             + ServiceStats.STAT_NAME_SUFFIX_PER_HOUR;
-    public static final String STAT_NAME_AVAILABLE_DISK_BYTES_PREFIX = "availableDiskByte";
+    public static final String STAT_NAME_AVAILABLE_DISK_BYTES_PREFIX = "availableDiskBytes";
     public static final String STAT_NAME_AVAILABLE_DISK_BYTES_PER_DAY = STAT_NAME_AVAILABLE_DISK_BYTES_PREFIX
             + ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
     public static final String STAT_NAME_AVAILABLE_DISK_BYTES_PER_HOUR = STAT_NAME_AVAILABLE_DISK_BYTES_PREFIX

@@ -1354,6 +1354,10 @@ public class ServiceHost implements ServiceRequestSender {
         return this.managementService;
     }
 
+    public ServiceStat getManagementServiceStat(String name) {
+        return getManagementService().getStat(name);
+    }
+
     ServiceResourceTracker getServiceResourceTracker() {
         return this.serviceResourceTracker;
     }

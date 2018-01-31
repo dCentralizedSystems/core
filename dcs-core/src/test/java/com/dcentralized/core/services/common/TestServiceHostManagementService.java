@@ -136,6 +136,11 @@ public class TestServiceHostManagementService extends BasicTestCase {
         assertTrue(gitCommitId != null);
         assertTrue(gitCommitTime != null);
 
+        // get service stat for CPU
+        ServiceStat cpuPerHourStat = this.host.getManagementServiceStat(
+                ServiceHostManagementService.STAT_NAME_CPU_USAGE_PCT_PER_HOUR);
+        assertTrue(cpuPerHourStat != null);
+
         // now issue a DELETE and verify host shutdown
         this.host.testStart(1);
         this.host.send(Operation.createDelete(u).setCompletion(this.host.getCompletion()));
