@@ -1480,6 +1480,7 @@ public class ServiceHost implements ServiceRequestSender {
                 this.httpListener.setResponsePayloadSizeLimit(this.state.responsePayloadSizeLimit);
             }
 
+            configureHttpListener(this.httpListener);
             this.httpListener.start(getPort(), this.state.bindAddress);
         }
 
@@ -1503,6 +1504,7 @@ public class ServiceHost implements ServiceRequestSender {
                             .setResponsePayloadSizeLimit(this.state.responsePayloadSizeLimit);
                 }
 
+                configureHttpListener(this.httpListener);
                 this.httpsListener.start(getSecurePort(), this.state.bindAddress);
             }
         }
@@ -5605,5 +5607,13 @@ public class ServiceHost implements ServiceRequestSender {
         Operation.fail(post, Operation.STATUS_CODE_CONFLICT,
                 ServiceErrorResponse.ERROR_CODE_SERVICE_ALREADY_EXISTS,
                 e);
+    }
+
+    /**
+     * Called during {@link ServiceHost#start()} to configure the default HTTP listener, before
+     * the listener is started. Override this method to configure the listener in an
+     * implementation specific way
+     */
+    protected void configureHttpListener(ServiceRequestListener httpListener) {
     }
 }

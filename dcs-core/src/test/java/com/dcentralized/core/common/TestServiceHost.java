@@ -60,6 +60,7 @@ import com.dcentralized.core.common.ServiceHost.ServiceHostState.MemoryLimitType
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
+import com.dcentralized.core.common.http.netty.NettyHttpListener;
 import com.dcentralized.core.common.jwt.Rfc7519Claims;
 import com.dcentralized.core.common.jwt.Signer;
 import com.dcentralized.core.common.jwt.Verifier;
@@ -86,6 +87,9 @@ import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.UiFileContentService;
 import com.dcentralized.core.services.common.UserService;
 
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.cors.CorsConfig;
+import io.netty.handler.codec.http.cors.CorsConfigBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.After;
 import org.junit.Rule;
@@ -2597,6 +2601,75 @@ public class TestServiceHost {
 
         // same for the URI with path-character
         this.host.getTestRequestSender().sendAndWait(Operation.createGet(rootUriWithPath));
+    }
+
+    @Test
+    public void cors() throws Throwable {
+        // CORS config for http://example.com
+        CorsConfig corsConfig = CorsConfigBuilder.forOrigin("http://example.com")
+                .allowedRequestMethods(HttpMethod.PUT)
+                .allowedRequestHeaders("x-xenon")
+                .build();
+
+        this.host = new VerificationHost() {
+            @Override
+            protected void configureHttpListener(ServiceRequestListener httpListener) {
+                // enable CORS
+                ((NettyHttpListener) httpListener).setCorsConfig(corsConfig);
+            }
+        };
+
+        VerificationHost.initialize(this.host,
+                VerificationHost.buildDefaultServiceHostArguments(0));
+        this.host.start();
+
+        TestRequestSender sender = this.host.getTestRequestSender();
+
+        Operation get;
+        Operation preflight;
+        Operation response;
+
+        // Request from http://example.com
+        get = Operation.createGet(this.host, ServiceUriPaths.CORE_MANAGEMENT)
+                .addRequestHeader("origin", "http://example.com")
+                .forceRemote();
+
+        response = sender.sendAndWait(get);
+        assertEquals("http://example.com",
+                response.getResponseHeader("access-control-allow-origin"));
+
+        // Request from http://not-example.com
+        get = Operation.createGet(this.host, ServiceUriPaths.CORE_MANAGEMENT)
+                .addRequestHeader("origin", "http://not-example.com")
+                .forceRemote();
+
+        response = sender.sendAndWait(get);
+        assertNull(response.getResponseHeader("access-control-allow-origin"));
+
+        // Preflight from http://example.com
+        preflight = Operation.createOptions(this.host, ServiceUriPaths.CORE_MANAGEMENT)
+                .addRequestHeader("origin", "http://example.com")
+                .addRequestHeader("Access-Control-Request-Method", "POST")
+                .forceRemote();
+
+        response = sender.sendAndWait(preflight);
+        assertEquals("http://example.com",
+                response.getResponseHeader("access-control-allow-origin"));
+        assertEquals("PUT", response.getResponseHeader("access-control-allow-methods"));
+        assertEquals("x-xenon", response.getResponseHeader("access-control-allow-headers"));
+
+        // Preflight from http://not-example.com
+        preflight = Operation.createOptions(this.host, ServiceUriPaths.CORE_MANAGEMENT)
+                .addRequestHeader("origin", "http://not-example.com")
+                .addRequestHeader("Access-Control-Request-Method", "POST")
+                .addRequestHeader(Operation.CONNECTION_HEADER, "close")
+                .setKeepAlive(false)
+                .forceRemote();
+
+        response = sender.sendAndWait(preflight);
+        assertNull(response.getResponseHeader("access-control-allow-origin"));
+        assertNull(response.getResponseHeader("access-control-allow-methods"));
+        assertNull(response.getResponseHeader("access-control-allow-headers"));
     }
 
     @After
