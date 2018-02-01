@@ -31,6 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import javax.net.ssl.SSLContext;
 
 import com.dcentralized.core.common.AuthorizationSetupHelper;
@@ -1342,5 +1344,58 @@ public class NettyHttpServiceClientTest {
                 Operation.MEDIA_TYPE_APPLICATION_JSON, resp.op.getContentType());
         ServiceErrorResponse error = resp.op.getBody(ServiceErrorResponse.class);
         assertEquals("hello", error.message);
+    }
+
+    @Test
+    public void testConnectionHeaderOverride() throws Throwable {
+
+        // When keepAlive=false, connection header can be overridden
+
+        AtomicReference<Operation> receivedOpHolder = new AtomicReference<>();
+
+        StatelessService service = new StatelessService() {
+            @Override
+            public void handleGet(Operation get) {
+                receivedOpHolder.set(get);
+                get.complete();
+            }
+        };
+
+        String servicePath = "/capturing-service";
+        this.host.startServiceAndWait(service, servicePath, null);
+
+        TestRequestSender sender = new TestRequestSender(this.host);
+        Operation op;
+        Map<String, String> receivedHeaders;
+
+        // override connection header
+        op = Operation.createGet(this.host, servicePath)
+                .addRequestHeader(Operation.CONNECTION_HEADER, "close")
+                .setKeepAlive(false)
+                .forceRemote();
+        sender.sendAndWait(op);
+
+        receivedHeaders = receivedOpHolder.get().getRequestHeaders();
+        assertEquals("close", receivedHeaders.get(Operation.CONNECTION_HEADER));
+
+        // with "op.setKeepAlive(true)" => should not be overridden
+        op = Operation.createGet(this.host, servicePath)
+                .addRequestHeader(Operation.CONNECTION_HEADER, "close")
+                .setKeepAlive(true)
+                .forceRemote();
+        sender.sendAndWait(op);
+
+        receivedHeaders = receivedOpHolder.get().getRequestHeaders();
+        assertEquals("keep-alive", receivedHeaders.get(Operation.CONNECTION_HEADER));
+
+        // do not call "op.setKeepAlive()" => should not be overridden
+        op = Operation.createGet(this.host, servicePath)
+                .addRequestHeader(Operation.CONNECTION_HEADER, "close")
+                .forceRemote();
+        sender.sendAndWait(op);
+
+        receivedHeaders = receivedOpHolder.get().getRequestHeaders();
+        assertEquals("keep-alive", receivedHeaders.get(Operation.CONNECTION_HEADER));
+
     }
 }
