@@ -481,7 +481,7 @@ class LuceneIndexDocumentHelper {
             if (!(v instanceof TaskState) && !expandField) {
                 return;
             }
-            addObjectIndexableFieldToDocument(v, pd, fieldName);
+            addObjectIndexableFieldToDocument(v, pd, fieldName, isCollectionItem);
             return;
         } else if (expandField && pd.typeName.equals(TypeName.MAP)) {
             addMapIndexableFieldToDocument(v, pd, fieldName);
@@ -516,7 +516,7 @@ class LuceneIndexDocumentHelper {
     }
 
     private void addObjectIndexableFieldToDocument(Object v, PropertyDescription pd,
-            String fieldNamePrefix) {
+            String fieldNamePrefix, boolean isCollectionItem) {
         for (Entry<String, PropertyDescription> e : pd.fieldDescriptions.entrySet()) {
             PropertyDescription fieldDescription = e.getValue();
             Object fieldValue = ReflectionUtils.getPropertyValue(fieldDescription, v);
@@ -528,7 +528,8 @@ class LuceneIndexDocumentHelper {
             }
             String fieldName = QuerySpecification.buildCompositeFieldName(fieldNamePrefix,
                     e.getKey());
-            addIndexableFieldToDocument(fieldValue, fieldDescription, fieldName, false, true);
+            addIndexableFieldToDocument(fieldValue, fieldDescription, fieldName, isCollectionItem,
+                    true);
         }
     }
 

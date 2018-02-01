@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
@@ -60,6 +61,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+
 import javax.xml.bind.DatatypeConverter;
 
 import com.dcentralized.core.common.AuthorizationSetupHelper;
@@ -76,6 +79,7 @@ import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceConfigUpdateRequest;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingOption;
 import com.dcentralized.core.common.ServiceDocumentDescription.TypeName;
 import com.dcentralized.core.common.ServiceDocumentQueryResult;
 import com.dcentralized.core.common.ServiceErrorResponse;
@@ -106,8 +110,10 @@ import com.dcentralized.core.services.common.LuceneDocumentIndexService.CommitIn
 import com.dcentralized.core.services.common.LuceneDocumentIndexService.PaginatedSearcherManager.PaginatedSearcherInfo;
 import com.dcentralized.core.services.common.QueryTask.Query;
 import com.dcentralized.core.services.common.QueryTask.Query.Occurance;
+import com.dcentralized.core.services.common.QueryTask.QuerySpecification;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.AnotherPersistentService.AnotherPersistentState;
+import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.StateWithPodoNestedInCollection.InnerPodo;
 
 import org.apache.lucene.search.IndexSearcher;
 
@@ -4986,6 +4992,41 @@ public class TestLuceneDocumentIndexService {
                 () -> {
                     return this.indexService.getPaginatedSearcherInfos().size() == 0;
                 });
+    }
+
+    public static class StateWithPodoNestedInCollection extends ServiceDocument {
+        public static class InnerPodo {
+            public String podoField;
+        }
+
+        @PropertyOptions(indexing = { PropertyIndexingOption.EXPAND })
+        public List<InnerPodo> collectionOfPodos;
+    }
+
+    @Test
+    public void testIndexingPodoNestedInCollection() {
+        ServiceDocumentDescription sdd = ServiceDocumentDescription.Builder.create()
+                .buildDescription(StateWithPodoNestedInCollection.class);
+
+        InnerPodo podo1 = new InnerPodo();
+        podo1.podoField = "value-1";
+        InnerPodo podo2 = new InnerPodo();
+        podo2.podoField = "second";
+        StateWithPodoNestedInCollection state = new StateWithPodoNestedInCollection();
+        state.collectionOfPodos = Arrays.asList(podo1, podo2);
+
+        LuceneIndexDocumentHelper helper = new LuceneIndexDocumentHelper();
+        helper.addIndexableFieldsToDocument(state, sdd);
+
+        final String nestedFieldName = QuerySpecification.buildCompositeFieldName(
+                QuerySpecification.buildCollectionItemName("collectionOfPodos"),
+                "podoField");
+        Set<String> indexedInnerValues = helper.getDoc().getFields().stream()
+                .filter(f -> nestedFieldName.equals(f.name()))
+                .map(f -> f.stringValue())
+                .collect(Collectors.toSet());
+        assertEquals(new HashSet<>(Arrays.asList(podo1.podoField, podo2.podoField)),
+                indexedInnerValues);
     }
 
 }
