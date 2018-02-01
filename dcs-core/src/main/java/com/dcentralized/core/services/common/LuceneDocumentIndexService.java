@@ -2874,7 +2874,8 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         if (s.documentUpdateAction == null) {
             updateOp.fail(new IllegalArgumentException(
-                    "documentUpdateAction is required"));
+                    String.format("documentUpdateAction is required (document: %s)",
+                            Utils.toJsonHtml(s))));
             return;
         }
 
