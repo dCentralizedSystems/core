@@ -386,7 +386,7 @@ public class MigrationTaskService extends StatefulService {
         }
         initState.querySpec.options.addAll(
                 EnumSet.of(QueryOption.EXPAND_CONTENT, QueryOption.BROADCAST,
-                        QueryOption.OWNER_SELECTION));
+                        QueryOption.OWNER_SELECTION, QueryOption.FORWARD_ONLY));
         if (initState.querySpec.query == null
                 || initState.querySpec.query.booleanClauses == null
                 || initState.querySpec.query.booleanClauses.isEmpty()) {
