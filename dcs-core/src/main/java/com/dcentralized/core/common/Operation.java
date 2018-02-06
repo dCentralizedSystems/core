@@ -31,7 +31,6 @@ import java.util.function.Consumer;
 import javax.security.cert.X509Certificate;
 
 import com.dcentralized.core.common.Service.Action;
-import com.dcentralized.core.common.ServiceErrorResponse.ErrorDetail;
 import com.dcentralized.core.common.ServiceHost.ServiceNotFoundException;
 import com.dcentralized.core.common.serialization.KryoSerializers;
 import com.dcentralized.core.services.common.GuestUserService;
@@ -389,19 +388,6 @@ public class Operation implements Cloneable {
             r.stackTrace = null;
         }
         request.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON).fail(e, r);
-    }
-
-    static void failOwnerMismatch(Operation op, String id, ServiceDocument body) {
-        String owner = body != null ? body.documentOwner : "";
-        op.setStatusCode(Operation.STATUS_CODE_CONFLICT);
-        Throwable e = new IllegalStateException(format(
-                "Owner in body: %s, computed locally: %s",
-                owner, id));
-        ServiceErrorResponse rsp = ServiceErrorResponse.create(e, op.getStatusCode(),
-                EnumSet.of(ErrorDetail.SHOULD_RETRY));
-        rsp.setInternalErrorCode(ServiceErrorResponse.ERROR_CODE_OWNER_MISMATCH);
-        op.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
-        op.fail(e, rsp);
     }
 
     public static void failActionNotSupported(Operation request) {
