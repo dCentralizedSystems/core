@@ -62,6 +62,7 @@ import com.dcentralized.core.common.TaskState;
 import com.dcentralized.core.common.TaskState.TaskStage;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.config.Configuration;
 import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
 import com.dcentralized.core.services.common.QueryTask.NumericRange;
 import com.dcentralized.core.services.common.QueryTask.Query;
@@ -129,6 +130,11 @@ public class MigrationTaskService extends StatefulService {
 
     // used for the result value of DeferredResult in order to workaround findbug warning for passing null by "defered.complete(null)".
     private static final Object DUMMY_OBJECT = new Object();
+
+    private static final boolean USE_FORWARD_ONLY_QUERY = Configuration.bool(
+            MigrationTaskService.class,
+            "useForwardOnlyQuery",
+            false);
 
     public enum MigrationOption {
         /**
@@ -386,7 +392,13 @@ public class MigrationTaskService extends StatefulService {
         }
         initState.querySpec.options.addAll(
                 EnumSet.of(QueryOption.EXPAND_CONTENT, QueryOption.BROADCAST,
-                        QueryOption.OWNER_SELECTION, QueryOption.FORWARD_ONLY));
+                        QueryOption.OWNER_SELECTION));
+
+        // when configured to use FORWARD_QUERY option, add it to default query spec.
+        if (USE_FORWARD_ONLY_QUERY) {
+            initState.querySpec.options.add(QueryOption.FORWARD_ONLY);
+        }
+
         if (initState.querySpec.query == null
                 || initState.querySpec.query.booleanClauses == null
                 || initState.querySpec.query.booleanClauses.isEmpty()) {
@@ -919,6 +931,10 @@ public class MigrationTaskService extends StatefulService {
                     if (queryTask.results.nextPageLink != null) {
                         nextPage = getNextPageLinkUri(op);
                     }
+
+                    logInfo("migration query task: uri=%s, nextPage=%s, queryTime=%s",
+                            queryTask.documentSelfLink, nextPage,
+                            queryTask.results.queryTimeMicros);
 
                     // actual query time per source host
                     String authority = op.getUri().getAuthority();
