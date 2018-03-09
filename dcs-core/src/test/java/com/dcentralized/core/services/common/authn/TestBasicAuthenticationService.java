@@ -13,13 +13,12 @@
 
 package com.dcentralized.core.services.common.authn;
 
-import static com.dcentralized.core.services.common.authn.BasicAuthenticationService.UPPER_SESSION_LIMIT_SECONDS_PROPERTY;
 import static com.dcentralized.core.services.common.authn.BasicAuthenticationUtils.constructBasicAuth;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-
+import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
 import java.time.Instant;
@@ -41,8 +40,10 @@ import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.ServiceStateCollectionUpdateRequest;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.config.TestConfiguration;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.TestRequestSender;
+import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.AuthCredentialsService;
 import com.dcentralized.core.services.common.AuthCredentialsService.AuthCredentialsServiceState;
@@ -70,9 +71,7 @@ public class TestBasicAuthenticationService extends BasicTestCase {
     private static final String ROLE = "guest-role";
     private static final String USER_GROUP = "guest-user-group";
     private static final String RESOURCE_GROUP = "guest-resource-group";
-    private static final Long UPPER_SESSION_LIMIT = (long) 28800;
-
-    private static Long ORIGINAL_UPPER_SESSION_LIMIT;
+    private static final Long UPPER_SESSION_LIMIT = 28800L;
 
     @Override
     public void beforeHostStart(VerificationHost h) {
@@ -81,18 +80,15 @@ public class TestBasicAuthenticationService extends BasicTestCase {
 
     @BeforeClass
     public static void setUpSystemProperties() throws Exception {
-        ORIGINAL_UPPER_SESSION_LIMIT = Long.getLong(UPPER_SESSION_LIMIT_SECONDS_PROPERTY);
-        System.setProperty(UPPER_SESSION_LIMIT_SECONDS_PROPERTY, UPPER_SESSION_LIMIT.toString());
+        TestConfiguration.override(
+                BasicAuthenticationService.class,
+                "UPPER_SESSION_LIMIT_SECONDS",
+                UPPER_SESSION_LIMIT.toString());
     }
 
     @AfterClass
     public static void clearSystemProperties() throws Exception {
-        if (ORIGINAL_UPPER_SESSION_LIMIT != null) {
-            System.setProperty(UPPER_SESSION_LIMIT_SECONDS_PROPERTY,
-                    ORIGINAL_UPPER_SESSION_LIMIT.toString());
-        } else {
-            System.clearProperty(UPPER_SESSION_LIMIT_SECONDS_PROPERTY);
-        }
+        TestConfiguration.restore();
     }
 
     @Before
@@ -139,7 +135,6 @@ public class TestBasicAuthenticationService extends BasicTestCase {
                     .setCompletion(this.host.getCompletion())
                     .setupRole();
             this.host.testWait();
-
         } catch (Throwable e) {
             throw new Exception(e);
         }
@@ -148,195 +143,81 @@ public class TestBasicAuthenticationService extends BasicTestCase {
     @Test
     public void testAuth() throws Throwable {
         this.host.resetAuthorizationContext();
+        TestRequestSender sender = this.host.getTestRequestSender();
+
         URI authServiceUri = UriUtils.buildUri(this.host, BasicAuthenticationService.SELF_LINK);
+
+        Operation op;
+        FailureResponse failureResponse;
+
         // send a request with no authentication header
-        this.host.testStart(1);
-        this.host
-                .send(Operation
-                        .createPost(authServiceUri)
-                        .setBody(new Object())
-                        .setCompletion(
-                                (o, e) -> {
-                                    if (e == null) {
-                                        this.host.failIteration(new IllegalStateException(
-                                                "request should have failed"));
-                                        return;
-                                    }
-                                    if (o.getStatusCode() != Operation.STATUS_CODE_UNAUTHORIZED) {
-                                        this.host.failIteration(new IllegalStateException(
-                                                "Invalid status code returned"));
-                                        return;
-                                    }
-                                    String authHeader = o
-                                            .getResponseHeader(
-                                                    BasicAuthenticationUtils.WWW_AUTHENTICATE_HEADER_NAME);
-                                    if (authHeader == null
-                                            || !authHeader
-                                            .equals(BasicAuthenticationUtils.WWW_AUTHENTICATE_HEADER_VALUE)) {
-                                        this.host.failIteration(new IllegalStateException(
-                                                "Invalid status code returned"));
-                                        return;
-                                    }
-                                    this.host.completeIteration();
-                                }));
-        this.host.testWait();
+        op = Operation.createPost(authServiceUri).setBody(new Object());
+        failureResponse = sender.sendAndWaitFailure(op);
+        assertEquals(Operation.STATUS_CODE_UNAUTHORIZED, failureResponse.op.getStatusCode());
+
+        String authHeader = failureResponse.op
+                .getResponseHeader(BasicAuthenticationUtils.WWW_AUTHENTICATE_HEADER_NAME);
+        assertEquals(BasicAuthenticationUtils.WWW_AUTHENTICATE_HEADER_VALUE, authHeader);
 
         // send a request with an authentication header for an invalid user
         String headerVal = constructBasicAuth(INVALID_USER, PASSWORD);
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPost(authServiceUri)
+        op = Operation.createPost(authServiceUri)
                 .setBody(new Object())
-                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal)
-                .setCompletion(
-                        (o, e) -> {
-                            if (e == null) {
-                                this.host.failIteration(
-                                        new IllegalStateException("request should have failed"));
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_FORBIDDEN) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            this.host.completeIteration();
-                        }));
-        this.host.testWait();
+                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal);
+        failureResponse = sender.sendAndWaitFailure(op);
+        assertEquals(Operation.STATUS_CODE_FORBIDDEN, failureResponse.op.getStatusCode());
 
         // send a request with a malformed authentication header
         String userPassStr = new String(Base64.getEncoder().encode(
                 new StringBuffer(USER).toString().getBytes()));
         headerVal = new StringBuffer(BASIC_AUTH_PREFIX).append(userPassStr).toString();
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPost(authServiceUri)
+        op = Operation.createPost(authServiceUri)
                 .setBody(new Object())
-                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal)
-                .setCompletion(
-                        (o, e) -> {
-                            if (e == null) {
-                                this.host.failIteration(
-                                        new IllegalStateException("request should have failed"));
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_BAD_REQUEST) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            this.host.completeIteration();
-                        }));
-        this.host.testWait();
+                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal);
+        failureResponse = sender.sendAndWaitFailure(op);
+        assertEquals(Operation.STATUS_CODE_BAD_REQUEST, failureResponse.op.getStatusCode());
 
         // send a request with an invalid password
         headerVal = constructBasicAuth(USER, INVALID_PASSWORD);
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPost(authServiceUri)
+        op = Operation.createPost(authServiceUri)
                 .setBody(new Object())
-                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal)
-                .setCompletion(
-                        (o, e) -> {
-                            if (e == null) {
-                                this.host.failIteration(
-                                        new IllegalStateException("request should have failed"));
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_FORBIDDEN) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            this.host.completeIteration();
-                        }));
-        this.host.testWait();
+                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal);
+        failureResponse = sender.sendAndWaitFailure(op);
+        assertEquals(Operation.STATUS_CODE_FORBIDDEN, failureResponse.op.getStatusCode());
 
         // Next send a valid request
         headerVal = constructBasicAuth(USER, PASSWORD);
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPost(authServiceUri)
+        op = Operation.createPost(authServiceUri)
                 .setBody(new Object())
-                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal)
-                .setCompletion(
-                        (o, e) -> {
-                            if (e != null) {
-                                this.host.failIteration(e);
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_OK) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            if (o.getAuthorizationContext() == null) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Authorization context not set"));
-                                return;
-                            }
-                            // now issue a logout
-                            AuthenticationRequest request = new AuthenticationRequest();
-                            request.requestType = AuthenticationRequestType.LOGOUT;
-                            Operation logoutOp = Operation
-                                    .createPost(authServiceUri)
-                                    .setBody(request)
-                                    .forceRemote()
-                                    .setCompletion(
-                                            (oo, ee) -> {
-                                                if (ee != null) {
-                                                    this.host.failIteration(ee);
-                                                    return;
-                                                }
-                                                if (oo.getStatusCode() != Operation.STATUS_CODE_OK) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Invalid status code returned"));
-                                                    return;
-                                                }
-                                                String cookieHeader = oo.getResponseHeader(SET_COOKIE_HEADER);
-                                                if (cookieHeader == null) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Cookie is null"));
-                                                    return;
-                                                }
-                                                Cookie cookie = ClientCookieDecoder.LAX.decode(cookieHeader);
-                                                if (cookie.maxAge() != 0) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Max-Age for cookie is not zero"));
-                                                    return;
-                                                }
-                                                this.host.resetAuthorizationContext();
-                                                this.host.completeIteration();
-                                            });
-                            this.host.setAuthorizationContext(o.getAuthorizationContext());
-                            this.host.send(logoutOp);
-                        }));
-        this.host.testWait();
+                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal);
+        Operation response = sender.sendAndWait(op);
+        assertEquals(Operation.STATUS_CODE_OK, response.getStatusCode());
+
+        assertNotNull(response.getAuthorizationContext());
+
+        // now issue a logout
+        AuthenticationRequest request = new AuthenticationRequest();
+        request.requestType = AuthenticationRequestType.LOGOUT;
+
+        op = Operation.createPost(authServiceUri)
+                .setBody(request)
+                .forceRemote()
+                .setAuthorizationContext(response.getAuthorizationContext());
+
+        response = sender.sendAndWait(op);
+        assertTrue("expect no response headers", response.getResponseHeaders().isEmpty());
+        this.host.resetAuthorizationContext();
 
         // Finally, send a valid remote request, and validate the cookie & auth token
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createPost(authServiceUri)
+        op = Operation.createPost(authServiceUri)
                 .setBody(new Object())
                 .forceRemote()
-                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal)
-                .setCompletion(
-                        (o, e) -> {
-                            if (e != null) {
-                                this.host.failIteration(e);
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_OK) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            if (!validateAuthToken(o)) {
-                                return;
-                            }
-                            this.host.completeIteration();
-                        }));
-        this.host.testWait();
+                .addRequestHeader(Operation.AUTHORIZATION_HEADER, headerVal);
+
+        response = sender.sendAndWait(op);
+        assertEquals(Operation.STATUS_CODE_OK, response.getStatusCode());
+        validateAuthToken(response);
+
         // delete the user and issue a remote request as the user
         // we should see a 200 response as xenon invokes this
         // request with the guest context
@@ -353,24 +234,10 @@ public class TestBasicAuthenticationService extends BasicTestCase {
                         }));
         this.host.resetSystemAuthorizationContext();
         this.host.assumeIdentity(UriUtils.buildUriPath(UserService.FACTORY_LINK, USER));
-        this.host.testStart(1);
-        this.host.send(Operation
-                .createGet(UriUtils.buildUri(this.host, UserService.FACTORY_LINK))
-                .forceRemote()
-                .setCompletion(
-                        (o, e) -> {
-                            if (e != null) {
-                                this.host.failIteration(e);
-                                return;
-                            }
-                            if (o.getStatusCode() != Operation.STATUS_CODE_OK) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Invalid status code returned"));
-                                return;
-                            }
-                            this.host.completeIteration();
-                        }));
-        this.host.testWait();
+
+        op = Operation.createGet(UriUtils.buildUri(this.host, UserService.FACTORY_LINK))
+                .forceRemote();
+        sender.sendAndWait(op);
     }
 
     @Test
@@ -466,18 +333,8 @@ public class TestBasicAuthenticationService extends BasicTestCase {
                                         "Invalid status code returned"));
                                 return;
                             }
-                            String cookieHeader = oo.getResponseHeader(SET_COOKIE_HEADER);
-                            if (cookieHeader == null) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Cookie is null"));
-                                return;
-                            }
-                            Cookie cookie = ClientCookieDecoder.LAX.decode(cookieHeader);
-                            if (cookie.maxAge() != 0) {
-                                this.host.failIteration(new IllegalStateException(
-                                        "Max-Age for cookie is not zero"));
-                                return;
-                            }
+                            assertTrue("expect no response headers",
+                                    oo.getResponseHeaders().isEmpty());
 
                             this.host.completeIteration();
                         }));
@@ -623,7 +480,6 @@ public class TestBasicAuthenticationService extends BasicTestCase {
                     expirationInMicro);
             this.host.failIteration(new IllegalStateException(msg));
         }
-
     }
 
     @Test
@@ -768,23 +624,9 @@ public class TestBasicAuthenticationService extends BasicTestCase {
                                                             "Invalid status code returned"));
                                                     return;
                                                 }
-                                                String cookieHeader = oo.getResponseHeader(SET_COOKIE_HEADER);
-                                                if (cookieHeader == null) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Cookie is null"));
-                                                    return;
-                                                }
-                                                Cookie cookie = ClientCookieDecoder.LAX.decode(cookieHeader);
-                                                if (cookie.maxAge() != 0) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Max-Age for cookie is not zero"));
-                                                    return;
-                                                }
-                                                if (!cookie.isHttpOnly()) {
-                                                    this.host.failIteration(new IllegalStateException(
-                                                            "Cookie is not HTTP-only"));
-                                                    return;
-                                                }
+                                                assertTrue("expect no response headers",
+                                                        oo.getResponseHeaders().isEmpty());
+
                                                 this.host.resetAuthorizationContext();
                                                 this.host.completeIteration();
                                             });
