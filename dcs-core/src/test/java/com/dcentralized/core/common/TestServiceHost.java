@@ -1909,7 +1909,7 @@ public class TestServiceHost {
 
                     ServiceStat cacheClears = stats
                             .get(ServiceHostManagementService.STAT_NAME_SERVICE_CACHE_CLEAR_COUNT);
-                    if (cacheClears == null || cacheClears.latestValue < this.serviceCount) {
+                    if (cacheClears == null || cacheClears.latestValue < this.serviceCount / 2) {
                         this.host.log(
                                 "Service Cache Clears %s were less than expected %d",
                                 cacheClears == null ? "null" : String
