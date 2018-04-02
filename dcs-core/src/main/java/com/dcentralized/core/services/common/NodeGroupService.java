@@ -47,6 +47,8 @@ import com.dcentralized.core.services.common.NodeState.NodeStatus;
 public class NodeGroupService extends StatefulService {
     public static final String STAT_NAME_JOIN_RETRY_COUNT = "joinRetryCount";
 
+    public static final String STAT_NAME_REMOTE_FALSE_UNAVAILABLE_COUNT = "falseUnavailableReportCountFrom-";
+
     public static final String PROPERTY_NAME_PEER_REQUEST_TIMEOUT_MICROS = Utils.PROPERTY_NAME_PREFIX
             + "NodeGroupService.peerRequestTimeoutMicros";
 
@@ -875,13 +877,15 @@ public class NodeGroupService extends StatefulService {
 
             if (!isSelfPatch && isLocalNode) {
                 if (remoteEntry.status != currentEntry.status) {
-                    logWarning("Peer %s is reporting us as %s, current status: %s",
+                    logFine("Peer %s is reporting us as %s, current status: %s",
                             remotePeerState.documentOwner, remoteEntry.status, currentEntry.status);
                     if (remoteEntry.documentVersion > currentEntry.documentVersion) {
                         // increment local version to re-enforce we are alive and well
                         currentEntry.documentVersion = remoteEntry.documentVersion;
                         currentEntry.documentUpdateTimeMicros = now;
                         changes.add(NodeGroupChange.SELF_CHANGE);
+                        adjustStat(STAT_NAME_REMOTE_FALSE_UNAVAILABLE_COUNT
+                                + remotePeerState.documentOwner, 1);
                     }
                 }
                 // local instance of node group service is the only one that can update its own
