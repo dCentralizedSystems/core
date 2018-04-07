@@ -689,7 +689,7 @@ public class NettyHttpServiceClient implements ServiceClient {
                 } else {
                     pool = this.channelPool;
                 }
-                r = () -> pool.returnOrClose(nettyCtx, !op.isKeepAlive());
+                r = () -> pool.returnOrClose(nettyCtx, true);
             }
 
             ExecutorService exec = this.host != null ? this.host.getExecutor() : this.executor;
