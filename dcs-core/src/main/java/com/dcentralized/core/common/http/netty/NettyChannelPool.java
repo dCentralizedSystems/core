@@ -665,20 +665,6 @@ public class NettyChannelPool {
         }
     }
 
-    public void clearConnectionCache(String tag) {
-        for (NettyChannelGroup g : this.channelGroups.values()) {
-            if (!g.key.connectionTag.equals(tag)) {
-                continue;
-            }
-            synchronized (g) {
-                for (NettyChannelContext c : g.availableChannels) {
-                    c.close(true);
-                }
-                g.availableChannels.clear();
-            }
-        }
-    }
-
     public void stop() {
         try {
             for (NettyChannelGroup g : this.channelGroups.values()) {

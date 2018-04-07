@@ -666,7 +666,6 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
                         this.cachedGroupState.nodes.size());
             }
             adjustStat(STAT_NAME_SYNCHRONIZATION_COUNT, 1);
-            getHost().getClient().clearConnectionCache(ServiceClient.CONNECTION_TAG_REPLICATION);
             getHost().scheduleNodeGroupChangeMaintenance(getSelfLink());
         }
 
