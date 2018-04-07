@@ -1077,4 +1077,18 @@ public class NettyHttpServiceClient implements ServiceClient {
 
         return this;
     }
+
+    @Override
+    public ServiceClient clearConnectionCache(String tag) {
+        if (this.sslChannelPool != null) {
+            this.sslChannelPool.clearConnectionCache(tag);
+        }
+        if (this.http2ChannelPool != null) {
+            this.http2ChannelPool.clearConnectionCache(tag);
+        }
+        if (this.http2SslChannelPool != null) {
+            this.http2SslChannelPool.clearConnectionCache(tag);
+        }
+        return this;
+    }
 }

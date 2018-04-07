@@ -151,4 +151,9 @@ public interface ServiceClient extends ServiceRequestSender {
      * Returns metrics for a connection pool associated with the given tag
      */
     ConnectionPoolMetrics getConnectionPoolMetricsPerTag(String connectionTag);
+
+    /**
+     * Clears all cached connections associated with tag
+     */
+    public ServiceClient clearConnectionCache(String connectionTagReplication);
 }
