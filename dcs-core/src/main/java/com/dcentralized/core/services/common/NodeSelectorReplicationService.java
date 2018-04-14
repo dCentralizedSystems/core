@@ -230,7 +230,7 @@ public class NodeSelectorReplicationService extends StatelessService {
     private static Operation createReplicationRequest(Operation outboundOp, URI remoteUri) {
         Operation update = Operation.createPost(remoteUri)
                 .setAction(outboundOp.getAction())
-                .setRetryCount(1)
+                .setRetryCount(0)
                 .forceRemote()
                 .setExpiration(outboundOp.getExpirationMicrosUtc())
                 .transferRefererFrom(outboundOp);
