@@ -671,6 +671,11 @@ public class NettyHttpServiceClient implements ServiceClient {
             NettyChannelContext nettyCtx = (NettyChannelContext) op.getSocketContext();
             NettyChannelPool pool;
             Runnable r = null;
+            boolean close = e != null && e.getMessage() != null
+                    && e.getMessage().toLowerCase().contains("input length");
+            if (close) {
+                LOGGER.warning("closing channel due to input length error");
+            }
             if (nettyCtx.getProtocol() == NettyChannelContext.Protocol.HTTP2) {
                 nettyCtx.removeStreamForOperation(op);
                 if (this.http2SslChannelPool != null
@@ -680,7 +685,7 @@ public class NettyHttpServiceClient implements ServiceClient {
                     pool = this.http2ChannelPool;
                 }
                 // For HTTP/2, we maintain multiple streams, so we don't close the connection.
-                r = () -> pool.returnOrClose(nettyCtx, false);
+                r = () -> pool.returnOrClose(nettyCtx, close);
             } else {
                 op.setSocketContext(null);
                 if (this.sslChannelPool != null
@@ -689,7 +694,7 @@ public class NettyHttpServiceClient implements ServiceClient {
                 } else {
                     pool = this.channelPool;
                 }
-                r = () -> pool.returnOrClose(nettyCtx, !op.isKeepAlive());
+                r = () -> pool.returnOrClose(nettyCtx, !op.isKeepAlive() || close);
             }
 
             ExecutorService exec = this.host != null ? this.host.getExecutor() : this.executor;
