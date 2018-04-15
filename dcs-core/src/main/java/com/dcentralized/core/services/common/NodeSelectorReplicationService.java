@@ -117,7 +117,7 @@ public class NodeSelectorReplicationService extends StatelessService {
             }
 
             context.failureThreshold = (eligibleMemberCount - context.successThreshold) + 1;
-            replicateUpdateToNodes(localState, context);
+            replicateUpdateToNodes(context);
             return;
         }
 
@@ -138,7 +138,7 @@ public class NodeSelectorReplicationService extends StatelessService {
                     context.failureThreshold = (localNodeCount - context.successThreshold) + 1;
                 }
             }
-            replicateUpdateToNodes(localState, context);
+            replicateUpdateToNodes(context);
             return;
         }
 
@@ -147,7 +147,7 @@ public class NodeSelectorReplicationService extends StatelessService {
         context.successThreshold = Math.min(2, eligibleMemberCount - 1);
         context.failureThreshold = (eligibleMemberCount - context.successThreshold) + 1;
 
-        replicateUpdateToNodes(localState, context);
+        replicateUpdateToNodes(context);
     }
 
     /**
@@ -186,10 +186,8 @@ public class NodeSelectorReplicationService extends StatelessService {
         return this.locationPerNodeURI.get(remoteNodeUri);
     }
 
-    private void replicateUpdateToNodes(NodeGroupState localState,
-            NodeSelectorReplicationContext context) {
-        Operation update = createReplicationRequest(localState,
-                context.parentOp, null);
+    private void replicateUpdateToNodes(NodeSelectorReplicationContext context) {
+        Operation update = createReplicationRequest(context.parentOp, null);
         update.setAuthorizationContext(getSystemAuthorizationContext());
         update.setCompletion((o, e) -> handleReplicationCompletion(context, o, e));
 
@@ -229,9 +227,7 @@ public class NodeSelectorReplicationService extends StatelessService {
         }
     }
 
-    private static Operation createReplicationRequest(NodeGroupState localState,
-            Operation outboundOp,
-            URI remoteUri) {
+    private static Operation createReplicationRequest(Operation outboundOp, URI remoteUri) {
         Operation update = Operation.createPost(remoteUri)
                 .setAction(outboundOp.getAction())
                 .setRetryCount(0)
@@ -253,8 +249,7 @@ public class NodeSelectorReplicationService extends StatelessService {
         Utils.encodeAndTransferLinkedStateToBody(outboundOp, update, BINARY_SERIALIZATION == 1);
 
         update.setFromReplication(true);
-        update.setConnectionTag(
-                ServiceClient.CONNECTION_TAG_REPLICATION + localState.membershipUpdateTimeMicros);
+        update.setConnectionTag(ServiceClient.CONNECTION_TAG_REPLICATION);
 
         if (NodeSelectorService.REPLICATION_OPERATION_OPTION != null) {
             update.toggleOption(NodeSelectorService.REPLICATION_OPERATION_OPTION, true);
