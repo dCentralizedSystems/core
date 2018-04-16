@@ -58,8 +58,9 @@ public class NodeSelectorReplicationContext {
 
         if (e != null && o != null) {
             h.log(Level.WARNING,
-                    "(Original id: %d) Replication request to %s-%s failed with %d, %s",
+                    "(Original id: %d, cl:%d, ct:%s) Replication request to %s-%s failed with %d, %s",
                     op.getId(),
+                    op.getContentLength(), op.getContentType(),
                     o.getUri(), o.getAction(), o.getStatusCode(), e.getMessage());
             this.failureStatus = o.getStatusCode();
             errorCode = this.getErrorCode(o);
