@@ -187,11 +187,12 @@ public class NettyHttpServerResponseHandler extends SimpleChannelInboundHandler<
 
     private void decodeResponseBody(Operation request, ByteBuf content) {
         if (!content.isReadable() || request.isFromReplication()) {
+            // skip body decode, request had no body
+            request.setContentLength(0).setBodyNoCloning(null);
             if (checkResponseForError(request)) {
                 return;
             }
-            // skip body decode, request had no body
-            request.setContentLength(0).setBodyNoCloning(null).complete();
+            request.complete();
             return;
         }
 
