@@ -223,7 +223,7 @@ public class NodeSelectorReplicationService extends StatelessService {
                 continue;
             }
 
-            this.getHost().getClient().send(update);
+            this.getHost().getClient().send(update.clone());
         }
     }
 
