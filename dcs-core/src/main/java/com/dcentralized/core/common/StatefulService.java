@@ -1132,7 +1132,8 @@ public class StatefulService implements Service {
 
         if (op.isFromReplication() && !op.isSynchronizeOwner()) {
             // avoid cost of sending the request body as a response
-            op.setBodyNoCloning(null);
+            op.setBodyNoCloning(Operation.EMPTY_JSON_BODY)
+                    .setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
         }
         op.complete();
     }
