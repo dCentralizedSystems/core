@@ -186,7 +186,7 @@ public class NettyHttpServerResponseHandler extends SimpleChannelInboundHandler<
     }
 
     private void decodeResponseBody(Operation request, ByteBuf content) {
-        if (!content.isReadable()) {
+        if (!content.isReadable() || request.isFromReplication()) {
             if (checkResponseForError(request)) {
                 return;
             }
