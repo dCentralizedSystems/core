@@ -61,13 +61,13 @@ public class NodeSelectorReplicationContext {
                     "(Original id: %d, cl:%d, ct:%s) Replication request to %s-%s failed with %d, %s",
                     op.getId(),
                     op.getContentLength(), op.getContentType(),
-                    o.getUri(), o.getAction(), o.getStatusCode(), e.getMessage());
+                    o.getUri(), o.getAction(), o.getStatusCode(), Utils.toString(e));
             this.failureStatus = o.getStatusCode();
-            errorCode = this.getErrorCode(o);
+            errorCode = getErrorCode(o);
         }
 
         synchronized (this) {
-            this.saveErrorCode(errorCode);
+            saveErrorCode(errorCode);
 
             if (this.completionStatus != Status.PENDING) {
                 return;
