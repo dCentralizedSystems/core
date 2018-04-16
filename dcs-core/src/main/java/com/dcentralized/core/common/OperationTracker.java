@@ -200,7 +200,7 @@ public class OperationTracker {
                         op.setUri(s.getUri());
                     }
                     if (op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_POST_TO_PUT)) {
-                        this.host.restoreActionOnChildServiceToPostOnFactory(link, op);
+                        ServiceHost.restoreActionOnChildServiceToPostOnFactory(link, op);
                     }
                     op.complete();
                 });

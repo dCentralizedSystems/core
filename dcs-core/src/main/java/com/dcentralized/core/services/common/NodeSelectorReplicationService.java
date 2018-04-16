@@ -187,7 +187,7 @@ public class NodeSelectorReplicationService extends StatelessService {
     }
 
     private void replicateUpdateToNodes(NodeSelectorReplicationContext context) {
-        Operation update = createReplicationRequest(context.parentOp, null);
+        Operation update = createReplicationRequest(context.parentOp);
         update.setAuthorizationContext(getSystemAuthorizationContext());
         update.setCompletion((o, e) -> handleReplicationCompletion(context, o, e));
 
@@ -203,7 +203,7 @@ public class NodeSelectorReplicationService extends StatelessService {
                 continue;
             }
 
-            URI updateUri = createReplicaUri(m.groupReference, context.parentOp);
+            URI updateUri = createReplicaUri(m.groupReference, update.getUri());
             update.setUri(updateUri);
 
             if (context.location != null) {
@@ -227,15 +227,23 @@ public class NodeSelectorReplicationService extends StatelessService {
         }
     }
 
-    private static Operation createReplicationRequest(Operation outboundOp, URI remoteUri) {
-        Operation update = Operation.createPost(remoteUri)
+    private static Operation createReplicationRequest(Operation outboundOp) {
+        String pragmaHeader = outboundOp.getRequestHeaderAsIs(Operation.PRAGMA_HEADER);
+
+        Operation update = Operation.createPost(outboundOp.getUri())
                 .setAction(outboundOp.getAction())
                 .setRetryCount(0)
                 .forceRemote()
                 .setExpiration(outboundOp.getExpirationMicrosUtc())
                 .transferRefererFrom(outboundOp);
 
-        String pragmaHeader = outboundOp.getRequestHeaderAsIs(Operation.PRAGMA_HEADER);
+        if (pragmaHeader != null && pragmaHeader.contains(Operation.PRAGMA_DIRECTIVE_POST_TO_PUT)) {
+            // replicate as the original POST, to the parent factory
+            String factoryPath = UriUtils.getParentPath(outboundOp.getUri().getPath());
+            update.setUri(UriUtils.buildUri(outboundOp.getUri(), factoryPath));
+            update.setAction(Action.POST);
+        }
+
         if (pragmaHeader != null && !Operation.PRAGMA_DIRECTIVE_FORWARDED.equals(pragmaHeader)) {
             update.addRequestHeader(Operation.PRAGMA_HEADER, pragmaHeader);
             update.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_REPLICATED);
@@ -262,10 +270,10 @@ public class NodeSelectorReplicationService extends StatelessService {
         return update;
     }
 
-    private URI createReplicaUri(URI remoteHost, Operation outboundOp) {
+    private URI createReplicaUri(URI remoteHost, URI targetUri) {
         return UriUtils.buildServiceUri(remoteHost.getScheme(),
                 remoteHost.getHost(), remoteHost.getPort(),
-                outboundOp.getUri().getPath(), outboundOp.getUri().getQuery(), null);
+                targetUri.getPath(), targetUri.getQuery(), null);
     }
 
     private void handleReplicationCompletion(

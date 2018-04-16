@@ -2813,14 +2813,11 @@ public class ServiceHost implements ServiceRequestSender {
         }
     }
 
-    void restoreActionOnChildServiceToPostOnFactory(String link, Operation op) {
-        log(Level.FINE, "Changing URI for (id:%d) %s from %s to factory",
-                op.getId(), op.getAction(), link);
-
+    public static void restoreActionOnChildServiceToPostOnFactory(String link, Operation op) {
         // restart a PUT to a child service, to a POST to the factory
         op.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_POST_TO_PUT);
         String factoryPath = UriUtils.getParentPath(link);
-        op.setUri(UriUtils.buildUri(this, factoryPath));
+        op.setUri(UriUtils.buildUri(op.getUri(), factoryPath));
         op.setAction(Action.POST);
 
         // If this was a synchronize-owner request, we need to set the body
