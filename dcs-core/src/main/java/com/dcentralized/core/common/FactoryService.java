@@ -260,7 +260,6 @@ public abstract class FactoryService extends StatelessService {
 
         SynchronizationTaskService service = SynchronizationTaskService
                 .create(() -> createChildServiceSafe());
-        service.setParentService(this);
         this.getHost().startService(post, service);
     }
 

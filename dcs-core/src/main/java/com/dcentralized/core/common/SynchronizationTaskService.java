@@ -17,18 +17,13 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyUsageOption;
 import com.dcentralized.core.common.config.Configuration;
-import com.dcentralized.core.services.common.NodeGroupBroadcastResponse;
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.ServiceUriPaths;
@@ -67,7 +62,7 @@ public class SynchronizationTaskService
     }
 
     public enum SubStage {
-        GET_CHECKPOINTS, QUERY, SYNCHRONIZE, RESTART, CHECK_NG_AVAILABILITY
+        QUERY, SYNCHRONIZE, RESTART, CHECK_NG_AVAILABILITY
     }
 
     public static class State extends TaskService.TaskServiceState {
@@ -148,28 +143,10 @@ public class SynchronizationTaskService
 
     private Supplier<Service> childServiceInstantiator;
 
-    private FactoryService parent;
-
     private final boolean isDetailedLoggingEnabled = Configuration.bool(
             SynchronizationTaskService.class,
             "isDetailedLoggingEnabled",
             false);
-
-    /**
-     * whether enable check point
-     */
-    private final boolean isCheckpointEnabled = Configuration.bool(
-            SynchronizationTaskService.class,
-            "isCheckpointEnabled",
-            false);
-
-    /**
-     * check point period in millisecond
-     */
-    private final long schedulePeriodSeconds = Configuration.number(
-            SynchronizationTaskService.class,
-            "schedulePeriodSeconds",
-            TimeUnit.MINUTES.toSeconds(30));
 
     public SynchronizationTaskService() {
         super(State.class);
@@ -327,15 +304,8 @@ public class SynchronizationTaskService
         task.queryResultLimit = body.queryResultLimit;
         if (startStateMachine) {
             task.taskInfo.stage = TaskState.TaskStage.STARTED;
-            // Periodically maintained services are expected to be in memory regardless of checkpoint
-            if (this.parent != null && this.parent.hasChildOption(ServiceOption.PERSISTENCE) &&
-                    !this.parent.hasChildOption(ServiceOption.PERIODIC_MAINTENANCE)
-                    && this.isCheckpointEnabled) {
-                task.subStage = SubStage.GET_CHECKPOINTS;
-            } else {
-                task.subStage = SubStage.QUERY;
-                task.checkpoint = 0L;
-            }
+            task.subStage = SubStage.QUERY;
+            task.checkpoint = 0L;
         }
 
         if (this.isDetailedLoggingEnabled) {
@@ -451,13 +421,9 @@ public class SynchronizationTaskService
             // the task's stage to RESTART. In this case, we reset the task
             // back to QUERY stage.
             task.taskInfo.stage = TaskState.TaskStage.STARTED;
-            if (this.parent != null && this.parent.hasChildOption(ServiceOption.PERSISTENCE)
-                    && this.isCheckpointEnabled) {
-                task.subStage = SubStage.GET_CHECKPOINTS;
-            } else {
-                task.subStage = SubStage.QUERY;
-                task.checkpoint = 0L;
-            }
+            task.subStage = SubStage.QUERY;
+            task.checkpoint = 0L;
+
             task.synchCompletionCount = 0;
             setStat(STAT_NAME_CHILD_SYNCH_RETRY_COUNT, 0);
             setStat(STAT_NAME_CHILD_SYNCH_FAILURE_COUNT, 0);
@@ -500,9 +466,6 @@ public class SynchronizationTaskService
 
     public void handleSubStage(State task) {
         switch (task.subStage) {
-        case GET_CHECKPOINTS:
-            handleCheckpointStage(task);
-            break;
         case QUERY:
             handleQueryStage(task);
             break;
@@ -516,70 +479,6 @@ public class SynchronizationTaskService
             logWarning("Unexpected sub stage: %s", task.subStage);
             break;
         }
-    }
-
-    private void handleCheckpointStage(State task) {
-        String checkPointServiceLink = UriUtils.buildUriPath(
-                CheckpointService.FACTORY_LINK,
-                UriUtils.convertPathCharsFromLink(this.parent.getSelfLink()));
-        ;
-        Operation get = Operation
-                .createGet(UriUtils.buildUri(this.getHost(), checkPointServiceLink))
-                .setReferer(this.getUri())
-                .setCompletion((o, e) -> {
-                    if (e != null) {
-                        log(Level.INFO,
-                                "broadcast get checkpoints failed %s, starting synchronization from timestamp 0",
-                                e.toString());
-                        task.checkpoint = 0L;
-                        sendSelfPatch(task, TaskState.TaskStage.STARTED,
-                                subStageSetter(SubStage.QUERY));
-                        return;
-                    }
-                    NodeGroupBroadcastResponse rsp = o.getBody(NodeGroupBroadcastResponse.class);
-                    if (!rsp.failures.isEmpty()) {
-                        for (Map.Entry<URI, ServiceErrorResponse> failure : rsp.failures
-                                .entrySet()) {
-                            // 404 may due to checkpoint is not created yet
-                            if (failure.getValue().statusCode != Operation.STATUS_CODE_NOT_FOUND) {
-                                log(Level.INFO, "get checkpoint failed with status %d from %s",
-                                        failure.getValue().errorCode, failure.getKey());
-                            }
-                        }
-                        log(Level.INFO, "starting synchronization from timestamp 0");
-                        task.checkpoint = 0L;
-                        sendSelfPatch(task, TaskState.TaskStage.STARTED,
-                                subStageSetter(SubStage.QUERY));
-                        return;
-                    }
-
-                    List<Long> checkPoints = rsp.jsonResponses.values().stream().map(mapJsonResponses()).collect(Collectors.toList());
-
-                    task.checkpoint = findMinimumCheckpoint(checkPoints);
-                    if (task.checkpoint > 0) {
-                        log(Level.INFO, "synch %s from check point %d",
-                                task.factorySelfLink, task.checkpoint);
-                    }
-                    sendSelfPatch(task, TaskState.TaskStage.STARTED,
-                            subStageSetter(SubStage.QUERY));
-                });
-        this.getHost().broadcastRequest(task.nodeSelectorLink, checkPointServiceLink, false, get);
-    }
-
-    private Function<? super String, ? extends Long> mapJsonResponses() {
-        return s -> {
-            CheckpointService.CheckpointState checkpointState = Utils.fromJson(s,
-                    CheckpointService.CheckpointState.class);
-            return checkpointState.timestamp;
-        };
-    }
-
-    private long findMinimumCheckpoint(List<Long> checkpoints) {
-        long minimumCheckpoint = Long.MAX_VALUE;
-        for (Long checkpoint : checkpoints) {
-            minimumCheckpoint = Long.min(minimumCheckpoint, checkpoint);
-        }
-        return minimumCheckpoint;
     }
 
     private void handleQueryStage(State task) {
@@ -644,23 +543,6 @@ public class SynchronizationTaskService
                 .setTermPropertyName(ServiceDocument.FIELD_NAME_KIND)
                 .setTermMatchValue(task.factoryStateKind);
         queryTask.querySpec.query.addBooleanClause(kindClause);
-
-        if (this.parent != null && this.parent.hasChildOption(ServiceOption.PERSISTENCE)
-                && this.isCheckpointEnabled) {
-            if (this.isDetailedLoggingEnabled) {
-                log(Level.INFO, "query %s from checkpoint %d", task.factorySelfLink,
-                        task.checkpoint);
-            }
-
-            QueryTask.NumericRange<Long> timeRange = QueryTask.NumericRange.createLongRange(
-                    task.checkpoint, Long.MAX_VALUE,
-                    false, true);
-
-            QueryTask.Query timeClause = new QueryTask.Query()
-                    .setTermPropertyName(ServiceDocument.FIELD_NAME_UPDATE_TIME_MICROS)
-                    .setNumericRange(timeRange);
-            queryTask.querySpec.query.addBooleanClause(timeClause);
-        }
 
         // set timeout based on peer synchronization upper limit
         long timeoutMicros = TimeUnit.SECONDS.toMicros(
@@ -950,9 +832,6 @@ public class SynchronizationTaskService
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)
                 .setRetryCount(0);
-        if (task.synchAllVersions) {
-            synchRequest.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_ALL_VERSIONS);
-        }
 
         try {
             sendRequest(synchRequest);
@@ -979,41 +858,6 @@ public class SynchronizationTaskService
                         // node group is not available - failing the task to
                         // prevent factory from being marked available
                         sendSelfFailurePatch(task, "node group is not available");
-                        return;
-                    }
-
-                    if (this.parent != null && this.parent.hasChildOption(ServiceOption.PERSISTENCE)
-                            && !this.parent.hasChildOption(ServiceOption.PERIODIC_MAINTENANCE)
-                            && this.isCheckpointEnabled) {
-                        CheckpointService.CheckpointState s = new CheckpointService.CheckpointState();
-                        s.timestamp = task.startTimeMicros;
-                        s.factoryLink = this.parent.getSelfLink();
-
-                        Operation post = Operation.createPost(
-                                UriUtils.buildUri(this.getHost(), CheckpointService.FACTORY_LINK))
-                                .setBody(s)
-                                .setReferer(this.getUri())
-                                .setCompletion((op, ex) -> {
-                                    getHost().scheduleCore(() -> {
-                                        if (this.isDetailedLoggingEnabled) {
-                                            log(Level.INFO,
-                                                    "synchronization task for %s has been re-scheduled",
-                                                    this.parent.getSelfLink());
-                                        }
-
-                                        SynchronizationTaskService.State scheduleTask = this.parent
-                                                .createSynchronizationTaskState(
-                                                        task.membershipUpdateTimeMicros);
-                                        Operation.createPost(this,
-                                                ServiceUriPaths.SYNCHRONIZATION_TASKS)
-                                                .setBody(scheduleTask)
-                                                .sendWith(this);
-                                    }, this.schedulePeriodSeconds, TimeUnit.SECONDS);
-
-                                    sendSelfFinishedPatch(task);
-                                });
-                        this.getHost().broadcastRequest(this.parent.getPeerNodeSelectorPath(),
-                                CheckpointService.FACTORY_LINK, false, post);
                         return;
                     }
 
@@ -1048,10 +892,6 @@ public class SynchronizationTaskService
                     }
                 });
         sendRequest(op);
-    }
-
-    public void setParentService(FactoryService factoryService) {
-        this.parent = factoryService;
     }
 
     @Override

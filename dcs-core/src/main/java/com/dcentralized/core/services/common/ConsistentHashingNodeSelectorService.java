@@ -139,7 +139,7 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
     private void startHelperServices(Operation op) {
         allocateUtilityService();
 
-        AtomicInteger remaining = new AtomicInteger(4);
+        AtomicInteger remaining = new AtomicInteger(3);
         CompletionHandler h = (o, e) -> {
             if (e != null) {
                 op.fail(e);
@@ -170,14 +170,10 @@ public class ConsistentHashingNodeSelectorService extends StatelessService imple
                     h.handle(o, e);
                 }));
 
-        Operation startSynchPost = Operation.createPost(
-                UriUtils.extendUri(getUri(), ServiceUriPaths.SERVICE_URI_SUFFIX_SYNCHRONIZATION))
-                .setCompletion(h);
         Operation startForwardingPost = Operation.createPost(
                 UriUtils.extendUri(getUri(), ServiceUriPaths.SERVICE_URI_SUFFIX_FORWARDING))
                 .setCompletion(h);
 
-        getHost().startService(startSynchPost, new NodeSelectorSynchronizationService(this));
         getHost().startService(startForwardingPost, new NodeSelectorForwardingService(this));
     }
 

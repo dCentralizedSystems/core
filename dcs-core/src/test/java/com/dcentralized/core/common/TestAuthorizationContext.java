@@ -448,7 +448,7 @@ public class TestAuthorizationContext extends BasicTestCase {
 
         OperationContext.setAuthorizationContext(this.host.getSystemAuthorizationContext());
         URI postUserUri = UriUtils.buildUri(this.host, ServiceUriPaths.CORE_AUTHZ_USERS);
-        this.host.testStart(4);
+        this.host.testStart(1);
         this.host.send(Operation
                 .createPost(postUserUri)
                 .setBody(userState)
@@ -460,24 +460,29 @@ public class TestAuthorizationContext extends BasicTestCase {
 
                     this.host.completeIteration();
                 }));
+        this.host.testWait();
 
+        this.host.testStart(1);
         this.host.send(Operation
                 .createPost(
                         UriUtils.buildUri(this.host, ServiceUriPaths.CORE_AUTHZ_USER_GROUPS))
                 .setBody(userGroupState)
                 .setCompletion(this.host.getCompletion()));
+        this.host.testWait();
 
+        this.host.testStart(1);
         this.host.send(Operation
                 .createPost(
                         UriUtils.buildUri(this.host, ServiceUriPaths.CORE_AUTHZ_RESOURCE_GROUPS))
                 .setBody(resourceGroupState)
                 .setCompletion(this.host.getCompletion()));
+        this.host.testWait();
 
+        this.host.testStart(1);
         this.host.send(Operation
                 .createPost(UriUtils.buildUri(this.host, ServiceUriPaths.CORE_AUTHZ_ROLES))
                 .setBody(roleState)
                 .setCompletion(this.host.getCompletion()));
-
         this.host.testWait();
         OperationContext.setAuthorizationContext(null);
     }

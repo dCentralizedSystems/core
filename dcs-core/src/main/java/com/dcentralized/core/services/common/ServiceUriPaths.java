@@ -59,7 +59,6 @@ public final class ServiceUriPaths {
             + SHARDS_MANAGER_NAME;
 
     public static final String SYNCHRONIZATION_TASKS = CORE + "/synch-tasks";
-    public static final String CHECKPOINTS = CORE + "/checkpoints";
 
     public static final String CORE_AUTH = CORE + "/auth";
     public static final String CORE_CREDENTIALS = CORE_AUTH + "/credentials";

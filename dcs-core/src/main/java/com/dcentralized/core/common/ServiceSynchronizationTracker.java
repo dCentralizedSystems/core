@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,7 +34,6 @@ import com.dcentralized.core.common.ServiceMaintenanceRequest.MaintenanceReason;
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.services.common.NodeGroupService;
 import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
-import com.dcentralized.core.services.common.NodeSelectorSynchronizationService.SynchronizePeersRequest;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 
 /**
@@ -50,18 +48,18 @@ class ServiceSynchronizationTracker {
 
     private ServiceHost host;
 
-    private final ConcurrentSkipListMap<String, Long> synchronizationTimes = new ConcurrentSkipListMap<>();
-    private final ConcurrentSkipListMap<String, Long> synchronizationRequiredServices = new ConcurrentSkipListMap<>();
-    private final ConcurrentSkipListMap<String, Long> synchronizationActiveServices = new ConcurrentSkipListMap<>();
-    private final ConcurrentSkipListMap<String, NodeGroupState> pendingNodeSelectorsForFactorySynch = new ConcurrentSkipListMap<>();
+    private final ConcurrentSkipListMap<String, Long> nodeGroupChangeScheduledTimes = new ConcurrentSkipListMap<>();
+    private final ConcurrentSkipListMap<String, Long> nodeGroupChangePendingMaintServices = new ConcurrentSkipListMap<>();
+    private final ConcurrentSkipListMap<String, Long> nodeGroupChangePendingMaintCompServices = new ConcurrentSkipListMap<>();
+    private final ConcurrentSkipListMap<String, NodeGroupState> pendingNodeSelectorsForMaintenance = new ConcurrentSkipListMap<>();
 
     public void addService(String servicePath, long timeMicros) {
-        this.synchronizationRequiredServices.put(servicePath, timeMicros);
+        this.nodeGroupChangePendingMaintServices.put(servicePath, timeMicros);
     }
 
     public void removeService(String path) {
-        this.synchronizationActiveServices.remove(path);
-        this.synchronizationRequiredServices.remove(path);
+        this.nodeGroupChangePendingMaintCompServices.remove(path);
+        this.nodeGroupChangePendingMaintServices.remove(path);
     }
 
     private void scheduleNodeGroupChangeMaintenance(String nodeSelectorPath, Operation op) {
@@ -90,7 +88,7 @@ class ServiceSynchronizationTracker {
                             }
 
                             NodeGroupState ngs = o.getBody(NodeGroupState.class);
-                            this.pendingNodeSelectorsForFactorySynch.put(nodeSelectorPath, ngs);
+                            this.pendingNodeSelectorsForMaintenance.put(nodeSelectorPath, ngs);
                             if (op != null) {
                                 op.complete();
                             }
@@ -224,21 +222,10 @@ class ServiceSynchronizationTracker {
      *
      * This method is called in the following cases:
      *
-     * 1) Synchronization of a factory service, due to node group change. This includes
-     * synchronization after host restart. Since factory synchronization uses SYNCH_OWNER
-     * request that is ONLY sent to the document owner, this function will not be executed
-     * on non-owner nodes (during factory synchronization).
-     *
      * 2) Synchronization due to conflict on epoch, version or owner, on a specific stateful
      * service instance. The service instance will call this method to synchronize peers.
      *
      * 3) When an On-demand load service is re-started due to an incoming request.
-     *
-     * Note that case 1) actually causes SYNCH_PEER requests to be sent out to peers, that can
-     * implicitly invoke case 2). That's because a SYNCH_PEER POST request is converted to a PUT
-     * on the peer node and is forwarded to the StatefulService. Validating ownership in this
-     * method is critical to avoid recursive loops between OWNER and PEERs trying to synchronize
-     * each other endlessly.
      *
      * Also note that the SYNCH_OWNER request since it is only sent to owner nodes, it is
      * not really required to again validate document ownership in this method. So, a future
@@ -279,9 +266,8 @@ class ServiceSynchronizationTracker {
                 return;
             }
 
-            // we are on owner node, proceed with synchronization logic that will discover
-            // and push, latest, best state, to all peers
-            synchronizeWithPeers(s, op);
+            // we are on owner node, but we only synchronized on demand, so just complete the operation
+            op.complete();
         };
 
         if (s.hasOption(ServiceOption.IMMUTABLE) && !s.hasOption(ServiceOption.OWNER_SELECTION)) {
@@ -297,146 +283,15 @@ class ServiceSynchronizationTracker {
         this.host.selectOwner(s.getPeerNodeSelectorPath(), s.getSelfLink(), selectOwnerOp);
     }
 
-    private void synchronizeWithPeers(Service s, Operation op) {
-        // service is durable and replicated. We need to ask our peers if they
-        // have more recent state version than we do, then pick the latest one
-        // (or the most valid one, depending on peer consensus)
-
-        SynchronizePeersRequest t = SynchronizePeersRequest.create();
-        t.indexLink = s.getDocumentIndexPath();
-        t.stateDescription = this.host.buildDocumentDescription(s);
-        t.options = s.getOptions();
-        t.state = op.hasBody() ? op.getBody(s.getStateType()) : null;
-        t.factoryLink = UriUtils.getParentPath(s.getSelfLink());
-        if (t.factoryLink == null || t.factoryLink.isEmpty()) {
-            String error = String.format("Factory not found for %s."
-                    + "If the service is not created through a factory it should not set %s",
-                    s.getSelfLink(), ServiceOption.OWNER_SELECTION);
-            op.fail(new IllegalStateException(error));
-            return;
-        }
-
-        if (t.state == null) {
-            // we have no initial state or state from storage. Create an empty state so we can
-            // compare with peers
-            ServiceDocument template = null;
-            try {
-                template = s.getStateType().newInstance();
-            } catch (Exception e) {
-                this.host.log(Level.SEVERE, "Could not create instance state type: %s",
-                        e.toString());
-                op.fail(e);
-                return;
-            }
-
-            template.documentSelfLink = s.getSelfLink();
-            template.documentEpoch = 0L;
-            // set version to negative so we do not select this over peer state
-            template.documentVersion = -1;
-            t.state = template;
-        }
-
-        // We remove the SYNCH_OWNER pragma from the operation here.
-        // This allows the best state computed through
-        // NodeSelectorSynchronizationService get persisted locally.
-        op.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER);
-
-        boolean synchHistoricalVersions = op
-                .hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_HISTORICAL_VERSIONS);
-
-        CompletionHandler c = (o, e) -> {
-            if (this.host.isStopping()) {
-                op.fail(new CancellationException("Host is stopping"));
-                return;
-            }
-
-            if (e != null) {
-                op.setStatusCode(o.getStatusCode());
-                op.fail(e);
-                return;
-            }
-
-            if (synchHistoricalVersions) {
-                // all historic versions of the service have been synchronized across all nodes,
-                // including this one
-                op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
-                op.complete();
-                return;
-            }
-
-            if (!o.hasBody()) {
-                // peers did not have a better state to offer
-                if (ServiceDocument.isDeleted(t.state)) {
-                    Operation.failServiceMarkedDeleted(t.state.documentSelfLink, op);
-                    return;
-                }
-
-                // avoid duplicate document version on owner
-                op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
-
-                op.complete();
-                return;
-            }
-
-            ServiceDocument selectedState = o.getBody(s.getStateType());
-            boolean isVersionSame = ServiceDocument
-                    .compare(selectedState, t.state, t.stateDescription, Utils.getTimeComparisonEpsilonMicros())
-                    .contains(ServiceDocument.DocumentRelationship.EQUAL_VERSION);
-
-            if (ServiceDocument.isDeleted(selectedState)) {
-                Operation.failServiceMarkedDeleted(t.state.documentSelfLink, op);
-                // Only save the document, if the selected state is a newer version of the document
-                // than the local copy.
-                if (!isVersionSame ) {
-                    selectedState.documentSelfLink = s.getSelfLink();
-                    selectedState.documentUpdateAction = Action.DELETE.toString();
-                    this.host.saveServiceState(s, Operation.createDelete(UriUtils.buildUri(this.host,
-                                    s.getSelfLink())).setReferer(s.getUri()),
-                            selectedState);
-                }
-                return;
-            }
-
-            // indicate that synchronization occurred, we got an updated state from peers
-            op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_PEER);
-
-            if (isVersionSame) {
-                // avoid duplicate document version on owner
-                op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
-            }
-
-            // The remote peers have a more recent state than the one we loaded from the store.
-            // Use the peer service state as the initial state. Also update the linked state,
-            // so that the correct documentVersion is indexed during startService.
-            op.linkState(selectedState);
-            op.setBodyNoCloning(selectedState).complete();
-        };
-
-        URI synchServiceForGroup = UriUtils.extendUri(
-                UriUtils.buildUri(this.host, s.getPeerNodeSelectorPath()),
-                ServiceUriPaths.SERVICE_URI_SUFFIX_SYNCHRONIZATION);
-        Operation synchPost = Operation
-                .createPost(synchServiceForGroup)
-                .setBodyNoCloning(t)
-                .setExpiration(op.getExpirationMicrosUtc())
-                .setRetryCount(0)
-                .setReferer(s.getUri())
-                .setCompletion(c);
-        if (synchHistoricalVersions) {
-            synchPost.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_HISTORICAL_VERSIONS);
-        }
-        this.host.sendRequest(synchPost);
-    }
-
     public void scheduleNodeGroupChangeMaintenance(String nodeSelectorPath) {
         long now = Utils.getNowMicrosUtc();
         this.host.log(Level.FINE, "%s %d", nodeSelectorPath, now);
-        this.synchronizationTimes.put(nodeSelectorPath, now);
+        this.nodeGroupChangeScheduledTimes.put(nodeSelectorPath, now);
         scheduleNodeGroupChangeMaintenance(nodeSelectorPath, null);
     }
 
     public void setFactoriesAvailabilityIfOwner(boolean isAvailable) {
-        for (String serviceLink : this.synchronizationRequiredServices.keySet()) {
+        for (String serviceLink : this.nodeGroupChangePendingMaintServices.keySet()) {
             Service factoryService = this.host.findService(serviceLink, true);
             if (factoryService == null || !factoryService.hasOption(ServiceOption.FACTORY)) {
                 this.host.log(Level.WARNING,
@@ -458,7 +313,7 @@ class ServiceSynchronizationTracker {
         }
 
         try {
-            Iterator<Entry<String, NodeGroupState>> it = this.pendingNodeSelectorsForFactorySynch
+            Iterator<Entry<String, NodeGroupState>> it = this.pendingNodeSelectorsForMaintenance
                     .entrySet()
                     .iterator();
             while (it.hasNext()) {
@@ -474,7 +329,7 @@ class ServiceSynchronizationTracker {
     private boolean checkAndScheduleNodeSelectorSynch(Operation post, MaintenanceStage nextStage,
             long deadline) {
         boolean hasSynchOccuredAtLeastOnce = false;
-        for (Long synchTime : this.synchronizationTimes.values()) {
+        for (Long synchTime : this.nodeGroupChangeScheduledTimes.values()) {
             if (synchTime != null && synchTime > 0) {
                 hasSynchOccuredAtLeastOnce = true;
             }
@@ -487,7 +342,7 @@ class ServiceSynchronizationTracker {
         Set<String> selectorPathsToSynch = new HashSet<>();
         // we have done at least once synchronization. Check if any services that require synch
         // started after the last node group change, and if so, schedule them
-        for (Entry<String, Long> en : this.synchronizationRequiredServices.entrySet()) {
+        for (Entry<String, Long> en : this.nodeGroupChangePendingMaintServices.entrySet()) {
             Long lastSynchTime = en.getValue();
             String link = en.getKey();
             Service s = this.host.findService(link, true);
@@ -495,7 +350,7 @@ class ServiceSynchronizationTracker {
                 continue;
             }
             String selectorPath = s.getPeerNodeSelectorPath();
-            Long selectorSynchTime = this.synchronizationTimes.get(selectorPath);
+            Long selectorSynchTime = this.nodeGroupChangeScheduledTimes.get(selectorPath);
             if (selectorSynchTime == null) {
                 continue;
             }
@@ -540,11 +395,11 @@ class ServiceSynchronizationTracker {
 
     private void performNodeSelectorChangeMaintenance(Entry<String, NodeGroupState> entry) {
         String nodeSelectorPath = entry.getKey();
-        Long selectorSynchTime = this.synchronizationTimes.get(nodeSelectorPath);
+        Long selectorSynchTime = this.nodeGroupChangeScheduledTimes.get(nodeSelectorPath);
         NodeGroupState ngs = entry.getValue();
         long now = Utils.getSystemNowMicrosUtc();
 
-        for (Entry<String, Long> en : this.synchronizationActiveServices.entrySet()) {
+        for (Entry<String, Long> en : this.nodeGroupChangePendingMaintCompServices.entrySet()) {
             String link = en.getKey();
             Service s = this.host.findService(link, true);
             if (s == null) {
@@ -572,11 +427,11 @@ class ServiceSynchronizationTracker {
             if (hostState.peerSynchronizationTimeLimitSeconds < deltaSeconds) {
                 this.host.log(Level.WARNING, "Service %s has exceeded synchronization limit of %d",
                         link, hostState.peerSynchronizationTimeLimitSeconds);
-                this.synchronizationActiveServices.remove(link);
+                this.nodeGroupChangePendingMaintCompServices.remove(link);
             }
         }
 
-        for (Entry<String, Long> en : this.synchronizationRequiredServices
+        for (Entry<String, Long> en : this.nodeGroupChangePendingMaintServices
                 .entrySet()) {
             now = Utils.getSystemNowMicrosUtc();
             if (this.host.isStopping()) {
@@ -613,35 +468,31 @@ class ServiceSynchronizationTracker {
             }
 
             Operation maintOp = Operation.createPost(s.getUri()).setCompletion((o, e) -> {
-                this.synchronizationActiveServices.remove(link);
+                this.nodeGroupChangePendingMaintCompServices.remove(link);
                 if (e != null) {
                     this.host.log(Level.WARNING, "Node group change maintenance failed for %s: %s",
                             s.getSelfLink(),
                             e.getMessage());
                 }
 
-                this.host.log(Level.FINE, "Synch done for selector %s, service %s",
+                this.host.log(Level.FINE,
+                        "node group change maint. done for selector %s, service %s",
                         nodeSelectorPath, s.getSelfLink());
             });
 
             // update service entry so we do not reschedule it
-            this.synchronizationRequiredServices.put(link, now);
-            this.synchronizationActiveServices.put(link, now);
+            this.nodeGroupChangePendingMaintServices.put(link, now);
+            this.nodeGroupChangePendingMaintCompServices.put(link, now);
 
             ServiceMaintenanceRequest body = ServiceMaintenanceRequest.create();
             body.reasons.add(MaintenanceReason.NODE_GROUP_CHANGE);
             body.nodeGroupState = ngs;
             maintOp.setBodyNoCloning(body);
-
-            long n = now;
             // allow overlapping node group change maintenance requests
             this.host
                     .run(() -> {
                         OperationContext.setAuthorizationContext(this.host
                                 .getSystemAuthorizationContext());
-                        this.host.log(Level.FINE, " Synchronizing %s (last:%d, sl: %d now:%d)",
-                                link,
-                                lastSynchTime, selectorSynchTime, n);
                         s.adjustStat(Service.STAT_NAME_NODE_GROUP_CHANGE_MAINTENANCE_COUNT, 1);
                         s.handleMaintenance(maintOp);
                     });
@@ -649,9 +500,9 @@ class ServiceSynchronizationTracker {
     }
 
     public void close() {
-        this.synchronizationTimes.clear();
-        this.synchronizationRequiredServices.clear();
-        this.synchronizationActiveServices.clear();
-        this.pendingNodeSelectorsForFactorySynch.clear();
+        this.nodeGroupChangeScheduledTimes.clear();
+        this.nodeGroupChangePendingMaintServices.clear();
+        this.nodeGroupChangePendingMaintCompServices.clear();
+        this.pendingNodeSelectorsForMaintenance.clear();
     }
 }

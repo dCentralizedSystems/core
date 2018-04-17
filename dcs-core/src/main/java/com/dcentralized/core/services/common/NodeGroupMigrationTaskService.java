@@ -91,7 +91,6 @@ public class NodeGroupMigrationTaskService extends TaskService<NodeGroupMigratio
         AUTO_MIGRATE_EXCLUSION_PATHS.add(ServiceUriPaths.SYNCHRONIZATION_TASKS);
         AUTO_MIGRATE_EXCLUSION_PATHS.add(ServiceUriPaths.MIGRATION_TASKS);
         AUTO_MIGRATE_EXCLUSION_PATHS.add(ServiceUriPaths.NODE_GROUP_MIGRATION_TASKS);
-        AUTO_MIGRATE_EXCLUSION_PATHS.add(ServiceUriPaths.CHECKPOINTS);
     }
 
 

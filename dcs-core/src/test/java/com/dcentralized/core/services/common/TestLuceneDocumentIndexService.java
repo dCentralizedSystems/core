@@ -1858,8 +1858,6 @@ public class TestLuceneDocumentIndexService {
         ExampleServiceState st = new ExampleServiceState();
         st.name = Utils.getNowMicrosUtc() + "";
 
-        verifyOnDemandLoadDeleteOnUnknown(factoryUri);
-
         // delete some of the services, not using a body, emulation DELETE through expiration
         URI serviceToDelete = childUris.remove(0);
         Operation delete = Operation.createDelete(serviceToDelete)
@@ -2035,32 +2033,6 @@ public class TestLuceneDocumentIndexService {
             }
         }
         this.host.testWait(ctx);
-    }
-
-    private void verifyOnDemandLoadDeleteOnUnknown(URI factoryUri) {
-        for (int i = 0; i < 10; i++) {
-            // do a DELETE for a completely unknown service, expect 200.
-            // The 200 status is to stay consistent with the behavior for
-            // non-ODL services.
-            String unknownServicePath = "unknown-" + this.host.nextUUID();
-            URI unknownServiceUri = UriUtils.extendUri(factoryUri, unknownServicePath);
-            Operation delete = Operation
-                    .createDelete(unknownServiceUri);
-            this.host.sendAndWaitExpectSuccess(delete);
-
-            ExampleServiceState body = new ExampleServiceState();
-            // now create the service, expect success
-            body.name = this.host.nextUUID();
-            body.documentSelfLink = unknownServicePath;
-            Operation post = Operation.createPost(factoryUri)
-                    .setBody(body);
-            this.host.sendAndWaitExpectSuccess(post);
-
-            // delete the "unknown" service
-            delete = Operation
-                    .createDelete(unknownServiceUri);
-            this.host.sendAndWaitExpectSuccess(delete);
-        }
     }
 
     private Map<URI, ExampleServiceState> updateUriMapWithNewPort(int port,

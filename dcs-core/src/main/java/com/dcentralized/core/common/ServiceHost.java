@@ -1654,12 +1654,6 @@ public class ServiceHost implements ServiceRequestSender {
             startDocumentIndexService(this.documentIndexService, defaultNodeSelectorService);
         }
 
-        // check point depends on index service
-        // synchronization task service may lookup check point
-        CheckpointFactoryService service = new CheckpointFactoryService();
-        service.setUseBodyForSelfLink(true);
-        startCoreServicesSynchronously(service);
-
         List<Service> coreServices = new ArrayList<>();
         coreServices.add(this.managementService);
         coreServices.add(new ODataQueryService());
@@ -2622,11 +2616,6 @@ public class ServiceHost implements ServiceRequestSender {
             return this;
         }
 
-        if (post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_ALL_VERSIONS)) {
-            synchAllVersions(post, service, onDemandTriggeringOp);
-            return this;
-        }
-
         if (service.getProcessingStage() == Service.ProcessingStage.STOPPED) {
             log(Level.INFO, "Restarting service %s (%s)", service.getClass().getSimpleName(),
                     post.getUri());
@@ -2661,7 +2650,7 @@ public class ServiceHost implements ServiceRequestSender {
             post.setExpiration(Utils.fromNowMicrosUtc(this.state.operationTimeoutMicros));
         }
 
-        boolean attachService = !post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_VERSION);
+        boolean attachService = true;
 
         // if the service is a helper for one of the known URI suffixes, do not
         // add it to the map. We will special case dispatching to it
@@ -2828,50 +2817,6 @@ public class ServiceHost implements ServiceRequestSender {
             doc.documentSelfLink = link;
             op.setBody(doc);
         }
-    }
-
-    private void synchAllVersions(Operation post, Service service, Operation onDemandTriggeringOp) {
-        // synch all versions operates in two stages:
-        // (1) regular syncOwner, at the end of it the last version is retrieved
-        // (2) synch historical versions, up to the last version excluding
-        post.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_ALL_VERSIONS);
-        post.nestCompletion((o, e) -> {
-            if (e != null) {
-                post.fail(e);
-                return;
-            }
-
-            if (!o.hasBody()) {
-                this.log(Level.WARNING,
-                        "POST %d: Synch all versions: first stage response has no body - skipping second stage",
-                        post.getId());
-                post.complete();
-                return;
-            }
-
-            ServiceDocument sd = o.getBody(service.getStateType());
-            long lastVersion = sd.documentVersion;
-
-            if (lastVersion == 0) {
-                post.complete();
-                return;
-            }
-
-            // stage (2): synch historical versions, up to the last version excluding
-            this.log(Level.FINE, "POST %d synch all versions: starting second stage for %s",
-                    post.getId(), post.getUri().getPath());
-
-            // restore to syncOwner post and set SYNCH_HISTORICAL_VERSIONS
-            post.setAction(Action.POST);
-            post.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER);
-            post.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_HISTORICAL_VERSIONS);
-            post.setFromReplication(false);
-
-            startService(post, service, onDemandTriggeringOp);
-        });
-
-        // Stage (1): regular syncOwner flow - synch latest version
-        startService(post, service, onDemandTriggeringOp);
     }
 
     private boolean checkIfServiceExistsAndAttach(Service service, String servicePath,
@@ -3185,13 +3130,6 @@ public class ServiceHost implements ServiceRequestSender {
                     return;
                 }
 
-                if (post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_VERSION)) {
-                    // skip handleStart for synch-version requests - this is a sync
-                    // of a historical version
-                    post.complete();
-                    return;
-                }
-
                 opCtx = replaceAuthContext(post);
                 try {
                     s.handleStart(post);
@@ -3306,7 +3244,6 @@ public class ServiceHost implements ServiceRequestSender {
                 }
                 post.complete();
                 if (!isServiceImmutable(s)
-                        && !post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_VERSION)
                         && s.getCacheClearDelayMicros() == 0) {
                     stopService(s);
                 }
@@ -3514,26 +3451,10 @@ public class ServiceHost implements ServiceRequestSender {
         }
 
         URI getStateUri;
-        boolean synchVersion = serviceStartPost
-                .hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_VERSION);
-        if (synchVersion) {
-            // construct a URI for the specific version
-            ServiceDocument body = serviceStartPost.getBody(s.getStateType());
-            getStateUri = UriUtils.buildIndexQueryUri(
-                    indexService.getUri(),
-                    serviceStartPost.getUri().getPath(),
-                    body.documentVersion,
-                    false,
-                    true,
-                    ServiceOption.PERSISTENCE);
-        } else {
-            getStateUri = serviceStartPost.getUri();
-        }
+        getStateUri = serviceStartPost.getUri();
 
         Operation getState = Operation.createGet(getStateUri).transferRefererFrom(serviceStartPost);
-        if (!synchVersion) {
-            getState.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_INDEX_CHECK);
-        }
+        getState.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_INDEX_CHECK);
 
         getState.setCompletion((indexQueryOperation, e) -> {
             handleLoadInitialStateCompletion(s, serviceStartPost, next,
@@ -3628,8 +3549,6 @@ public class ServiceHost implements ServiceRequestSender {
 
         boolean isDeleted = ServiceDocument.isDeleted(stateFromStore)
                 || this.pendingServiceDeletions.contains(s.getSelfLink());
-        boolean synchVersion = serviceStartPost
-                .hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_VERSION);
 
         if (!serviceStartPost.hasBody()) {
             if (isDeleted) {
@@ -3644,7 +3563,7 @@ public class ServiceHost implements ServiceRequestSender {
             }
         }
         ServiceDocument initState = serviceStartPost.getBody(s.getStateType());
-        if (isDeleted && !synchVersion) {
+        if (isDeleted) {
             if (stateFromStore.documentVersion < initState.documentVersion) {
                 // new state is higher than previously indexed state, allow restart
                 return true;
@@ -3667,14 +3586,7 @@ public class ServiceHost implements ServiceRequestSender {
             if (stateFromStore.documentVersion == initState.documentVersion) {
                 // avoid creating a duplicate document version
                 serviceStartPost.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NO_INDEX_UPDATE);
-            } else if (synchVersion) {
-                serviceStartPost.fail(new IllegalStateException(String.format(
-                        "Service %s: synchronize version mismatch: expected version %d, index returned %d",
-                        initState.documentSelfLink, initState.documentVersion,
-                        stateFromStore.documentVersion)));
-                return false;
             }
-
             return true;
         }
 
@@ -4846,11 +4758,9 @@ public class ServiceHost implements ServiceRequestSender {
 
     private ScheduledFuture<?> schedule(ScheduledExecutorService e, Runnable task, long delay,
             TimeUnit unit) {
-        if (this.isStopping()) {
-            throw new IllegalStateException("Stopped");
-        }
-        if (e.isShutdown()) {
-            throw new IllegalStateException("Stopped");
+        if (this.isStopping() || e.isShutdown()) {
+            log(Level.WARNING, "Host is stopped, will not schedule task");
+            return null;
         }
 
         AuthorizationContext origContext = OperationContext.getAuthorizationContext();
