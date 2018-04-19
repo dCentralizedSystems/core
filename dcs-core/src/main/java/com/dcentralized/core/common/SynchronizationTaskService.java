@@ -551,7 +551,7 @@ public class SynchronizationTaskService
         queryTask.documentExpirationTimeMicros = Utils.fromNowMicrosUtc(timeoutMicros);
 
         // Make this a broadcast query so that we get child services from all peer nodes.
-        queryTask.querySpec.options = EnumSet.of(QueryOption.BROADCAST, QueryOption.FORWARD_ONLY);
+        queryTask.querySpec.options = EnumSet.of(QueryOption.FORWARD_ONLY);
 
         // Set the node-selector link.
         queryTask.nodeSelectorLink = task.nodeSelectorLink;
