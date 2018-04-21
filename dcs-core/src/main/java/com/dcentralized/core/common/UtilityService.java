@@ -945,6 +945,16 @@ public class UtilityService implements Service {
         return getStat(name, true);
     }
 
+    @Override
+    public ServiceStats getStats() {
+        if (this.stats == null) {
+            return null;
+        }
+        synchronized (this.stats) {
+            return Utils.clone(this.stats);
+        }
+    }
+
     private ServiceStat getStat(String name, boolean create) {
         if (!allocateStats(true)) {
             return null;

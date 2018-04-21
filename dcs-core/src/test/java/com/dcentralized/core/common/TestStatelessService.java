@@ -19,6 +19,7 @@ import static org.junit.Assert.assertNotEquals;
 import java.net.URI;
 import java.time.Duration;
 
+import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.StatelessTestService.ComputeSquare;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestRequestSender;
@@ -143,6 +144,26 @@ public class TestStatelessService extends BasicReusableHostTestCase {
         service.options.add(Service.ServiceOption.OWNER_SELECTION);
 
         this.host.startServiceAndWait(service, "bad-stateless/service", null);
+    }
+
+    @Test
+    public void getStats() throws Throwable {
+        StatelessService service = new StatelessTestService();
+        service.setMaintenanceIntervalMicros(100);
+        service.options.add(Service.ServiceOption.INSTRUMENTATION);
+        service.options.add(Service.ServiceOption.PERIODIC_MAINTENANCE);
+        this.host.startServiceAndWait(service, "some/service", null);
+        this.host.waitFor("missing stats", () -> {
+            ServiceStats stats = service.getStats();
+            if (stats == null || stats.entries.isEmpty()) {
+                return false;
+            }
+            ServiceStat maintSt = stats.entries.get(Service.STAT_NAME_MAINTENANCE_COUNT);
+            if (maintSt == null || maintSt.version < 1) {
+                return false;
+            }
+            return true;
+        });
     }
 
     @Test

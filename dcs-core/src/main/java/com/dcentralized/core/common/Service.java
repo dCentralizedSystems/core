@@ -517,6 +517,8 @@ public interface Service extends ServiceRequestSender {
 
     ServiceStat getStat(String name);
 
+    ServiceStats getStats();
+
     void adjustStat(String name, double delta);
 
     void adjustStat(ServiceStat stat, double delta);

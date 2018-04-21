@@ -1731,6 +1731,15 @@ public class StatefulService implements Service {
         return getHost().buildDocumentDescription(this);
     }
 
+    @Override
+    public ServiceStats getStats() {
+        Service s = this.getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_STATS, false);
+        if (s == null) {
+            return null;
+        }
+        return s.getStats();
+    }
+
     /**
      * Generate an example instance of the document type. Override this method to provide a more
      * detailed example

@@ -423,6 +423,15 @@ public class StatelessService implements Service {
     }
 
     @Override
+    public ServiceStats getStats() {
+        Service s = this.getUtilityService(ServiceHost.SERVICE_URI_SUFFIX_STATS, false);
+        if (s == null) {
+            return null;
+        }
+        return s.getStats();
+    }
+
+    @Override
     public ServiceStat getStat(String name) {
         if (!allowStats()) {
             return null;

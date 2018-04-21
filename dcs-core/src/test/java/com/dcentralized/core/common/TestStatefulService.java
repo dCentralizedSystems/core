@@ -842,6 +842,11 @@ public class TestStatefulService extends BasicReusableHostTestCase {
         final double maintenanceCount = (hostStat != null) ? hostStat.latestValue : 0;
         this.host.waitFor("Timeout waiting for the service host to elapse three maintenance intervals",
                 () -> {
+                    // verify we can get all statistics
+                    ServiceStats stats = service2.getStats();
+                    if (stats == null || stats.entries.isEmpty()) {
+                        return false;
+                    }
                     ServiceStat serviceStat = service2
                             .getStat(Service.STAT_NAME_MAINTENANCE_COUNT);
                     ServiceStat newHostStat = this.host
