@@ -4611,6 +4611,12 @@ public class ServiceHost implements ServiceRequestSender {
             return Utils.clone(this.info);
         }
 
+        enumerateNetworkInterfaces();
+
+        return Utils.clone(this.info);
+    }
+
+    public void enumerateNetworkInterfaces() {
         List<String> ipAddresses = new ArrayList<>();
         ipAddresses.add(LOOPBACK_ADDRESS);
 
@@ -4654,8 +4660,6 @@ public class ServiceHost implements ServiceRequestSender {
             log(Level.WARNING, "No IP or network interfaces detected. Adding loopback address");
             this.info.ipAddresses.add(ServiceHost.LOOPBACK_ADDRESS);
         }
-
-        return Utils.clone(this.info);
     }
 
     public void updateMemoryAndDiskInfo() {
