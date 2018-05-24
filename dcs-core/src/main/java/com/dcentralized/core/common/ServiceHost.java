@@ -1481,6 +1481,16 @@ public class ServiceHost implements ServiceRequestSender {
             allocateExecutors();
         }
 
+        if (!this.isAuthorizationEnabled()) {
+            String msg = "\n\n"
+                    + "##################################################################\n"
+                    + "##  Authorization is NOT enabled.                               ##\n"
+                    + "##  This is NOT secure. Please consider enabling authorization. ##\n"
+                    + "##################################################################\n"
+                    + "\n";
+            log(Level.WARNING, msg);
+        }
+
         if (this.isAuthorizationEnabled() && this.authorizationService == null) {
             this.authorizationService = new AuthorizationContextService();
         }
