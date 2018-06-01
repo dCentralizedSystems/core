@@ -5301,7 +5301,14 @@ public class ServiceHost implements ServiceRequestSender {
                 }
             }
             r.documentLinks.add(servicePath);
-            r.documents.put(servicePath, s.getDocumentTemplate());
+            ServiceDocument template = s.getDocumentTemplate();
+            ServiceDocument doc = new ServiceDocument();
+            doc.documentDescription = new ServiceDocumentDescription();
+            if (template != null && template.documentDescription != null) {
+                doc.documentDescription.documentIndexingOptions = template.documentDescription.documentIndexingOptions;
+            }
+            doc.documentDescription.serviceCapabilities = s.getOptions();
+            r.documents.put(servicePath, doc);
         }
         r.documentOwner = getId();
         r.documentCount = (long) r.documentLinks.size();

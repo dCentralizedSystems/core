@@ -2249,6 +2249,12 @@ public class TestServiceHost {
         this.host.testWait();
         assertEquals(serviceCount, results[0].documentLinks.size());
         assertEquals(serviceCount, results[0].documents.size());
+        for (Object o : results[0].documents.values()) {
+            ServiceDocument d = Utils.fromJson(o, ServiceDocument.class);
+            assertTrue(d.documentDescription != null);
+            assertTrue(d.documentDescription.serviceCapabilities != null);
+            assertTrue(!d.documentDescription.serviceCapabilities.isEmpty());
+        }
         assertEquals((long) serviceCount, (long) results[0].documentCount);
         this.host.testStart(1);
         this.host.queryServices(options, null, null, null, get.clone());
