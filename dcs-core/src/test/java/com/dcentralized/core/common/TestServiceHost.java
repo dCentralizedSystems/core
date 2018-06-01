@@ -2248,11 +2248,13 @@ public class TestServiceHost {
         this.host.queryServices(options, options, null, null, get.clone());
         this.host.testWait();
         assertEquals(serviceCount, results[0].documentLinks.size());
+        assertEquals(serviceCount, results[0].documents.size());
         assertEquals((long) serviceCount, (long) results[0].documentCount);
         this.host.testStart(1);
         this.host.queryServices(options, null, null, null, get.clone());
         this.host.testWait();
         assertTrue(results[0].documentLinks.size() >= serviceCount);
+        assertTrue(results[0].documents.size() >= serviceCount);
         assertEquals((long) results[0].documentLinks.size(), (long) results[0].documentCount);
     }
 

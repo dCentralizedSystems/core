@@ -5216,6 +5216,7 @@ public class ServiceHost implements ServiceRequestSender {
             EnumSet<ServiceOption> matchAllOptions,
             EnumSet<ServiceOption> exclusionOptions, String match, Operation get) {
         ServiceDocumentQueryResult r = new ServiceDocumentQueryResult();
+        r.documents = new HashMap<>();
 
         boolean doPrefixMatch =  false;
         boolean doContainsMatch = false;
@@ -5300,6 +5301,7 @@ public class ServiceHost implements ServiceRequestSender {
                 }
             }
             r.documentLinks.add(servicePath);
+            r.documents.put(servicePath, s.getDocumentTemplate());
         }
         r.documentOwner = getId();
         r.documentCount = (long) r.documentLinks.size();
