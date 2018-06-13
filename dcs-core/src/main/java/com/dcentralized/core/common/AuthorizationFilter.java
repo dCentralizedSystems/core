@@ -54,15 +54,13 @@ public class AuthorizationFilter implements Filter {
 
     public void cacheAuthorizationContext(ServiceHost h, String token, AuthorizationContext ctx) {
         synchronized (this) {
-            if (this.authorizationContextCache.put(token, ctx) == null) {
-                Utils.logWarning("user:%s, token:%s", ctx.getClaims().getSubject(), token);
-            }
+            this.authorizationContextCache.put(token, ctx);
             addUserToken(this.userLinkToTokenMap, ctx.getClaims().getSubject(), token);
         }
 
         h.getManagementService().adjustStat(
                 ServiceHostManagementService.STAT_NAME_AUTHORIZATION_CACHE_INSERT_COUNT, 1);
-        h.getManagementService().adjustStat(
+        h.getManagementService().setStat(
                 ServiceHostManagementService.STAT_NAME_AUTHORIZATION_CACHE_SIZE,
                 this.authorizationContextCache.size());
     }
