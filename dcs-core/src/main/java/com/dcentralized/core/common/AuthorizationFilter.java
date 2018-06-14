@@ -138,6 +138,7 @@ public class AuthorizationFilter implements Filter {
                 && op.getAuthorizationContext().isGuestUser()) {
             String msg = String.format(
                     "%s requests are not authorized for guest Users", op.getContentType());
+            Utils.logWarning(msg);
             IllegalAccessException ex = new IllegalAccessException(msg);
             context.resumeProcessingRequest(op,
                     OperationProcessingChain.FilterReturnCode.FAILED_STOP_PROCESSING, ex);
@@ -221,7 +222,7 @@ public class AuthorizationFilter implements Filter {
 
         Long expirationTime = claims.getExpirationTime();
         if (expirationTime != null && TimeUnit.SECONDS.toMicros(expirationTime) <= Utils.getSystemNowMicrosUtc()) {
-            host.log(Level.FINE, "Token expired for %s", claims.getSubject());
+            host.log(Level.INFO, "Token expired for %s", claims.getSubject());
             host.clearAuthorizationContext(null, claims.getSubject());
             return null;
         }

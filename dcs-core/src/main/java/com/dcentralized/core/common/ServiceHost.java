@@ -3414,7 +3414,8 @@ public class ServiceHost implements ServiceRequestSender {
 
         AuthorizationContext ctx = op.getAuthorizationContext();
         if (ctx == null) {
-            log(Level.FINE, String.format("request to %s with null auth context", service.getSelfLink()));
+            log(Level.WARNING,
+                    String.format("request to %s with null auth context", service.getSelfLink()));
             return false;
         }
 
@@ -3442,6 +3443,11 @@ public class ServiceHost implements ServiceRequestSender {
             ServiceDocumentDescription documentDescription = buildDocumentDescription(service);
             QueryFilter queryFilter = ctx.getResourceQueryFilter(op.getAction());
             if (queryFilter == null || !queryFilter.evaluate(document, documentDescription)) {
+                log(Level.WARNING, "auth failure on %s, subject %s, token %s, state: %s",
+                        service.getSelfLink(),
+                        op.getAuthorizationContext().getClaims().getSubject(),
+                        op.getAuthorizationContext().getToken(),
+                        Utils.toJson(document));
                 return false;
             }
         } catch (Exception e) {
