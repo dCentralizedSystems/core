@@ -3443,11 +3443,13 @@ public class ServiceHost implements ServiceRequestSender {
             ServiceDocumentDescription documentDescription = buildDocumentDescription(service);
             QueryFilter queryFilter = ctx.getResourceQueryFilter(op.getAction());
             if (queryFilter == null || !queryFilter.evaluate(document, documentDescription)) {
-                log(Level.WARNING, "auth failure on %s, subject %s, token %s, state: %s",
+                String json = Utils.toJson(document);
+                json = json.substring(1, Math.min(1024, json.length() - 1));
+                log(Level.WARNING, "auth failure on %s, ref: %s, subject %s, state: %s",
                         service.getSelfLink(),
+                        op.getRefererAsString(),
                         op.getAuthorizationContext().getClaims().getSubject(),
-                        op.getAuthorizationContext().getToken(),
-                        Utils.toJson(document));
+                        json);
                 return false;
             }
         } catch (Exception e) {
