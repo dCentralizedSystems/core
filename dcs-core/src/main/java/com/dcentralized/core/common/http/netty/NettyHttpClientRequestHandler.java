@@ -29,6 +29,7 @@ import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Operation.OperationOption;
+import com.dcentralized.core.common.OperationContext;
 import com.dcentralized.core.common.ServerSentEvent;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.ServiceErrorResponse;
@@ -142,7 +143,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
         Operation request = null;
         Integer streamId = null;
         try {
-
+            OperationContext.reset();
             // Start of request processing, initialize in-bound operation
             FullHttpRequest nettyRequest = (FullHttpRequest) msg;
             long expMicros = Utils.fromNowMicrosUtc(this.host.getOperationTimeoutMicros());
@@ -190,6 +191,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             request.setKeepAlive(false).setStatusCode(sc)
                     .setBodyNoCloning(ServiceErrorResponse.create(e, sc));
             sendResponse(ctx, request, streamId, requestedPath, startTime);
+            OperationContext.reset();
         }
     }
 
@@ -579,6 +581,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
                     cause.getMessage());
         }
         ctx.close();
+        OperationContext.reset();
     }
 
     private void setRefererFromSocketContext(ChannelHandlerContext ctx, Operation request) {
