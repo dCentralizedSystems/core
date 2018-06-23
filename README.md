@@ -4,4 +4,4 @@ This project is an actively maintained, and slightly simplified (and improved!) 
 
 Please review the [wiki](https://github.com/dCentralizedSystems/core/wiki) for further information.
 
-We enjoy using it for powering our autonomous robots, on Rasbperri PIs, and for processing large ammounts of robot telemetry in the cloud.
+We enjoy using it for powering our autonomous robots, on Rasbperri PIs, and for processing large amounts of robot telemetry in the cloud.
