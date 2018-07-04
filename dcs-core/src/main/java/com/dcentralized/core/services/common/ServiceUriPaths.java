@@ -32,9 +32,6 @@ public final class ServiceUriPaths {
     public static final String PROCESS_LOG = CORE_MANAGEMENT + "/process-log";
     public static final String GO_PROCESS_LOG = CORE_MANAGEMENT + "/go-dcp-process-log";
     public static final String SYSTEM_LOG = CORE_MANAGEMENT + "/system-log";
-    public static final String MIGRATION_TASKS = MANAGEMENT + "/migration-tasks";
-    public static final String NODE_GROUP_MIGRATION_TASKS = MANAGEMENT
-            + "/node-group-migration-tasks";
 
     public static final String CORE_PROCESSES = CORE + "/processes";
 
@@ -52,11 +49,6 @@ public final class ServiceUriPaths {
             + DEFAULT_NODE_SELECTOR_NAME + "-1x";
     public static final String DEFAULT_3X_NODE_SELECTOR = NODE_SELECTOR_PREFIX + "/"
             + DEFAULT_NODE_SELECTOR_NAME + "-3x";
-
-    public static final String SHARDS_MANAGEMENT_FACTORY = CORE + "/shards-management";
-    public static final String SHARDS_MANAGER_NAME = "manager";
-    public static final String SHARDS_MANAGER = SHARDS_MANAGEMENT_FACTORY + "/"
-            + SHARDS_MANAGER_NAME;
 
     public static final String SYNCHRONIZATION_TASKS = CORE + "/synch-tasks";
 

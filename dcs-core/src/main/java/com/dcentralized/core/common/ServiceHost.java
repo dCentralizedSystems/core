@@ -103,8 +103,6 @@ import com.dcentralized.core.services.common.LuceneDocumentIndexBackupService;
 import com.dcentralized.core.services.common.LuceneDocumentIndexService;
 import com.dcentralized.core.services.common.NodeGroupFactoryService;
 import com.dcentralized.core.services.common.NodeGroupService.JoinPeerRequest;
-import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
-import com.dcentralized.core.services.common.NodeGroupService.UpdateQuorumRequest;
 import com.dcentralized.core.services.common.NodeGroupUtils;
 import com.dcentralized.core.services.common.NodeSelectorReplicationService;
 import com.dcentralized.core.services.common.ODataQueryService;
@@ -117,8 +115,6 @@ import com.dcentralized.core.services.common.RoleService;
 import com.dcentralized.core.services.common.ServiceHostLogService;
 import com.dcentralized.core.services.common.ServiceHostManagementService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
-import com.dcentralized.core.services.common.ShardsManagementService;
-import com.dcentralized.core.services.common.ShardsManagementService.ShardsManagementServiceState;
 import com.dcentralized.core.services.common.SynchronizationManagementService;
 import com.dcentralized.core.services.common.SystemUserService;
 import com.dcentralized.core.services.common.TaskFactoryService;
@@ -1686,10 +1682,6 @@ public class ServiceHost implements ServiceRequestSender {
         coreServices.add(new SystemUserService());
         coreServices.add(new GuestUserService());
 
-        Service shardsManagementFactory = ShardsManagementService.createFactory();
-        coreServices.add(shardsManagementFactory);
-        addPrivilegedService(shardsManagementFactory.getClass());
-
         Service synchronizationManagementService = new SynchronizationManagementService();
         coreServices.add(synchronizationManagementService);
         addPrivilegedService(SynchronizationManagementService.class);
@@ -1724,10 +1716,6 @@ public class ServiceHost implements ServiceRequestSender {
             // on the local host have been started and Ready.
             scheduleCore(() -> {
                 joinPeers(peers, ServiceUriPaths.DEFAULT_NODE_GROUP);
-                if (DEFAULT_NODEGROUP_REPLICATION_FACTOR > 0) {
-                    // sharding is enabled
-                    createOrStartShardsManagerWhenDefaultNodeGroupIsAvailable();
-                }
             }, this.state.maintenanceIntervalMicros, TimeUnit.MICROSECONDS);
         }
     }
@@ -1771,113 +1759,6 @@ public class ServiceHost implements ServiceRequestSender {
                     .createAutoBackupConsumer(this, this.managementService);
             startSubscriptionService(createSubscriptionOp, autoBackupConsumer);
         }, this.documentIndexService.getSelfLink());
-    }
-
-    /**
-     * Subscribes to default nodegroup notifications and creates/starts
-     * the shards manager when the nodegroup becomes available
-     */
-    public void createOrStartShardsManagerWhenDefaultNodeGroupIsAvailable() {
-        Operation subscribeToNodeGroup = Operation.createPost(
-                UriUtils.buildSubscriptionUri(this, ServiceUriPaths.DEFAULT_NODE_GROUP))
-                .setReferer(getUri());
-        URI[] subscriptionUri = new URI[1];
-        subscriptionUri[0] = startSubscriptionService(subscribeToNodeGroup,
-                (notifyOp) -> {
-                    notifyOp.complete();
-                    if (notifyOp.getAction() == Action.PATCH) {
-                        UpdateQuorumRequest bd = notifyOp.getBody(UpdateQuorumRequest.class);
-                        if (UpdateQuorumRequest.KIND.equals(bd.kind)) {
-                            return;
-                        }
-                    } else if (notifyOp.getAction() != Action.POST) {
-                        return;
-                    }
-
-                    NodeGroupState ngs = notifyOp.getBody(NodeGroupState.class);
-                    if (ngs.nodes == null || ngs.nodes.isEmpty()) {
-                        return;
-                    }
-
-                    if (NodeGroupUtils.isNodeGroupAvailable(this, ngs)) {
-                        try {
-                            createOrStartShardsManagerSynchronously(
-                                    DEFAULT_NODEGROUP_REPLICATION_FACTOR);
-                        } catch (Throwable t) {
-                            // already logged
-                        }
-                        Operation unsubscribe = subscribeToNodeGroup.clone();
-                        stopSubscriptionService(unsubscribe, subscriptionUri[0]);
-                    }
-                });
-        sendRequest(Operation.createGet(this, ServiceUriPaths.DEFAULT_NODE_GROUP)
-                .setCompletion((o, e) -> {
-                    if (e != null) {
-                        this.log(Level.SEVERE, "Failed to get default nodegroup state: %s", e);
-                        return;
-                    }
-
-                    NodeGroupState ngs = o.getBody(NodeGroupState.class);
-                    if (ngs.nodes == null || ngs.nodes.isEmpty()) {
-                        return;
-                    }
-
-                    if (NodeGroupUtils.isNodeGroupAvailable(this, ngs)) {
-                        try {
-                            createOrStartShardsManagerSynchronously(
-                                    DEFAULT_NODEGROUP_REPLICATION_FACTOR);
-                        } catch (Throwable t) {
-                            // already logged
-                        }
-                    }
-                }));
-    }
-
-    /**
-     * Creates the shards manager if it doesn't exist.
-     * This method should be called when the nodegroup is available
-     */
-    public void createOrStartShardsManagerSynchronously(int replicationFactor) throws Throwable {
-        log(Level.FINE, "creating / starting the shards manager");
-        CountDownLatch l = new CountDownLatch(1);
-        Throwable[] failure = new Throwable[1];
-        CompletionHandler h = (o, e) -> {
-            try {
-                if (e != null) {
-                    failure[0] = e;
-                    return;
-                }
-
-                this.coreServices.add(o.getUri().getPath());
-            } finally {
-                l.countDown();
-            }
-        };
-
-        ShardsManagementServiceState state = new ShardsManagementServiceState();
-        state.documentSelfLink = ServiceUriPaths.SHARDS_MANAGER_NAME;
-        state.nodeGroupLink = ServiceUriPaths.DEFAULT_NODE_GROUP;
-        state.replicationFactor = replicationFactor;
-
-        URI shardsManagementFactoryUri = UriUtils.buildUri(this,
-                ServiceUriPaths.SHARDS_MANAGEMENT_FACTORY);
-        Operation post = Operation.createPost(shardsManagementFactoryUri)
-                .setBody(state)
-                .setReferer(getUri())
-                .setAuthorizationContext(getSystemAuthorizationContext())
-                .setCompletion(h);
-        sendRequest(post);
-
-        if (!l.await(this.state.operationTimeoutMicros, TimeUnit.MICROSECONDS)) {
-            TimeoutException e = new TimeoutException();
-            failure[0] = e;
-        }
-
-        if (failure[0] != null) {
-            String errorMsg = String.format("Failed to create shards manager: %s", failure[0]);
-            log(Level.SEVERE, errorMsg, failure[0]);
-            throw failure[0];
-        }
     }
 
     public List<URI> getInitialPeerHosts() {
