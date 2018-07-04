@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.CompletionHandler;
-import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
 import com.dcentralized.core.common.ServiceClient;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceHost.ServiceHostState;
@@ -422,9 +421,6 @@ public class NodeGroupService extends StatefulService {
      *
      * @param post
      */
-    @RouteDocumentation(
-            description = "Join a peer to this node group",
-            requestBodyType = JoinPeerRequest.class)
     @Override
     public void handlePost(Operation post) {
         if (!post.hasBody()) {

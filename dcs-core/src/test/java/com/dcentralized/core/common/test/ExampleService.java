@@ -20,9 +20,6 @@ import java.util.Set;
 
 import com.dcentralized.core.common.FactoryService;
 import com.dcentralized.core.common.Operation;
-import com.dcentralized.core.common.OperationProcessingChain;
-import com.dcentralized.core.common.RequestRouter;
-import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyIndexingOption;
@@ -184,7 +181,6 @@ public class ExampleService extends StatefulService {
     }
 
     @Override
-    @RouteDocumentation(description = "@PUT")
     public void handlePut(Operation put) {
         ExampleServiceState newState = getBody(put);
         ExampleServiceState currentState = getState(put);
@@ -202,64 +198,9 @@ public class ExampleService extends StatefulService {
         put.complete();
     }
 
-    @Override
-    @RouteDocumentation(description = "Update selected fields of example document")
     public void handlePatch(Operation patch) {
         updateState(patch);
         // updateState method already set the response body with the merged state
-        patch.complete();
-    }
-
-    /**
-     * A chain of filters, each of them is a {@link java.util.function.Predicate <Operation>}. When {@link #processRequest} is called
-     * the filters are evaluated sequentially, where each filter's {@link java.util.function.Predicate <Operation>#test} can return
-     * <code>true</code> to have the next filter in the chain continue process the request or
-     * <code>false</code> to stop processing.
-     */
-    @Override
-    public OperationProcessingChain getOperationProcessingChain() {
-        if (super.getOperationProcessingChain() != null) {
-            return super.getOperationProcessingChain();
-        }
-
-        RequestRouter myRouter = new RequestRouter();
-        myRouter.register(
-                Action.PATCH,
-                new RequestRouter.RequestBodyMatcher<>(
-                        StrictUpdateRequest.class, "kind",
-                        StrictUpdateRequest.KIND),
-                this::handlePatchForStrictUpdate, "Strict update version check");
-
-        OperationProcessingChain opProcessingChain = OperationProcessingChain.create(myRouter);
-        setOperationProcessingChain(opProcessingChain);
-        return opProcessingChain;
-    }
-
-    private void handlePatchForStrictUpdate(Operation patch) {
-        ExampleServiceState currentState = getState(patch);
-        StrictUpdateRequest body = patch.getBody(StrictUpdateRequest.class);
-
-        if (body.kind == null || !body.kind.equals(Utils.buildKind(StrictUpdateRequest.class))) {
-            patch.fail(new IllegalArgumentException("invalid kind: %s" + body.kind));
-            return;
-        }
-
-        if (body.name == null) {
-            patch.fail(new IllegalArgumentException("name is required"));
-            return;
-        }
-
-        if (body.documentVersion != currentState.documentVersion) {
-            String errorString = String
-                    .format("Current version %d. Request version %d",
-                            currentState.documentVersion,
-                            body.documentVersion);
-            patch.fail(new IllegalArgumentException(errorString));
-            return;
-        }
-
-        currentState.name = body.name;
-        patch.setBody(currentState);
         patch.complete();
     }
 

@@ -43,8 +43,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import com.dcentralized.core.common.RequestRouter.Route;
-import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.ServiceDocument.Documentation;
 import com.dcentralized.core.common.ServiceDocument.IndexingParameters;
 import com.dcentralized.core.common.ServiceDocument.PropertyOptions;
@@ -243,7 +241,6 @@ public class ServiceDocumentDescription {
 
     public Map<String, ServiceDocumentDescription.PropertyDescription> propertyDescriptions;
     public EnumSet<Service.ServiceOption> serviceCapabilities;
-    public Map<Action, List<Route>> serviceRequestRoutes;
     public String userInterfaceResourcePath;
 
     /**
@@ -336,28 +333,13 @@ public class ServiceDocumentDescription {
         }
 
         public ServiceDocumentDescription buildDescription(
-                Class<? extends ServiceDocument> type,
-                EnumSet<Service.ServiceOption> serviceCaps,
-                RequestRouter serviceRequestRouter) {
-            ServiceDocumentDescription desc = buildDescription(type, serviceCaps);
-            if (serviceRequestRouter != null) {
-                desc.serviceRequestRoutes = serviceRequestRouter.getRoutes();
-            }
-            return desc;
-        }
-
-        public ServiceDocumentDescription buildDescription(
                 ServiceHost host, Service service,
-                EnumSet<Service.ServiceOption> serviceCaps,
-                RequestRouter serviceRequestRouter) {
+                EnumSet<Service.ServiceOption> serviceCaps) {
             ServiceDocumentDescription desc = buildDescription(service.getStateType(), serviceCaps);
 
             // look up a richer description from resource files if one exists
             desc.description = ServiceDocumentDescriptionHelper
                     .lookupDocumentationDescription(service.getClass(), desc.description);
-            if (serviceRequestRouter != null) {
-                desc.serviceRequestRoutes = serviceRequestRouter.getRoutes();
-            }
             return desc;
         }
 

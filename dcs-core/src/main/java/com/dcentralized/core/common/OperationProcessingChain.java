@@ -272,10 +272,6 @@ public class OperationProcessingChain {
         }
     }
 
-    public Filter findFilter(Predicate<Filter> tester) {
-        return this.filters.stream().filter(tester).findFirst().orElse(null);
-    }
-
     private FilterReturnCode processRequest(Operation op, OperationProcessingContext context, int startIndex) {
         boolean shouldLog = shouldLog(op);
 
@@ -335,6 +331,9 @@ public class OperationProcessingChain {
     }
 
     private boolean shouldLog(Operation op) {
+        if (!this.loggingEnabled) {
+            return false;
+        }
         boolean shouldLog = this.loggingEnabled;
         if (this.logFilter != null) {
             shouldLog &= this.logFilter.test(op);

@@ -21,8 +21,6 @@ import java.util.logging.Logger;
 
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
-import com.dcentralized.core.common.RequestRouter.Route.RouteDocumentation;
-import com.dcentralized.core.common.RequestRouter.Route.SupportLevel;
 import com.dcentralized.core.common.ServiceHost.ServiceNotFoundException;
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.jwt.Signer;
@@ -186,12 +184,10 @@ public class StatelessService implements Service {
         }
     }
 
-    @RouteDocumentation(supportLevel = SupportLevel.NOT_SUPPORTED)
     public void handlePut(Operation put) {
         Operation.failActionNotSupported(put);
     }
 
-    @RouteDocumentation(supportLevel = SupportLevel.NOT_SUPPORTED)
     public void handlePatch(Operation patch) {
         Operation.failActionNotSupported(patch);
     }
@@ -227,7 +223,6 @@ public class StatelessService implements Service {
         options.complete();
     }
 
-    @RouteDocumentation(supportLevel = SupportLevel.NOT_SUPPORTED)
     public void handlePost(Operation post) {
         Operation.failActionNotSupported(post);
     }

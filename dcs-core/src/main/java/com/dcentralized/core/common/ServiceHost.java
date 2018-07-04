@@ -5250,8 +5250,7 @@ public class ServiceHost implements ServiceRequestSender {
             // Description has to be built in three stages:
             // 1) Build the base description and add it to the cache
             desc = this.descriptionBuilder.buildDescription(this, s,
-                    s.getOptions(),
-                    ServiceDocumentDescriptionHelper.findAndDocumentRequestRouter(s));
+                    s.getOptions());
 
             if (s.getOptions().contains(ServiceOption.IMMUTABLE)) {
                 if (desc.versionRetentionLimit > ServiceDocumentDescription.DEFAULT_VERSION_RETENTION_LIMIT) {
