@@ -11,7 +11,7 @@
   <artifactId>dcs-core</artifactId>
 
   <properties>
-    <gson.version>2.8.0</gson.version>
+    <gson.version>2.8.5</gson.version>
     <kryo.version>3.0.2</kryo.version>
     <lucene.version>7.2.1</lucene.version>
     <netty.version>4.1.23.Final</netty.version>
