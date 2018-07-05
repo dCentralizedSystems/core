@@ -39,13 +39,11 @@ public class TestServiceHostLogService extends BasicReusableHostTestCase {
     @Before
     public void waitForServices() throws Throwable {
         this.uri = UriUtils.buildUri(this.host, ServiceUriPaths.PROCESS_LOG);
-        this.host.testStart(3);
+        this.host.testStart(2);
         this.host.registerForServiceAvailability(this.host.getCompletion(),
                 ServiceUriPaths.PROCESS_LOG);
         this.host.registerForServiceAvailability(this.host.getCompletion(),
                 ServiceUriPaths.SYSTEM_LOG);
-        this.host.registerForServiceAvailability(this.host.getCompletion(),
-                ServiceUriPaths.GO_PROCESS_LOG);
         this.host.testWait();
     }
 

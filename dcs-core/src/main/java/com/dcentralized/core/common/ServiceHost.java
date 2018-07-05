@@ -1696,10 +1696,6 @@ public class ServiceHost implements ServiceRequestSender {
                 new ServiceHostLogService(ServiceHostLogService.getDefaultProcessLogName()));
 
         startService(
-                Operation.createPost(UriUtils.buildUri(this, ServiceUriPaths.GO_PROCESS_LOG)),
-                new ServiceHostLogService(ServiceHostLogService.getDefaultGoDcpProcessLogName()));
-
-        startService(
                 Operation.createPost(UriUtils.buildUri(this, ServiceUriPaths.SYSTEM_LOG)),
                 new ServiceHostLogService(ServiceHostLogService.DEFAULT_SYSTEM_LOG_NAME));
 
