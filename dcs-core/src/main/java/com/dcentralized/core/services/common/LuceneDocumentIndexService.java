@@ -153,6 +153,11 @@ public class LuceneDocumentIndexService extends StatelessService {
             "updateQueueDepth",
             10 * Service.OPERATION_QUEUE_DEFAULT_LIMIT);
 
+    public static final boolean QUERY_LOGGING = Configuration.bool(
+            LuceneDocumentIndexService.class,
+            "queryLogging",
+            false);
+
     public static final String FILE_PATH_LUCENE = "lucene";
 
     public static final int DEFAULT_INDEX_FILE_COUNT_THRESHOLD_FOR_WRITER_REFRESH = 10000;
@@ -1281,6 +1286,10 @@ public class LuceneDocumentIndexService extends StatelessService {
     private void handleQueryTaskPatch(Operation op, QueryTask task) throws Exception {
         QueryTask.QuerySpecification qs = task.querySpec;
 
+        if (QUERY_LOGGING) {
+            logInfo("query spec: %s", Utils.toJson(task.querySpec));
+        }
+
         Query luceneQuery = (Query) qs.context.nativeQuery;
         Sort luceneSort = (Sort) qs.context.nativeSort;
 
@@ -1556,6 +1565,10 @@ public class LuceneDocumentIndexService extends StatelessService {
                 });
             }
 
+            if (QUERY_LOGGING) {
+                logInfo("link: %s", selfLink);
+            }
+
             // Most basic query is retrieving latest document at latest version for a specific link
             queryIndexSingle(selfLink, get, version);
             return;
@@ -1569,6 +1582,11 @@ public class LuceneDocumentIndexService extends StatelessService {
 
         ServiceDocumentQueryResult rsp = new ServiceDocumentQueryResult();
         rsp.documentLinks = new ArrayList<>();
+
+        if (QUERY_LOGGING) {
+            logInfo("link: %s, options: %s", selfLink, options);
+        }
+
         if (queryIndex(null, get, selfLink, options, tq, null, resultLimit, 0, null, null, rsp,
                 null)) {
             return;
