@@ -349,8 +349,6 @@ public class AuthorizationContextServiceHelper {
             return;
         }
 
-        Utils.logWarning("%s", op.toString());
-
         Query userGroupQuery = Query.Builder.create()
                 .addKindFieldClause(UserGroupState.class)
                 .addFieldClause(ServiceDocument.FIELD_NAME_SELF_LINK, ServiceUriPaths.CORE_AUTHZ_USER_GROUPS,
