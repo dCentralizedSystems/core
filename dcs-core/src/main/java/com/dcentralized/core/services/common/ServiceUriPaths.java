@@ -71,9 +71,6 @@ public final class ServiceUriPaths {
             ServiceUriPaths.CORE,
             BroadcastQueryPageService.SELF_LINK_PREFIX);
 
-    public static final String CORE_GRAPH_QUERIES = UriUtils.buildUriPath(ServiceUriPaths.CORE,
-            "graph-queries");
-
     public static final String ODATA_QUERIES = UriUtils.buildUriPath(ServiceUriPaths.CORE,
             "odata-queries");
 
