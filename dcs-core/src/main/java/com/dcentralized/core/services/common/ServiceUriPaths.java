@@ -34,7 +34,6 @@ public final class ServiceUriPaths {
 
     public static final String CORE_PROCESSES = CORE + "/processes";
 
-    public static final String COORDINATED_UPDATE_FACTORY = CORE + "/coordinated-updates";
     public static final String NODE_GROUP_FACTORY = CORE + "/node-groups";
     public static final String DEFAULT_NODE_GROUP_NAME = "default";
     public static final String DEFAULT_NODE_GROUP = NODE_GROUP_FACTORY + "/"
@@ -58,9 +57,6 @@ public final class ServiceUriPaths {
     public static final String CORE_IN_MEMORY_DOCUMENT_INDEX = ServiceUriPaths.CORE
             + "/in-memory-document-index";
     public static final String CORE_DOCUMENT_INDEX_BACKUP = ServiceUriPaths.CORE + "/document-index-backup";
-    public static final String CORE_OPERATION_INDEX = ServiceUriPaths.CORE + "/operation-index";
-    public static final String CORE_SERVICE_CONTEXT_INDEX = ServiceUriPaths.CORE
-            + "/service-context-index";
 
     public static final String CORE_QUERY_TASKS = UriUtils.buildUriPath(ServiceUriPaths.CORE,
             "query-tasks");

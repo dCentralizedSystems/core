@@ -470,7 +470,7 @@ public class TestServiceHost {
 
             // attempt to set limit that brings total > 1.0
             try {
-                h.setServiceMemoryLimit(ServiceUriPaths.CORE_OPERATION_INDEX, 0.99);
+                h.setServiceMemoryLimit(ServiceUriPaths.CORE_AUTHZ_ROLES, 0.99);
                 throw new IllegalStateException("Should have failed");
             } catch (Throwable e) {
 
@@ -535,7 +535,7 @@ public class TestServiceHost {
 
             // attempt to set the limit for a service after a host has started, it should fail
             try {
-                h.setServiceMemoryLimit(ServiceUriPaths.CORE_OPERATION_INDEX, 0.2);
+                h.setServiceMemoryLimit(ServiceUriPaths.CORE_AUTHZ_GUEST_USER, 0.2);
                 throw new IllegalStateException("Should have failed");
             } catch (Throwable e) {
 

@@ -553,7 +553,6 @@ public class ServiceHost implements ServiceRequestSender {
                         ServiceUriPaths.DEFAULT_NODE_GROUP,
                         ServiceUriPaths.DEFAULT_NODE_SELECTOR,
                         ServiceUriPaths.CORE_DOCUMENT_INDEX,
-                        ServiceUriPaths.CORE_OPERATION_INDEX,
                         ServiceUriPaths.CORE_LOCAL_QUERY_TASKS,
                         ServiceUriPaths.CORE_QUERY_TASKS }));
         public String[] initialPeerNodes;
@@ -776,11 +775,6 @@ public class ServiceHost implements ServiceRequestSender {
                 MemoryLimitType.EXACT) == null) {
             setServiceMemoryLimit(ServiceUriPaths.CORE_DOCUMENT_INDEX,
                     DEFAULT_PCT_MEMORY_LIMIT_DOCUMENT_INDEX);
-        }
-        if (getServiceMemoryLimitMB(ServiceUriPaths.CORE_SERVICE_CONTEXT_INDEX,
-                MemoryLimitType.EXACT) == null) {
-            setServiceMemoryLimit(ServiceUriPaths.CORE_SERVICE_CONTEXT_INDEX,
-                    DEFAULT_PCT_MEMORY_LIMIT_SERVICE_CONTEXT_INDEX);
         }
         allocateExecutors();
         return this;

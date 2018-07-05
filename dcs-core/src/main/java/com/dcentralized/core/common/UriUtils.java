@@ -484,17 +484,6 @@ public final class UriUtils {
                 selfLink, doExpand, includeDeleted, cap);
     }
 
-    public static URI buildOperationTracingQueryUri(ServiceHost host,
-            String selfLink,
-            boolean doExpand,
-            boolean includeDeleted,
-            ServiceOption cap) {
-
-        URI hostURI = UriUtils.extendUri(host.getUri(), ServiceUriPaths.CORE_OPERATION_INDEX);
-        return buildIndexQueryUri(hostURI,
-                selfLink, doExpand, includeDeleted, cap);
-    }
-
     public static URI buildIndexQueryUri(URI indexURI,
             String selfLink,
             boolean doExpand,
