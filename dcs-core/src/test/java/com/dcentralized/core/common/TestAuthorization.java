@@ -44,6 +44,7 @@ import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.Service.ServiceOption;
+import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.TestAuthorization.AuthzStatefulService.AuthzState;
 import com.dcentralized.core.common.test.AuthorizationHelper;
 import com.dcentralized.core.common.test.ExampleService;
@@ -244,6 +245,14 @@ public class TestAuthorization extends BasicTestCase {
         patch.setCompletion(ch);
         this.host.send(patch);
         this.host.testWait();
+
+        verifyAuthFailCountStat();
+    }
+
+    public void verifyAuthFailCountStat() {
+        ServiceStat authSt = this.host.getManagementServiceStat(
+                ServiceHostManagementService.STAT_NAME_AUTHZ_FORBIDDEN_COUNT);
+        assertTrue(authSt != null && authSt.latestValue > 0);
     }
 
     @Test
@@ -815,6 +824,8 @@ public class TestAuthorization extends BasicTestCase {
         body.userLink = this.userServicePath;
         this.host.startServiceAndWait(s, UUID.randomUUID().toString(), body);
         this.host.resetSystemAuthorizationContext();
+
+        verifyAuthFailCountStat();
     }
 
     private AuthorizationContext assumeIdentityAndGetContext(String userLink,
