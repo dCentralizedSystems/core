@@ -138,7 +138,6 @@ public class AuthorizationFilter implements Filter {
                 && op.getAuthorizationContext().isGuestUser()) {
             String msg = String.format(
                     "%s requests are not authorized for guest Users", op.getContentType());
-            Utils.logWarning(msg);
             IllegalAccessException ex = new IllegalAccessException(msg);
             context.resumeProcessingRequest(op,
                     OperationProcessingChain.FilterReturnCode.FAILED_STOP_PROCESSING, ex);
