@@ -2678,7 +2678,14 @@ public class ServiceHost implements ServiceRequestSender {
                 if (e != null && op.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_POST_TO_PUT)) {
                     restoreActionOnChildServiceToPostOnFactory(s.getSelfLink(), op);
                 }
-                op.complete();
+                long deltaMicros = Math
+                        .abs(Utils.getSystemNowMicrosUtc() - op.getExpirationMicrosUtc());
+                if (deltaMicros < this.getOperationTimeoutMicros() / 10) {
+                    Operation.failServiceNotFound(op, Operation.STATUS_CODE_TIMEOUT,
+                            "timeout on availability");
+                } else {
+                    op.complete();
+                }
             });
         }
     }
