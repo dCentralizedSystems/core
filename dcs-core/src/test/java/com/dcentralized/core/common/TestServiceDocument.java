@@ -85,6 +85,8 @@ public class TestServiceDocument {
         source.documentExpirationTimeMicros = SOME_EXPIRATION_VALUE;
         source.listOfStrings = new ArrayList<String>();
         source.listOfStrings.add(SOME_STRING_VALUE);
+        source.listOfReplacedStrings = new ArrayList<String>();
+        source.listOfReplacedStrings.add(SOME_STRING_VALUE);
         source.mapOfStrings = new HashMap<String, String>();
         source.mapOfStrings.put(SOME_STRING_VALUE, SOME_STRING_VALUE);
         source.setOfStrings = new HashSet<String>();
@@ -99,6 +101,8 @@ public class TestServiceDocument {
         patch.listOfStrings = new ArrayList<String>();
         patch.listOfStrings.add(SOME_STRING_VALUE);
         patch.listOfStrings.add(SOME_OTHER_STRING_VALUE);
+        patch.listOfReplacedStrings = new ArrayList<String>();
+        patch.listOfReplacedStrings.add(SOME_OTHER_STRING_VALUE);
         patch.setOfStrings = new HashSet<String>();
         patch.setOfStrings.add(SOME_STRING_VALUE);
         patch.setOfStrings.add(SOME_OTHER_STRING_VALUE);
@@ -118,11 +122,17 @@ public class TestServiceDocument {
         Assert.assertEquals("Non-annotated ignore field", source.ignore, SOME_IGNORE_VALUE);
         Assert.assertEquals("Auto-annotated expiration field", source.documentExpirationTimeMicros,
                 SOME_OTHER_EXPIRATION_VALUE);
+
         Assert.assertEquals("Number of list elements", 3, source.listOfStrings.size());
+        Assert.assertEquals("Number of replaced list elements", 1,
+                source.listOfReplacedStrings.size());
         Assert.assertTrue("Check existence of element",
                 source.listOfStrings.contains(SOME_STRING_VALUE));
         Assert.assertTrue("Check existence of element",
                 source.listOfStrings.contains(SOME_OTHER_STRING_VALUE));
+        Assert.assertFalse("Check absence of element",
+                source.listOfReplacedStrings.contains(SOME_STRING_VALUE));
+
         Assert.assertEquals("Number of set elements", 2, source.setOfStrings.size());
         Assert.assertTrue("Check existence of element",
                 source.setOfStrings.contains(SOME_STRING_VALUE));
@@ -846,6 +856,8 @@ public class TestServiceDocument {
         public String ignore;
         @UsageOption(option = ServiceDocumentDescription.PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
         public List<String> listOfStrings;
+        @UsageOption(option = ServiceDocumentDescription.PropertyUsageOption.AUTO_REPLACE_IF_NOT_NULL)
+        public List<String> listOfReplacedStrings;
         @UsageOption(option = ServiceDocumentDescription.PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)
         public Set<String> setOfStrings;
         @UsageOption(option = ServiceDocumentDescription.PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)

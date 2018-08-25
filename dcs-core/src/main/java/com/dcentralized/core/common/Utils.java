@@ -1065,26 +1065,31 @@ public final class Utils {
         }
         boolean modified = false;
         for (PropertyDescription prop : desc.propertyDescriptions.values()) {
-            if (prop.usageOptions != null &&
-                    prop.usageOptions.contains(PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL)) {
-                Object o = ReflectionUtils.getPropertyValue(prop, patch);
-                if (o != null) {
+            if (prop.usageOptions == null) {
+                continue;
+            }
 
-                    // when patch.documentExpirationTimeMicros is 0, do not override source.documentExpirationTimeMicros
-                    if (FIELD_NAME_EXPIRATION_TIME_MICROS.equals(prop.accessor.getName())
-                            && Long.valueOf(0).equals(o)) {
-                        continue;
-                    }
+            if (!prop.usageOptions.contains(PropertyUsageOption.AUTO_MERGE_IF_NOT_NULL) &&
+                    !prop.usageOptions.contains(PropertyUsageOption.AUTO_REPLACE_IF_NOT_NULL)) {
+                continue;
+            }
+            Object o = ReflectionUtils.getPropertyValue(prop, patch);
+            if (o == null) {
+                continue;
+            }
+            // when patch.documentExpirationTimeMicros is 0, do not override source.documentExpirationTimeMicros
+            if (FIELD_NAME_EXPIRATION_TIME_MICROS.equals(prop.accessor.getName())
+                    && Long.valueOf(0).equals(o)) {
+                continue;
+            }
 
-                    if ((prop.typeName == TypeName.COLLECTION && !o.getClass().isArray())
-                            || prop.typeName == TypeName.MAP) {
-                        modified |= ReflectionUtils.setOrUpdatePropertyValue(prop, source, o);
-                    } else {
-                        if (!o.equals(ReflectionUtils.getPropertyValue(prop, source))) {
-                            ReflectionUtils.setPropertyValue(prop, source, o);
-                            modified = true;
-                        }
-                    }
+            if ((prop.typeName == TypeName.COLLECTION && !o.getClass().isArray())
+                    || prop.typeName == TypeName.MAP) {
+                modified |= ReflectionUtils.setOrUpdatePropertyValue(prop, source, o);
+            } else {
+                if (!o.equals(ReflectionUtils.getPropertyValue(prop, source))) {
+                    ReflectionUtils.setPropertyValue(prop, source, o);
+                    modified = true;
                 }
             }
         }

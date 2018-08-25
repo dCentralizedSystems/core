@@ -128,9 +128,14 @@ public class ServiceDocumentDescription {
         INFRASTRUCTURE,
 
         /**
-         * Property value is replaced by PATCH request in case it is not {@code null} in PATCH document
+         * Property value is merged with PATCH request body property in case it is not {@code null} in PATCH request
          */
         AUTO_MERGE_IF_NOT_NULL,
+
+        /**
+         * Property value is replaced with PATCH request body property in case it is not {@code null} in PATCH request
+         */
+        AUTO_REPLACE_IF_NOT_NULL,
 
         /**
          * Property is an ID (currently just used for DocumentDescription generation)

@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
+import com.dcentralized.core.common.ServiceDocumentDescription.PropertyUsageOption;
 
 public final class ReflectionUtils {
 
@@ -92,7 +93,11 @@ public final class ReflectionUtils {
             if (currentObj != null) {
                 if (currentObj instanceof Collection) {
                     Collection<Object> existingCollection = (Collection<Object>) currentObj;
-                    hasValueChanged = existingCollection.addAll((Collection<Object>) value);
+                    if (pd.usageOptions.contains(PropertyUsageOption.AUTO_REPLACE_IF_NOT_NULL)) {
+                        existingCollection = (Collection<Object>) value;
+                    } else {
+                        hasValueChanged = existingCollection.addAll((Collection<Object>) value);
+                    }
                     pd.accessor.set(instance, existingCollection);
                 } else if (currentObj instanceof Map) {
                     Map<Object, Object> existingMap = (Map<Object, Object>) currentObj;
