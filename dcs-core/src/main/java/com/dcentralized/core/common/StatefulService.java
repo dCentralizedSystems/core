@@ -208,7 +208,7 @@ public class StatefulService implements Service {
         }
 
         if (isAlreadyStopped) {
-            if (op.getAction() == Action.DELETE && !isDeleteAndStop) {
+            if (op.getAction() == Action.DELETE) {
                 // this is a pure stop, and the service has already stopped
                 op.complete();
             } else {
@@ -236,8 +236,6 @@ public class StatefulService implements Service {
 
     private void cancelPendingRequests(Operation op) {
         Collection<Operation> opsToCancel = null;
-        boolean isDeleteAndStop = ServiceHost.isServiceDeleteAndStop(op);
-
         synchronized (this.context) {
             opsToCancel = this.context.operationQueue.toCollection();
             this.context.operationQueue.clear();
@@ -252,7 +250,7 @@ public class StatefulService implements Service {
             if (o.isFromReplication() && o.getAction() == Action.DELETE) {
                 o.complete();
             } else {
-                if (!isDeleteAndStop) {
+                if (o.getAction() != Action.DELETE) {
                     // Pending requests need to be retried on services that are being stopped.
                     getHost().retryOnDemandLoadConflict(o, this);
                 } else {

@@ -2668,7 +2668,7 @@ public class ServiceHost implements ServiceRequestSender {
                     s.getSelfLink());
         }
 
-        // Complete all. Any updates or GETs will get re-queued if the service is not going to ever
+        // Complete or fail all. Any updates or GETs will get re-queued if the service is not going to ever
         // start, but any POSTs, or IDEMPOTENT POSTs -> PUT will attempt to start the service
         for (Operation op : ops) {
             run(() -> {
@@ -2683,6 +2683,8 @@ public class ServiceHost implements ServiceRequestSender {
                 if (deltaMicros < this.getOperationTimeoutMicros() / 10) {
                     Operation.failServiceNotFound(op, Operation.STATUS_CODE_TIMEOUT,
                             "timeout on availability");
+                } else if (e != null) {
+                    op.fail(e);
                 } else {
                     op.complete();
                 }
