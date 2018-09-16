@@ -3509,7 +3509,7 @@ public class LuceneDocumentIndexService extends StatelessService {
             op.complete();
         } catch (Exception e) {
             if (this.getHost().isStopping()) {
-                op.fail(new CancellationException("Host is stopping"));
+                op.complete();
                 return;
             }
             logWarning("Attempting recovery due to error: %s", Utils.toString(e));
