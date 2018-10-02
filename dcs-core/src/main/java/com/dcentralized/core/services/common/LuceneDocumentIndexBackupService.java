@@ -41,6 +41,7 @@ import java.util.logging.Logger;
 
 import com.dcentralized.core.common.FileUtils;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceHost;
@@ -76,6 +77,7 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.store.RAMDirectory;
+
 
 /**
  * Handle backup and restore of lucene index files.
@@ -177,8 +179,8 @@ public class LuceneDocumentIndexBackupService extends StatelessService {
                     commitInfo.sequenceNumber));
             Operation notification = Operation
                     .createPatch(notifyOp.getUri())
-                    .addPragmaDirective(
-                            Operation.PRAGMA_DIRECTIVE_NOTIFICATION)
+                    .toggleOption(
+                            OperationOption.NOTIFICATION, true)
                     .setBody(commitInfo)
                     .setReferer(notifyOp.getReferer());
             host.sendRequest(notification);

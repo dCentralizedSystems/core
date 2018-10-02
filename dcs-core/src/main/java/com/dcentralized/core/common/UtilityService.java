@@ -372,8 +372,7 @@ public class UtilityService implements Service {
                                 Operation putOp = Operation
                                         .createPut(notificationURI)
                                         .setBodyNoCloning(o.getBody(this.parent.getStateType()))
-                                        .addPragmaDirective(
-                                                Operation.PRAGMA_DIRECTIVE_NOTIFICATION)
+                                        .toggleOption(OperationOption.NOTIFICATION, true)
                                         .setReferer(getUri());
                                 this.parent.sendRequest(putOp);
                             }));
@@ -427,7 +426,7 @@ public class UtilityService implements Service {
 
             Operation clone = op.clone();
             clone.toggleOption(OperationOption.REMOTE, false);
-            clone.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NOTIFICATION);
+            clone.toggleOption(OperationOption.NOTIFICATION, true);
             for (Entry<URI, ServiceSubscriber> e : this.subscriptions.subscribers.entrySet()) {
                 ServiceSubscriber s = e.getValue();
                 notifySubscriber(now, clone, s);

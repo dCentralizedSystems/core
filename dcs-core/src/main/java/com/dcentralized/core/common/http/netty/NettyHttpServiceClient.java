@@ -488,6 +488,10 @@ public class NettyHttpServiceClient implements ServiceClient {
                 request.setOperation(op);
             }
 
+            if (op.isNotification()) {
+                op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NOTIFICATION);
+            }
+
             String pragmaValue = op.getAndRemoveRequestHeaderAsIs(Operation.PRAGMA_HEADER);
             String acceptValue = op.getAndRemoveRequestHeaderAsIs(Operation.ACCEPT_HEADER);
             String authTokenValue = op

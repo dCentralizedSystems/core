@@ -314,7 +314,15 @@ public class Operation implements Cloneable {
          * Set by transport/client to indicate the operation has an active socket
          * channel associated with it.
          */
-        SOCKET_ACTIVE
+        SOCKET_ACTIVE,
+
+        /**
+         * Infrastructure use only
+         *
+         * Set by service support classes to indicate this operation is a
+         * notification request.
+         */
+        NOTIFICATION
     }
 
     public static class SerializedOperation extends ServiceDocument {
@@ -1982,7 +1990,8 @@ public class Operation implements Cloneable {
     }
 
     public boolean isNotification() {
-        return hasPragmaDirective(PRAGMA_DIRECTIVE_NOTIFICATION);
+        return this.hasOption(OperationOption.NOTIFICATION)
+                || hasPragmaDirective(PRAGMA_DIRECTIVE_NOTIFICATION);
     }
 
     public Operation setNotificationDisabled(boolean disable) {

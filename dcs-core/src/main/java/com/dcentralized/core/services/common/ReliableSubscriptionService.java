@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 
 import com.dcentralized.core.common.NodeSelectorState;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.ServiceSubscriptionState;
 import com.dcentralized.core.common.ServiceSubscriptionState.ServiceSubscriber;
@@ -228,7 +229,7 @@ public class ReliableSubscriptionService extends StatelessService {
         // self DELETE. The client, if they implemented handleRequest on the service instance
         // will be able to tell something went wrong
         sendRequest(Operation.createDelete(getUri())
-                .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NOTIFICATION)
+                .toggleOption(OperationOption.NOTIFICATION, true)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SKIPPED_NOTIFICATIONS));
     }
 }

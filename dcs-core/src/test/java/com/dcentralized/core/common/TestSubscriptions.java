@@ -289,6 +289,10 @@ public class TestSubscriptions extends BasicTestCase {
             hostWithAuth.startServiceAndWait(s, minimalServiceUUID, serviceState);
 
             Consumer<Operation> notifyC = (nOp) -> {
+                if (!nOp.isNotification()) {
+                    notifyContext.failIteration(new IllegalStateException());
+                    return;
+                }
                 nOp.complete();
                 switch (nOp.getAction()) {
                 case PUT:

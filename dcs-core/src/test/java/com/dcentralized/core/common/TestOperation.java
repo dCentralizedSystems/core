@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.Operation.SerializedOperation;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.test.ExampleService;
@@ -721,13 +722,20 @@ public class TestOperation extends BasicReusableHostTestCase {
         op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SKIPPED_NOTIFICATIONS);
         assertFalse(op.isNotification());
 
-        op.addPragmaDirective(Operation.PRAGMA_DIRECTIVE_NOTIFICATION);
+        final String notificationPragma = "xn-nt";
+        op.addPragmaDirective(notificationPragma);
         assertTrue(op.isNotification());
 
         op.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_SKIPPED_NOTIFICATIONS);
         assertTrue(op.isNotification());
 
-        op.removePragmaDirective(Operation.PRAGMA_DIRECTIVE_NOTIFICATION);
+        op.removePragmaDirective(notificationPragma);
+        assertFalse(op.isNotification());
+
+        op.toggleOption(OperationOption.NOTIFICATION, true);
+        assertTrue(op.isNotification());
+
+        op.toggleOption(OperationOption.NOTIFICATION, false);
         assertFalse(op.isNotification());
     }
 
