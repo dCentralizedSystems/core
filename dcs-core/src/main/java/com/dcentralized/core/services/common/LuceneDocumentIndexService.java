@@ -158,6 +158,11 @@ public class LuceneDocumentIndexService extends StatelessService {
             "queryLogging",
             false);
 
+    public static final boolean UPDATE_LOGGING = Configuration.bool(
+            LuceneDocumentIndexService.class,
+            "updateLogging",
+            false);
+
     public static final String FILE_PATH_LUCENE = "lucene";
 
     public static final int DEFAULT_INDEX_FILE_COUNT_THRESHOLD_FOR_WRITER_REFRESH = 10000;
@@ -2888,6 +2893,10 @@ public class LuceneDocumentIndexService extends StatelessService {
             updateOp.fail(new IllegalArgumentException(
                     "documentSelfLink is required"));
             return;
+        }
+
+        if (UPDATE_LOGGING) {
+            logInfo("link: %s", link);
         }
 
         if (s.documentUpdateAction == null) {
