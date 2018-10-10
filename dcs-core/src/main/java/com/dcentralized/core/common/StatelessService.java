@@ -95,6 +95,9 @@ public class StatelessService implements Service {
     }
 
     protected void prepareRequest(Operation op) {
+        if (op.hasReferer()) {
+            return;
+        }
         op.setReferer(UriUtils.buildUri(getHost().getPublicUri(), getSelfLink()));
     }
 

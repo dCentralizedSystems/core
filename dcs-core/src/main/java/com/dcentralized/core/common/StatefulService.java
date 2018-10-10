@@ -1709,6 +1709,9 @@ public class StatefulService implements Service {
     }
 
     private void prepareRequest(Operation op) {
+        if (op.hasReferer()) {
+            return;
+        }
         // avoid URI allocation and parsing by using cached host URI string
         StringBuilder sb = Utils.getBuilder();
         sb.append(getHost().getPublicUriAsString()).append(getSelfLink());
