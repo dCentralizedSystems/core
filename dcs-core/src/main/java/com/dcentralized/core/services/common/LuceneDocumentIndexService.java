@@ -2467,7 +2467,8 @@ public class LuceneDocumentIndexService extends StatelessService {
         // will contain the links for which post processing should to be skipped
         // added to support TIME_SNAPSHOT, can be extended in future to represent qs.context.documentLinkBlackList
         Set<String> linkBlackList = options.contains(QueryOption.TIME_SNAPSHOT)
-                ? Collections.emptySet() : null;
+                ? Collections.emptySet()
+                : null;
         if (qs != null) {
             if (qs.context != null && qs.context.documentLinkWhiteList != null) {
                 linkWhiteList = qs.context.documentLinkWhiteList;
@@ -3414,23 +3415,31 @@ public class LuceneDocumentIndexService extends StatelessService {
 
     @Override
     public void handleMaintenance(Operation post) {
-        if (this.fieldInfoCache != null) {
-            this.fieldInfoCache.handleMaintenance();
+        try {
+            if (this.fieldInfoCache != null) {
+                this.fieldInfoCache.handleMaintenance();
+            }
+
+            Operation maintenanceOp = Operation
+                    .createPost(this.getUri())
+                    .setBodyNoCloning(new MaintenanceRequest())
+                    .setCompletion((o, ex) -> {
+                        if (ex != null) {
+                            post.fail(ex);
+                            return;
+                        }
+                        post.complete();
+                    });
+
+            setAuthorizationContext(maintenanceOp, getSystemAuthorizationContext());
+            handleRequest(maintenanceOp);
+        } catch (Throwable e) {
+            if (getHost().isStopping()) {
+                return;
+            }
+            logSevere(e);
+            post.fail(e);
         }
-
-        Operation maintenanceOp = Operation
-                .createPost(this.getUri())
-                .setBodyNoCloning(new MaintenanceRequest())
-                .setCompletion((o, ex) -> {
-                    if (ex != null) {
-                        post.fail(ex);
-                        return;
-                    }
-                    post.complete();
-                });
-
-        setAuthorizationContext(maintenanceOp, getSystemAuthorizationContext());
-        handleRequest(maintenanceOp);
     }
 
     private void handleMaintenanceImpl(Operation op) throws Exception {

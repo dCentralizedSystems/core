@@ -610,8 +610,9 @@ public class NodeGroupService extends StatefulService {
         local.status = NodeStatus.AVAILABLE;
         body.nodes.put(local.id, local);
 
-        sendRequest(Operation.createPatch(getUri()).setBody(
-                body));
+        sendRequest(Operation.createPatch(getUri())
+                .setReferer(getUri())
+                .setBody(body));
     }
 
     private NodeState buildLocalNodeState(NodeState body) {
@@ -663,6 +664,7 @@ public class NodeGroupService extends StatefulService {
             if (!isAvailable()) {
                 // self patch at least once, so we update availability
                 sendRequest(Operation.createPatch(getUri())
+                        .setReferer(getUri())
                         .setBodyNoCloning(localState)
                         .setCompletion((o, e) -> {
                             maint.complete();
