@@ -452,7 +452,8 @@ public final class FileUtils {
                                     op.setContentType(contentType);
                                 }
 
-                                String body = Utils.decodeIfText(bb, contentType);
+                                String body = op.isRemote() ? null
+                                        : Utils.decodeIfText(bb, contentType);
                                 if (body != null) {
                                     op.setBody(body);
                                 } else {
