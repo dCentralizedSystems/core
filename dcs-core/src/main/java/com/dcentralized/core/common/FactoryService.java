@@ -213,7 +213,9 @@ public abstract class FactoryService extends StatelessService {
             return;
         }
 
-        if (!ServiceHost.isServiceIndexed(this)) {
+        if (!ServiceHost.isServiceIndexed(this)
+                && !hasOption(ServiceOption.REPLICATION)
+                && !hasChildOption(ServiceOption.REPLICATION)) {
             setAvailable(true);
             startPost.complete();
             return;
