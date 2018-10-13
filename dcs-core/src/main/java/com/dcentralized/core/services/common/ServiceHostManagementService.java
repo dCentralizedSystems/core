@@ -80,8 +80,17 @@ public class ServiceHostManagementService extends StatefulService {
     public static final String STAT_NAME_HTTP2_PENDING_OP_COUNT_PER_HOUR = STAT_NAME_HTTP2_PENDING_OP_COUNT_PREFIX
             + ServiceStats.STAT_NAME_SUFFIX_PER_HOUR;
 
-    public static final String STAT_NAME_EXECUTOR_QUEUE_DEPTH = "executorQueueDepth";
-    public static final String STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH = "scheduledExecutorQueueDepth";
+    public static final String STAT_NAME_EXECUTOR_QUEUE_DEPTH_PREFIX = "executorQueueDepth";
+    public static final String STAT_NAME_EXECUTOR_QUEUE_DEPTH_PER_DAY = STAT_NAME_EXECUTOR_QUEUE_DEPTH_PREFIX
+            + ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
+    public static final String STAT_NAME_EXECUTOR_QUEUE_DEPTH_PER_HOUR = STAT_NAME_EXECUTOR_QUEUE_DEPTH_PREFIX
+            + ServiceStats.STAT_NAME_SUFFIX_PER_HOUR;
+
+    public static final String STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PREFIX = "scheduledExecutorQueueDepth";
+    public static final String STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PER_DAY = STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PREFIX
+            + ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
+    public static final String STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PER_HOUR = STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PREFIX
+            + ServiceStats.STAT_NAME_SUFFIX_PER_HOUR;
 
     public static final String STAT_NAME_SERVICE_COUNT = "serviceCount";
     public static final String STAT_NAME_SERVICE_CACHE_CLEAR_COUNT = "serviceCacheClearCount";

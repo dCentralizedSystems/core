@@ -96,7 +96,27 @@ public class ServiceResourceTracker {
                 0);
 
         createTimeSeriesStat(
+                ServiceHostManagementService.STAT_NAME_HTTP11_PENDING_OP_COUNT_PREFIX,
+                0);
+
+        createTimeSeriesStat(
                 ServiceHostManagementService.STAT_NAME_HTTP2_CONNECTION_COUNT_PREFIX,
+                0);
+
+        createTimeSeriesStat(
+                ServiceHostManagementService.STAT_NAME_HTTP2_PENDING_OP_COUNT_PREFIX,
+                0);
+
+        createTimeSeriesStat(
+                ServiceHostManagementService.STAT_NAME_JVM_THREAD_COUNT_PREFIX,
+                0);
+
+        createTimeSeriesStat(
+                ServiceHostManagementService.STAT_NAME_EXECUTOR_QUEUE_DEPTH_PREFIX,
+                0);
+
+        createTimeSeriesStat(
+                ServiceHostManagementService.STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PREFIX,
                 0);
 
         getManagementService().setStat(ServiceHostManagementService.STAT_NAME_THREAD_COUNT,
@@ -166,7 +186,9 @@ public class ServiceResourceTracker {
             return;
         }
 
-        createTimeSeriesStat(ServiceHostManagementService.STAT_NAME_JVM_THREAD_COUNT_PREFIX,
+        mgmtService.setStat(ServiceHostManagementService.STAT_NAME_JVM_THREAD_COUNT_PER_DAY,
+                threadIds.length);
+        mgmtService.setStat(ServiceHostManagementService.STAT_NAME_JVM_THREAD_COUNT_PER_HOUR,
                 threadIds.length);
 
         totalTime = TimeUnit.NANOSECONDS.toMicros(totalTime);
@@ -181,37 +203,55 @@ public class ServiceResourceTracker {
         ConnectionPoolMetrics http11TagInfo = this.host.getClient()
                 .getConnectionPoolMetrics(false);
         if (http11TagInfo != null) {
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_HTTP11_PENDING_OP_COUNT_PREFIX,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP11_PENDING_OP_COUNT_PER_DAY,
                     http11TagInfo.pendingRequestCount);
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_HTTP11_CONNECTION_COUNT_PREFIX,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP11_PENDING_OP_COUNT_PER_HOUR,
+                    http11TagInfo.pendingRequestCount);
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP11_CONNECTION_COUNT_PER_DAY,
+                    http11TagInfo.inUseConnectionCount);
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP11_CONNECTION_COUNT_PER_HOUR,
                     http11TagInfo.inUseConnectionCount);
         }
 
         ConnectionPoolMetrics http2TagInfo = this.host.getClient()
                 .getConnectionPoolMetrics(true);
         if (http2TagInfo != null) {
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_HTTP2_PENDING_OP_COUNT_PREFIX,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP2_PENDING_OP_COUNT_PER_DAY,
                     http2TagInfo.pendingRequestCount);
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_HTTP2_CONNECTION_COUNT_PREFIX,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP2_PENDING_OP_COUNT_PER_HOUR,
+                    http2TagInfo.pendingRequestCount);
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP2_CONNECTION_COUNT_PER_DAY,
+                    http2TagInfo.inUseConnectionCount);
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_HTTP2_CONNECTION_COUNT_PER_HOUR,
                     http2TagInfo.inUseConnectionCount);
         }
 
         ForkJoinPool executor = (ForkJoinPool) this.host.getExecutor();
         if (executor != null) {
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_EXECUTOR_QUEUE_DEPTH,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_EXECUTOR_QUEUE_DEPTH_PER_DAY,
+                    executor.getQueuedSubmissionCount());
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_EXECUTOR_QUEUE_DEPTH_PER_HOUR,
                     executor.getQueuedSubmissionCount());
         }
 
         ScheduledThreadPoolExecutor scheduledExecutor = (ScheduledThreadPoolExecutor) this.host
                 .getScheduledExecutor();
         if (scheduledExecutor != null) {
-            createTimeSeriesStat(
-                    ServiceHostManagementService.STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH,
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PER_DAY,
+                    scheduledExecutor.getQueue().size());
+            mgmtService.setStat(
+                    ServiceHostManagementService.STAT_NAME_SCHEDULED_EXECUTOR_QUEUE_DEPTH_PER_HOUR,
                     scheduledExecutor.getQueue().size());
         }
     }
