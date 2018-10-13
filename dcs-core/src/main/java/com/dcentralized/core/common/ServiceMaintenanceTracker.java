@@ -24,7 +24,6 @@ import java.util.logging.Level;
 
 import com.dcentralized.core.common.Service.ProcessingStage;
 import com.dcentralized.core.common.Service.ServiceOption;
-import com.dcentralized.core.common.ServiceMaintenanceRequest.MaintenanceReason;
 
 /**
  * Sequences service periodic maintenance
@@ -165,20 +164,17 @@ class ServiceMaintenanceTracker {
     }
 
     private void performServiceMaintenance(String servicePath, Service s) {
-        long[] start = new long[1];
-        ServiceMaintenanceRequest body = ServiceMaintenanceRequest.create();
-        body.reasons.add(MaintenanceReason.PERIODIC_SCHEDULE);
-
+        long limit = Math.max(this.host.getMaintenanceIntervalMicros(),
+                s.getMaintenanceIntervalMicros());
         Operation servicePost = Operation
-                .createPost(UriUtils.buildUri(this.host, servicePath))
+                .createPost(null)
                 .setReferer(this.host.getUri())
-                .setBodyNoCloning(body)
+                .setBodyNoCloning(ServiceMaintenanceRequest.PERIODIC_INSTANCE)
                 .setCompletion(
                         (o, ex) -> {
                             long now = Utils.getSystemNowMicrosUtc();
-                            long actual = now - start[0];
-                            long limit = Math.max(this.host.getMaintenanceIntervalMicros(),
-                                    s.getMaintenanceIntervalMicros());
+                            long actual = now - (o.getExpirationMicrosUtc() - limit);
+
                             if (s.hasOption(ServiceOption.INSTRUMENTATION)) {
                                 updateStats(s, actual, limit, servicePath);
                             }
@@ -197,7 +193,7 @@ class ServiceMaintenanceTracker {
                 if (s.hasOption(Service.ServiceOption.INSTRUMENTATION)) {
                     s.adjustStat(Service.STAT_NAME_MAINTENANCE_COUNT, 1);
                 }
-                start[0] = Utils.getSystemNowMicrosUtc();
+                servicePost.setExpiration(Utils.getSystemNowMicrosUtc() + limit);
                 s.handleMaintenance(servicePost);
             } catch (Exception ex) {
                 // Mostly at this point, CompletionHandler for servicePost has already consumed in

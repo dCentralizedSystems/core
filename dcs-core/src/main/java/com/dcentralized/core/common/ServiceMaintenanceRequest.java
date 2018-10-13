@@ -23,6 +23,14 @@ import com.dcentralized.core.services.common.NodeGroupService.NodeGroupState;
 public class ServiceMaintenanceRequest {
     public static final String KIND = Utils.buildKind(ServiceMaintenanceRequest.class);
 
+    public static final ServiceMaintenanceRequest PERIODIC_INSTANCE = createPeriodic();
+
+    public static ServiceMaintenanceRequest createPeriodic() {
+        ServiceMaintenanceRequest body = ServiceMaintenanceRequest.create();
+        body.reasons.add(MaintenanceReason.PERIODIC_SCHEDULE);
+        return body;
+    }
+
     public static ServiceMaintenanceRequest create() {
         ServiceMaintenanceRequest r = new ServiceMaintenanceRequest();
         r.kind = KIND;

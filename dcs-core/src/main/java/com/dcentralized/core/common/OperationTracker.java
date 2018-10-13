@@ -106,71 +106,80 @@ public class OperationTracker {
 
     public void performMaintenance(long nowMicros) {
         // check pendingStartOperations
-        Iterator<Operation> startOpsIt = this.pendingStartOperations.iterator();
-        checkOperationExpiration(nowMicros, startOpsIt);
+        if (!this.pendingStartOperations.isEmpty()) {
+            Iterator<Operation> startOpsIt = this.pendingStartOperations.iterator();
+            checkOperationExpiration(nowMicros, startOpsIt);
+        }
 
         // check pendingServiceStartCompletions
-        for (Entry<String, SortedSet<Operation>> entry : this.pendingServiceStartCompletions
-                .entrySet()) {
-            String link = entry.getKey();
-            SortedSet<Operation> pendingOps = entry.getValue();
-            Service s = this.host.findService(link, true);
-            if (s != null && s.getProcessingStage() == ProcessingStage.AVAILABLE) {
-                this.host.log(Level.WARNING,
-                        "Service %s available, but has pending start operations", link);
-                processPendingServiceStartOperations(link, ProcessingStage.AVAILABLE, s);
-                continue;
-            }
+        if (!this.pendingServiceStartCompletions.isEmpty()) {
+            for (Entry<String, SortedSet<Operation>> entry : this.pendingServiceStartCompletions
+                    .entrySet()) {
+                String link = entry.getKey();
+                SortedSet<Operation> pendingOps = entry.getValue();
+                Service s = this.host.findService(link, true);
+                if (s != null && s.getProcessingStage() == ProcessingStage.AVAILABLE) {
+                    this.host.log(Level.WARNING,
+                            "Service %s available, but has pending start operations", link);
+                    processPendingServiceStartOperations(link, ProcessingStage.AVAILABLE, s);
+                    continue;
+                }
 
-            if (s == null || s.getProcessingStage() == ProcessingStage.STOPPED) {
-                this.host.log(Level.WARNING,
-                        "Service %s has stopped, but has pending start operations", link);
-                processPendingServiceStartOperations(link, ProcessingStage.STOPPED, null);
-                continue;
-            }
+                if (s == null || s.getProcessingStage() == ProcessingStage.STOPPED) {
+                    this.host.log(Level.WARNING,
+                            "Service %s has stopped, but has pending start operations", link);
+                    processPendingServiceStartOperations(link, ProcessingStage.STOPPED, null);
+                    continue;
+                }
 
-            Iterator<Operation> it = pendingOps.iterator();
-            checkOperationExpiration(nowMicros, it);
+                Iterator<Operation> it = pendingOps.iterator();
+                checkOperationExpiration(nowMicros, it);
+            }
         }
 
         // check pendingServiceAvailableCompletions
-        for (Entry<String, SortedSet<Operation>> entry : this.pendingServiceAvailableCompletions
-                .entrySet()) {
-            String link = entry.getKey();
-            SortedSet<Operation> pendingOps = entry.getValue();
-            Service s = this.host.findService(link, true);
-            if (s != null && s.getProcessingStage() == ProcessingStage.AVAILABLE) {
-                this.host.log(Level.WARNING,
-                        "Service %s available, but has pending start operations", link);
-                this.host.processPendingServiceAvailableOperations(s, null, false);
-                continue;
-            }
+        if (!this.pendingServiceAvailableCompletions.isEmpty()) {
+            for (Entry<String, SortedSet<Operation>> entry : this.pendingServiceAvailableCompletions
+                    .entrySet()) {
+                String link = entry.getKey();
+                SortedSet<Operation> pendingOps = entry.getValue();
+                Service s = this.host.findService(link, true);
+                if (s != null && s.getProcessingStage() == ProcessingStage.AVAILABLE) {
+                    this.host.log(Level.WARNING,
+                            "Service %s available, but has pending start operations", link);
+                    this.host.processPendingServiceAvailableOperations(s, null, false);
+                    continue;
+                }
 
-            Iterator<Operation> it = pendingOps.iterator();
-            checkOperationExpiration(nowMicros, it);
+                Iterator<Operation> it = pendingOps.iterator();
+                checkOperationExpiration(nowMicros, it);
+            }
         }
 
         // check pendingOperationsForRetry
-        final long intervalMicros = TimeUnit.SECONDS.toMicros(1);
-        Iterator<Entry<Long, Operation>> it = this.pendingOperationsForRetry.entrySet().iterator();
-        while (it.hasNext()) {
-            Entry<Long, Operation> entry = it.next();
-            Operation o = entry.getValue();
-            if (this.host.isStopping()) {
-                o.fail(new CancellationException("Host is stopping"));
-                return;
-            }
+        if (!this.pendingOperationsForRetry.isEmpty()) {
+            final long intervalMicros = TimeUnit.SECONDS.toMicros(1);
+            Iterator<Entry<Long, Operation>> it = this.pendingOperationsForRetry.entrySet()
+                    .iterator();
+            while (it.hasNext()) {
+                Entry<Long, Operation> entry = it.next();
+                Operation o = entry.getValue();
+                if (this.host.isStopping()) {
+                    o.fail(new CancellationException("Host is stopping"));
+                    return;
+                }
 
-            // Apply linear back-off: we delay retry based on the number of retry attempts. We
-            // keep retrying until expiration of the operation (applied in retryOrFailRequest)
-            long queuingTimeMicros = entry.getKey();
-            long estimatedRetryTimeMicros = o.getRetryCount() * intervalMicros +
-                    queuingTimeMicros;
-            if (estimatedRetryTimeMicros > nowMicros) {
-                continue;
+                // Apply linear back-off: we delay retry based on the number of retry attempts. We
+                // keep retrying until expiration of the operation (applied in retryOrFailRequest)
+                long queuingTimeMicros = entry.getKey();
+                long estimatedRetryTimeMicros = o.getRetryCount() * intervalMicros +
+                        queuingTimeMicros;
+                if (estimatedRetryTimeMicros > nowMicros) {
+                    continue;
+                }
+                it.remove();
+                this.host.handleRequest(null, o);
             }
-            it.remove();
-            this.host.handleRequest(null, o);
         }
     }
 
@@ -187,7 +196,8 @@ public class OperationTracker {
         }
     }
 
-    void processPendingServiceStartOperations(String link, ProcessingStage processingStage, Service s) {
+    void processPendingServiceStartOperations(String link, ProcessingStage processingStage,
+            Service s) {
         SortedSet<Operation> ops = removeServiceStartCompletions(link);
         if (ops == null || ops.isEmpty()) {
             return;
