@@ -3750,7 +3750,11 @@ public class ServiceHost implements ServiceRequestSender {
                     OperationContext.restoreAuthContext(opCtx);
                 }
             };
-            this.executor.execute(r);
+            if (s.hasOption(ServiceOption.CONCURRENT_UPDATE_HANDLING)) {
+                r.run();
+            } else {
+                this.executor.execute(r);
+            }
         }
     }
 
