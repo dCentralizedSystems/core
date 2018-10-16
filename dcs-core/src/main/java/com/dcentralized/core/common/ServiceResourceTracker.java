@@ -339,7 +339,7 @@ public class ServiceResourceTracker {
             // An expired persistent service is also detected and deleted by the
             // index service, but concurrent stop delete is safe and in any
             // case expired documents cannot be returned from the cache.
-            stopServiceAndClearFromCache(s, state);
+            stopServiceAndClearFromCache(serviceInfo);
             return null;
         }
 
@@ -353,10 +353,10 @@ public class ServiceResourceTracker {
         return state;
     }
 
-    private void stopServiceAndClearFromCache(Service s, ServiceDocument state) {
+    private void stopServiceAndClearFromCache(AttachedServiceInfo si) {
         // Issue DELETE to stop the service and clear it from cache
-        Operation deleteExp = Operation.createDelete(this.host, s.getSelfLink())
-                .setBodyNoCloning(state)
+        Operation deleteExp = Operation.createDelete(this.host, si.service.getSelfLink())
+                .setBodyNoCloning(si.cachedState)
                 .disableFailureLogging(true)
                 .toggleOption(Operation.OperationOption.INDEXING_DISABLED, true)
                 .toggleOption(Operation.OperationOption.FORWARDING_DISABLED, true)
@@ -401,21 +401,23 @@ public class ServiceResourceTracker {
         updateStats(now);
         ServiceHostState hostState = this.host.getStateNoCloning();
         int stopServiceCount = 0;
+        int serviceCount = 0;
 
         for (AttachedServiceInfo serviceInfo : this.attachedServices.values()) {
+            serviceCount++;
             Service service = serviceInfo.service;
-            ServiceDocument state;
-            synchronized (serviceInfo) {
-                state = serviceInfo.cachedState;
+            if (service == null) {
+                continue;
             }
 
             if (!ServiceHost.isServiceIndexed(service)) {
+                ServiceDocument state = serviceInfo.cachedState;
                 // service is not persistent - just check if it's expired, and
                 // if so - stop and clear from cache
                 if (state != null &&
                         state.documentExpirationTimeMicros > 0 &&
                         state.documentExpirationTimeMicros < now) {
-                    stopServiceAndClearFromCache(service, state);
+                    stopServiceAndClearFromCache(serviceInfo);
                 }
                 continue;
             }
@@ -426,13 +428,13 @@ public class ServiceResourceTracker {
                 continue;
             }
 
-            if (serviceActive(serviceInfo.lastAccessTime, service, now)) {
+            if (serviceActive(serviceInfo, now)) {
                 // Skip stop for services that have been recently active
                 continue;
             }
 
             // stop service and update count
-            stopServiceAndClearFromCache(service, state);
+            stopServiceAndClearFromCache(serviceInfo);
             stopServiceCount++;
 
             if (deadlineMicros < Utils.getSystemNowMicrosUtc()) {
@@ -440,14 +442,7 @@ public class ServiceResourceTracker {
             }
         }
 
-        if (hostState.serviceCount < 0) {
-            // Make sure our service count matches the list contents, they could drift. Using size()
-            // on a concurrent data structure is costly so we do this only when pausing services or
-            // the count is negative
-            synchronized (hostState) {
-                hostState.serviceCount = this.attachedServices.size();
-            }
-        }
+        hostState.serviceCount = serviceCount;
 
         if (stopServiceCount == 0) {
             return;
@@ -495,13 +490,16 @@ public class ServiceResourceTracker {
         return false;
     }
 
-    private boolean serviceActive(long lastAccessTime, Service s, long now) {
+    private boolean serviceActive(AttachedServiceInfo si, long now) {
+        Service s = si.service;
+        if (s == null) {
+            return true;
+        }
         long cacheClearDelayMicros = s.getCacheClearDelayMicros();
         if (ServiceHost.isServiceImmutable(s)) {
             cacheClearDelayMicros = 0;
         }
-
-        return (cacheClearDelayMicros + lastAccessTime) > now;
+        return (cacheClearDelayMicros + si.lastAccessTime) > now;
     }
 
     void retryOnDemandLoadConflict(Operation op, Service s) {
