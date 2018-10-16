@@ -481,7 +481,8 @@ public class ServiceHost implements ServiceRequestSender {
         public static final long DEFAULT_MAINTENANCE_INTERVAL_MICROS = TimeUnit.SECONDS
                 .toMicros(1);
         public static final long DEFAULT_OPERATION_TIMEOUT_MICROS = TimeUnit.SECONDS.toMicros(60);
-        public static final long DEFAULT_SERVICE_CACHE_CLEAR_DELAY_MICROS = TimeUnit.SECONDS.toMicros(60);
+        public static final long DEFAULT_SERVICE_CACHE_CLEAR_DELAY_MICROS = TimeUnit.SECONDS
+                .toMicros(60);
 
         public String bindAddress;
         public int httpPort;
@@ -604,7 +605,6 @@ public class ServiceHost implements ServiceRequestSender {
         this.stop();
         this.log(Level.WARNING, "Host is stopped");
     });
-
 
     private Logger logger = Logger.getLogger(getClass().getName());
     private FileHandler handler;
@@ -803,7 +803,8 @@ public class ServiceHost implements ServiceRequestSender {
         }
 
         this.executor = new ForkJoinPool(Utils.DEFAULT_THREAD_COUNT, (pool) -> {
-            ForkJoinWorkerThread res = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
+            ForkJoinWorkerThread res = ForkJoinPool.defaultForkJoinWorkerThreadFactory
+                    .newThread(pool);
             res.setName(getUri() + "/" + res.getName());
             return res;
         }, null, true);
@@ -888,7 +889,8 @@ public class ServiceHost implements ServiceRequestSender {
         if (args.autoBackupDirectory != null) {
             this.state.autoBackupDirectoryReference = args.autoBackupDirectory.toUri();
         } else {
-            this.state.autoBackupDirectoryReference = s.toPath().resolve(DEFAULT_AUTO_BACKUP_DIR).toUri();
+            this.state.autoBackupDirectoryReference = s.toPath().resolve(DEFAULT_AUTO_BACKUP_DIR)
+                    .toUri();
         }
         this.state.isAutoBackupEnabled = args.isAutoBackupEnabled;
     }
@@ -1095,7 +1097,8 @@ public class ServiceHost implements ServiceRequestSender {
 
         // Update pragma directives list for synchronization requests
         if (loggingInfo.skipSynchronizationRequests) {
-            if (!this.skipLoggingPragmaDirectives.contains(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)) {
+            if (!this.skipLoggingPragmaDirectives
+                    .contains(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)) {
                 this.skipLoggingPragmaDirectives.add(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER);
             }
             if (!this.skipLoggingPragmaDirectives.contains(Operation.PRAGMA_DIRECTIVE_SYNCH_PEER)) {
@@ -1428,7 +1431,8 @@ public class ServiceHost implements ServiceRequestSender {
     }
 
     public ExecutorService allocateExecutor(Service s, int threadCount) {
-        return Executors.newFixedThreadPool(threadCount, new NamedThreadFactory(s.getUri().toString()));
+        return Executors.newFixedThreadPool(threadCount,
+                new NamedThreadFactory(s.getUri().toString()));
     }
 
     public ServiceHost start() throws Throwable {
@@ -1622,7 +1626,8 @@ public class ServiceHost implements ServiceRequestSender {
         if (this.authorizationService != null) {
             addPrivilegedService(this.authorizationService.getClass());
             addPrivilegedService(AuthorizationTokenCacheService.class);
-            startCoreServicesSynchronously(this.authorizationService, new AuthorizationTokenCacheService());
+            startCoreServicesSynchronously(this.authorizationService,
+                    new AuthorizationTokenCacheService());
         }
 
         // start AuthN service before factories since its invoked in the IO path on every
@@ -1800,8 +1805,8 @@ public class ServiceHost implements ServiceRequestSender {
         Path baseUriPath = null;
         try {
             if (sdd != null && sdd.userInterfaceResourcePath != null) {
-                String customPathResources = s.getDocumentTemplate()
-                        .documentDescription.userInterfaceResourcePath;
+                String customPathResources = s
+                        .getDocumentTemplate().documentDescription.userInterfaceResourcePath;
                 Path cpr = Paths.get(customPathResources);
                 rootDir = discoverUiResources(cpr, s, true, pathToURIPath);
                 baseUriPath = getBaseUriPath(cpr, s, true);
@@ -1814,7 +1819,6 @@ public class ServiceHost implements ServiceRequestSender {
             log(Level.WARNING, "Error enumerating UI resources for %s: %s", s.getSelfLink(),
                     Utils.toString(e));
         }
-
 
         if (pathToURIPath.isEmpty() || rootDir == null || baseUriPath == null) {
             return;
@@ -2037,7 +2041,8 @@ public class ServiceHost implements ServiceRequestSender {
                     publicUri.getHost().equals(peerNodeBaseUri.getHost()) &&
                     publicUri.getPort() == peerNodeBaseUri.getPort()) {
                 // self, skip
-                log(Level.INFO, "Skipping peer %s, its us (%s)", peerNodeBaseUri, peerNodeBaseUri.getHost());
+                log(Level.INFO, "Skipping peer %s, its us (%s)", peerNodeBaseUri,
+                        peerNodeBaseUri.getHost());
                 continue;
             }
 
@@ -2184,7 +2189,8 @@ public class ServiceHost implements ServiceRequestSender {
         }
     }
 
-    protected void startFactoryChildServiceSynchronously(String factoryLink, ServiceDocument serviceState) throws Throwable {
+    protected void startFactoryChildServiceSynchronously(String factoryLink,
+            ServiceDocument serviceState) throws Throwable {
         CountDownLatch latch = new CountDownLatch(1);
         Throwable[] failure = new Throwable[1];
         CompletionHandler comp = (o, e) -> {
@@ -2202,11 +2208,12 @@ public class ServiceHost implements ServiceRequestSender {
         if (serviceState.documentSelfLink == null) {
             serviceState.documentSelfLink = nextUUID();
         }
-        this.registerForServiceAvailability(comp, UriUtils.buildUriPath(factoryLink, serviceState.documentSelfLink));
+        this.registerForServiceAvailability(comp,
+                UriUtils.buildUriPath(factoryLink, serviceState.documentSelfLink));
 
         Operation post = Operation.createPost(UriUtils.buildUri(this, factoryLink))
-                            .setBody(serviceState)
-                            .setReferer(getUri());
+                .setBody(serviceState)
+                .setReferer(getUri());
         post.setAuthorizationContext(getSystemAuthorizationContext());
         sendRequest(post);
 
@@ -2337,7 +2344,8 @@ public class ServiceHost implements ServiceRequestSender {
             }
         } else {
             if (notificationTargetSelfLink == null) {
-                String prefix = UriUtils.convertPathCharsFromLink(UriUtils.getParentPath(subscribe.getUri().getPath()));
+                String prefix = UriUtils.convertPathCharsFromLink(
+                        UriUtils.getParentPath(subscribe.getUri().getPath()));
                 notificationTargetSelfLink = UriUtils.buildUriPath(ServiceUriPaths.CORE_CALLBACKS,
                         prefix + "-" + nextUUID());
             }
@@ -2874,7 +2882,8 @@ public class ServiceHost implements ServiceRequestSender {
                     ServiceDocument d = post.getBody(s.getStateType());
 
                     // preserve original update time for migration task
-                    if (!post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_FROM_MIGRATION_TASK) && !post.isFromReplication()) {
+                    if (!post.hasPragmaDirective(Operation.PRAGMA_DIRECTIVE_FROM_MIGRATION_TASK)
+                            && !post.isFromReplication()) {
                         d.documentUpdateTimeMicros = Utils.getNowMicrosUtc();
                     }
                 }
@@ -3395,12 +3404,12 @@ public class ServiceHost implements ServiceRequestSender {
             return;
         }
 
-        ServiceDocument stateFromStore = indexQueryOperation.hasBody() ?
-                indexQueryOperation.getBody(s.getStateType()) : null;
+        ServiceDocument stateFromStore = indexQueryOperation.hasBody()
+                ? indexQueryOperation.getBody(s.getStateType()) : null;
         boolean isSynchronizePeer = serviceStartPost.isSynchronizePeer();
 
-        ServiceDocument stateToLink = isSynchronizePeer ?
-                serviceStartPost.getBody(s.getStateType()) : stateFromStore;
+        ServiceDocument stateToLink = isSynchronizePeer ? serviceStartPost.getBody(s.getStateType())
+                : stateFromStore;
         serviceStartPost.linkState(stateToLink);
 
         if (!checkServiceExistsOrDeleted(s, stateFromStore, serviceStartPost)) {
@@ -3596,7 +3605,8 @@ public class ServiceHost implements ServiceRequestSender {
         int uriPathLength = uriPath.length();
         Service candidate = null;
         // pick the service with the longest match
-        for (Entry<String, Service> e : this.attachedNamespaceServices.headMap(uriPath, true).entrySet()) {
+        for (Entry<String, Service> e : this.attachedNamespaceServices.headMap(uriPath, true)
+                .entrySet()) {
             if (!uriPath.startsWith(e.getKey())) {
                 continue;
             }
@@ -3739,22 +3749,28 @@ public class ServiceHost implements ServiceRequestSender {
     }
 
     private void queueOrScheduleRequestInternal(Service s, Operation op) {
-        if (!s.queueRequest(op)) {
+        if (s.queueRequest(op)) {
+            return;
+        }
+
+        if (s.hasOption(ServiceOption.CONCURRENT_UPDATE_HANDLING)) {
+            executeOperationHandler(s, op);
+        } else {
             Runnable r = () -> {
-                AuthorizationContext opCtx = replaceAuthContext(op);
-                try {
-                    s.handleRequest(op);
-                } catch (Exception e) {
-                    handleUncaughtException(s, op, e);
-                } finally {
-                    OperationContext.restoreAuthContext(opCtx);
-                }
+                executeOperationHandler(s, op);
             };
-            if (s.hasOption(ServiceOption.CONCURRENT_UPDATE_HANDLING)) {
-                r.run();
-            } else {
-                this.executor.execute(r);
-            }
+            this.executor.execute(r);
+        }
+    }
+
+    public void executeOperationHandler(Service s, Operation op) {
+        AuthorizationContext opCtx = replaceAuthContext(op);
+        try {
+            s.handleRequest(op);
+        } catch (Exception e) {
+            handleUncaughtException(s, op, e);
+        } finally {
+            OperationContext.restoreAuthContext(opCtx);
         }
     }
 
@@ -4885,7 +4901,8 @@ public class ServiceHost implements ServiceRequestSender {
                     }
                     if (e != null) {
                         if (previousState != null) {
-                            this.serviceResourceTracker.resetCachedServiceState(s, previousState, op);
+                            this.serviceResourceTracker.resetCachedServiceState(s, previousState,
+                                    op);
                         } else {
                             this.serviceResourceTracker.clearCachedServiceState(s.getSelfLink(),
                                     op);
@@ -5105,7 +5122,7 @@ public class ServiceHost implements ServiceRequestSender {
         ServiceDocumentQueryResult r = new ServiceDocumentQueryResult();
         r.documents = new HashMap<>();
 
-        boolean doPrefixMatch =  false;
+        boolean doPrefixMatch = false;
         boolean doContainsMatch = false;
 
         if (match != null) {
@@ -5425,7 +5442,7 @@ public class ServiceHost implements ServiceRequestSender {
         } else if (subject.equals(GuestUserService.SELF_LINK)) {
             return getGuestAuthorizationContext();
         }
-        return this.authorizationFilter.createAuthorizationContext(getTokenSigner(),subject);
+        return this.authorizationFilter.createAuthorizationContext(getTokenSigner(), subject);
     }
 
     /**
