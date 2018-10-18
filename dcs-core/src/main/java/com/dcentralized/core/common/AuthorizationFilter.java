@@ -112,8 +112,14 @@ public class AuthorizationFilter implements Filter {
 
     @Override
     public FilterReturnCode processRequest(Operation op, OperationProcessingContext context) {
-        if (!context.getHost().isAuthorizationEnabled() || context.getHost().getAuthorizationService() == null) {
+        if (!context.getHost().isAuthorizationEnabled()
+                || context.getHost().getAuthorizationService() == null) {
             // authorization is disabled or no authorization service
+            return FilterReturnCode.CONTINUE_PROCESSING;
+        }
+
+        AuthorizationContext ctx = op.getAuthorizationContext();
+        if (ctx != null && ctx.isSystemUser()) {
             return FilterReturnCode.CONTINUE_PROCESSING;
         }
 
@@ -185,7 +191,8 @@ public class AuthorizationFilter implements Filter {
         });
     }
 
-    private void getAuthorizationContext(Operation op, OperationProcessingContext context, Consumer<AuthorizationContext> authorizationContextHandler) {
+    private void getAuthorizationContext(Operation op, OperationProcessingContext context,
+            Consumer<AuthorizationContext> authorizationContextHandler) {
         String token = BasicAuthenticationUtils.getAuthToken(op);
 
         if (token == null) {
@@ -220,7 +227,8 @@ public class AuthorizationFilter implements Filter {
         }
 
         Long expirationTime = claims.getExpirationTime();
-        if (expirationTime != null && TimeUnit.SECONDS.toMicros(expirationTime) <= Utils.getSystemNowMicrosUtc()) {
+        if (expirationTime != null
+                && TimeUnit.SECONDS.toMicros(expirationTime) <= Utils.getSystemNowMicrosUtc()) {
             host.log(Level.INFO, "Token expired for %s", claims.getSubject());
             host.clearAuthorizationContext(null, claims.getSubject());
             return null;
@@ -249,7 +257,8 @@ public class AuthorizationFilter implements Filter {
             // It is possible to receive a request while the host is starting up: the listener is
             // processing requests but the core authorization/authentication services are not yet
             // started
-            host.log(Level.WARNING, "Error verifying token, authentication service not initialized");
+            host.log(Level.WARNING,
+                    "Error verifying token, authentication service not initialized");
             authorizationContextHandler.accept(null);
             return;
         }
@@ -261,7 +270,8 @@ public class AuthorizationFilter implements Filter {
             shouldRetry = false;
         }
 
-        verifyTokenInternal(op, context, tokenVerificationUri, authorizationContextHandler, shouldRetry);
+        verifyTokenInternal(op, context, tokenVerificationUri, authorizationContextHandler,
+                shouldRetry);
     }
 
     private void verifyTokenInternal(Operation parentOp, OperationProcessingContext context,
@@ -283,8 +293,7 @@ public class AuthorizationFilter implements Filter {
                                             .getBody(ServiceErrorResponse.class);
                                     // If external authentication fails with this specific error
                                     // code, we can skip basic auth.
-                                    if (err.getErrorCode()
-                                            == ServiceErrorResponse.ERROR_CODE_EXTERNAL_AUTH_FAILED) {
+                                    if (err.getErrorCode() == ServiceErrorResponse.ERROR_CODE_EXTERNAL_AUTH_FAILED) {
                                         host.log(Level.FINE, () -> "Skipping basic auth.");
                                         context.resumeProcessingRequest(parentOp,
                                                 FilterReturnCode.FAILED_STOP_PROCESSING, ex);
@@ -304,21 +313,24 @@ public class AuthorizationFilter implements Filter {
                                     authorizationContextHandler.accept(null);
                                 }
                             } else {
-                                AuthorizationContext ctx = resultOp.getBody(AuthorizationContext.class);
+                                AuthorizationContext ctx = resultOp
+                                        .getBody(AuthorizationContext.class);
                                 // check to see if the subject is valid
                                 Operation getUserOp = Operation.createGet(
                                         AuthUtils.buildUserUriFromClaims(host, ctx.getClaims()))
                                         .setReferer(parentOp.getUri())
                                         .setCompletion((getOp, getEx) -> {
                                             if (getEx != null) {
-                                                host.log(Level.WARNING, "Error obtaining subject: %s", getEx);
+                                                host.log(Level.WARNING,
+                                                        "Error obtaining subject: %s", getEx);
                                                 // return a null context. This will result in the auth context
                                                 // for this operation defaulting to the guest context
                                                 authorizationContextHandler.accept(null);
                                                 return;
                                             }
                                             AuthorizationContext authCtx = checkAndGetAuthorizationContext(
-                                                    null, ctx.getClaims(), ctx.getToken(), parentOp, context);
+                                                    null, ctx.getClaims(), ctx.getToken(), parentOp,
+                                                    context);
                                             parentOp.transferResponseHeadersFrom(resultOp);
                                             Map<String, String> cookies = resultOp.getCookies();
                                             if (cookies != null) {
@@ -332,7 +344,8 @@ public class AuthorizationFilter implements Filter {
                                             }
                                             authorizationContextHandler.accept(authCtx);
                                         });
-                                getUserOp.setAuthorizationContext(host.getSystemAuthorizationContext());
+                                getUserOp.setAuthorizationContext(
+                                        host.getSystemAuthorizationContext());
                                 host.sendRequest(getUserOp);
                             }
                         });
