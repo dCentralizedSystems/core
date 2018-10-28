@@ -3956,8 +3956,11 @@ public class ServiceHost implements ServiceRequestSender {
         final CountDownLatch latch = new CountDownLatch(servicesToCloseCount);
 
         final Operation.CompletionHandler removeServiceCompletion = (o, e) -> {
-            this.attachedServices.remove(o.getUri().getPath());
-            latch.countDown();
+            try {
+                this.attachedServices.remove(o.getUri().getPath());
+            } finally {
+                latch.countDown();
+            }
         };
 
         setAuthorizationContext(getSystemAuthorizationContext());
