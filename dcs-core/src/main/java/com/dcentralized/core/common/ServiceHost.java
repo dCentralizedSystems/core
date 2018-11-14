@@ -4683,6 +4683,12 @@ public class ServiceHost implements ServiceRequestSender {
             return null;
         }
 
+        if (TimeUnit.MICROSECONDS.equals(unit)
+                && delay <= Service.MIN_MAINTENANCE_INTERVAL_MICROS) {
+            log(Level.WARNING, "Short scheduling delay detected: %d micros", delay);
+            delay = Service.MIN_MAINTENANCE_INTERVAL_MICROS;
+        }
+
         AuthorizationContext origContext = OperationContext.getAuthorizationContext();
         return e.schedule(() -> {
             OperationContext.restoreAuthContext(origContext);
