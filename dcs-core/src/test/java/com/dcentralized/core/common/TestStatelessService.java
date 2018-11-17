@@ -149,7 +149,7 @@ public class TestStatelessService extends BasicReusableHostTestCase {
     @Test
     public void getStats() throws Throwable {
         StatelessService service = new StatelessTestService();
-        service.setMaintenanceIntervalMicros(100);
+        service.setMaintenanceIntervalMicros(1000);
         service.options.add(Service.ServiceOption.INSTRUMENTATION);
         service.options.add(Service.ServiceOption.PERIODIC_MAINTENANCE);
         this.host.startServiceAndWait(service, "some/service", null);

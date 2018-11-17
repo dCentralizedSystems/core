@@ -4684,7 +4684,7 @@ public class ServiceHost implements ServiceRequestSender {
         }
 
         if (TimeUnit.MICROSECONDS.equals(unit)
-                && delay <= Service.MIN_MAINTENANCE_INTERVAL_MICROS) {
+                && delay < Service.MIN_MAINTENANCE_INTERVAL_MICROS) {
             log(Level.WARNING, "Short scheduling delay detected: %d micros", delay);
             delay = Service.MIN_MAINTENANCE_INTERVAL_MICROS;
         }
@@ -4789,8 +4789,12 @@ public class ServiceHost implements ServiceRequestSender {
             }
             performMaintenanceStage(post, stage, deadline);
         } catch (Exception e) {
-            log(Level.SEVERE, "Uncaught exception: %s", Utils.toString(e));
+            log(Level.SEVERE, "Uncaught exception in stage %s: %s", stage, Utils.toString(e));
             post.fail(e);
+            if (isStopping()) {
+                return;
+            }
+            scheduleMaintenance();
         }
     }
 

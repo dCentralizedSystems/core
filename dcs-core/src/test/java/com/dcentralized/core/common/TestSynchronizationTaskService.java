@@ -227,7 +227,7 @@ public class TestSynchronizationTaskService extends BasicTestCase {
         task.queryResultLimit = this.serviceCount / 2;
 
         // Speed up the retries.
-        this.host.setMaintenanceIntervalMicros(TimeUnit.MILLISECONDS.toMicros(1));
+        this.host.setMaintenanceIntervalMicros(TimeUnit.MILLISECONDS.toMicros(10));
 
         Operation op = Operation
                 .createPost(UriUtils.buildUri(this.host, SynchronizationTaskService.FACTORY_LINK))
