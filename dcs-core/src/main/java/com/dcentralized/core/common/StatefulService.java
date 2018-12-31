@@ -1525,10 +1525,14 @@ public class StatefulService implements Service {
 
     @Override
     public ServiceStat getStat(String name) {
+        return getStat(name, true);
+    }
+
+    public ServiceStat getStat(String name, boolean create) {
         if (!allowStats()) {
             return null;
         }
-        if (!allocateUtilityService(true)) {
+        if (!allocateUtilityService(create)) {
             return null;
         }
         return this.context.utilityService.getStat(name);
