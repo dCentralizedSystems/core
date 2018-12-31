@@ -954,7 +954,7 @@ public class UtilityService implements Service {
         }
     }
 
-    private ServiceStat getStat(String name, boolean create) {
+    public ServiceStat getStat(String name, boolean create) {
         if (!allocateStats(true)) {
             return null;
         }

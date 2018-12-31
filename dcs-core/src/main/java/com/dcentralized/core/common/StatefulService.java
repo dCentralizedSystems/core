@@ -1535,7 +1535,7 @@ public class StatefulService implements Service {
         if (!allocateUtilityService(create)) {
             return null;
         }
-        return this.context.utilityService.getStat(name);
+        return this.context.utilityService.getStat(name, create);
     }
 
     private ServiceStat getHistogramStat(String name) {
