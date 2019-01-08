@@ -482,6 +482,11 @@ public class SynchronizationTaskService
     }
 
     private void handleQueryStage(State task) {
+        if (task.childOptions.contains(ServiceOption.IMMUTABLE)) {
+            // we do not synchronized immutable service instances
+            sendSelfFinishedPatch(task);
+            return;
+        }
         QueryTask queryTask = buildChildQueryTask(task);
         Operation queryPost = Operation
                 .createPost(this, ServiceUriPaths.CORE_LOCAL_QUERY_TASKS)
