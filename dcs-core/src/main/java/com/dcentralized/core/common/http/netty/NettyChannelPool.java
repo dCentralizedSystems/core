@@ -703,6 +703,7 @@ public class NettyChannelPool {
         for (NettyChannelGroup g : this.channelGroups.values()) {
             logGroupStatus(g);
             closeIdleChannelContexts(g, false, now);
+            checkPendingOperations(g);
         }
     }
 
@@ -751,8 +752,6 @@ public class NettyChannelPool {
                 c.close();
             }
         }
-
-        checkPendingOperations(group);
     }
 
     /**
