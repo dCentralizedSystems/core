@@ -624,6 +624,7 @@ public class StatefulService implements Service {
                         return;
                     }
 
+                    this.toggleOption(ServiceOption.DOCUMENT_OWNER, true);
                     // now that we have the latest state, and are marked as owner,
                     // we can re-process the request
                     handleRequest(op);
