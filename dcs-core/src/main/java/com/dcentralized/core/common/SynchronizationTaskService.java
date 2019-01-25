@@ -470,7 +470,7 @@ public class SynchronizationTaskService
             handleQueryStage(task);
             break;
         case SYNCHRONIZE:
-            handleSynchronizeStage(task, true);
+            handleSynchronizeStage(task);
             break;
         case CHECK_NG_AVAILABILITY:
             handleCheckNodeGroupAvailabilityStage(task);
@@ -487,6 +487,9 @@ public class SynchronizationTaskService
             sendSelfFinishedPatch(task);
             return;
         }
+
+        // run all queries in system context to by pass result filtering
+        OperationContext.setAuthorizationContext(super.getSystemAuthorizationContext());
         QueryTask queryTask = buildChildQueryTask(task);
         Operation queryPost = Operation
                 .createPost(this, ServiceUriPaths.CORE_LOCAL_QUERY_TASKS)
@@ -567,7 +570,7 @@ public class SynchronizationTaskService
         return queryTask;
     }
 
-    private void handleSynchronizeStage(State task, boolean verifyOwnership) {
+    private void handleSynchronizeStage(State task) {
         if (task.queryPageReference == null) {
             sendSelfPatch(task, TaskState.TaskStage.STARTED,
                     subStageSetter(SubStage.CHECK_NG_AVAILABILITY));
@@ -576,12 +579,6 @@ public class SynchronizationTaskService
 
         if (getHost().isStopping()) {
             sendSelfCancellationPatch(task, "host is stopping");
-            return;
-        }
-
-        if (verifyOwnership && verifySynchronizationOwnership(task)) {
-            // Verifying ownership will recursively call into
-            // handleSynchronizationStage with verifyOwnership set to false.
             return;
         }
 
@@ -731,7 +728,6 @@ public class SynchronizationTaskService
                 sendSelfCancellationPatch(task, "host is stopping");
                 return;
             }
-
             synchronizeService(task, link, c);
         }
     }
@@ -777,44 +773,6 @@ public class SynchronizationTaskService
         return delay;
     }
 
-    private boolean verifySynchronizationOwnership(State task) {
-        // If this is not a REPLICATED factory, we don't
-        // bother verifying ownership.
-        if (!task.childOptions.contains(ServiceOption.REPLICATION)) {
-            return false;
-        }
-
-        Operation selectOp = Operation
-                .createPost(null)
-                .setExpiration(task.documentExpirationTimeMicros)
-                .setCompletion((o, e) -> {
-                    if (e != null) {
-                        sendSelfFailurePatch(task, e.getMessage());
-                        return;
-                    }
-
-                    NodeSelectorService.SelectOwnerResponse rsp = o.getBody(
-                            NodeSelectorService.SelectOwnerResponse.class);
-
-                    if (!rsp.isLocalHostOwner) {
-                        logWarning(
-                                "Current node %s is no longer owner for the factory %s. Cancelling synchronization",
-                                this.getHost().getId(), task.factorySelfLink);
-
-                        sendSelfCancellationPatch(task,
-                                "Local node is no longer owner for this factory.");
-                        return;
-                    }
-
-                    // Recursively call handleSynchronizeStage
-                    // without owner verification.
-                    handleSynchronizeStage(task, false);
-                });
-
-        getHost().selectOwner(task.nodeSelectorLink, task.factorySelfLink, selectOp);
-        return true;
-    }
-
     private void synchronizeService(State task, String link, Operation.CompletionHandler c) {
         // To trigger synchronization of the child-service, we make
         // a SYNCH-OWNER request. The request body is an empty document
@@ -837,7 +795,6 @@ public class SynchronizationTaskService
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)
                 .setRetryCount(0);
-
         try {
             sendRequest(synchRequest);
         } catch (Exception e) {

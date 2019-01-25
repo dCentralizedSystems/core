@@ -17,7 +17,6 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -26,7 +25,6 @@ import com.dcentralized.core.common.Operation.CompletionHandler;
 import com.dcentralized.core.common.OperationProcessingChain.OperationProcessingContext;
 import com.dcentralized.core.common.ServiceDocumentDescription.PropertyDescription;
 import com.dcentralized.core.common.config.Configuration;
-import com.dcentralized.core.services.common.NodeGroupBroadcastResponse;
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.QueryTask.QuerySpecification.QueryOption;
 import com.dcentralized.core.services.common.QueryTask.QueryTerm.MatchType;
@@ -956,57 +954,30 @@ public abstract class FactoryService extends StatelessService {
         if (this.childOptions.contains(ServiceOption.REPLICATION)) {
             // Reset query result limit for new synchronization cycle.
             this.selfQueryResultLimit = SELF_QUERY_RESULT_LIMIT;
-            synchronizeChildServicesIfOwner(maintOp);
+            synchronizeChildServices(maintOp);
             return;
         }
 
         maintOp.complete();
     }
 
-    void synchronizeChildServicesIfOwner(Operation maintOp) {
+    void synchronizeChildServices(Operation maintOp) {
         // Become unavailable until synchronization is complete.
         // If we are not the owner, we stay unavailable
         setAvailable(false);
-        Operation.AuthorizationContext authContext = OperationContext.getAuthorizationContext();
-        // Only one node is responsible for synchronizing the child services of a given factory.
-        // Ask the runtime if this is the owner node, using the factory self link as the key.
-        Operation selectOwnerOp = maintOp.clone().setExpiration(Utils.fromNowMicrosUtc(
-                getHost().getOperationTimeoutMicros()));
-        selectOwnerOp.setCompletion((o, e) -> {
-            OperationContext.restoreAuthContext(authContext);
-            if (e != null) {
-                logWarning("owner selection failed: %s", e.toString());
-                scheduleSynchronizationRetry(maintOp);
-                maintOp.fail(e);
-                return;
-            }
-            SelectOwnerResponse rsp = o.getBody(SelectOwnerResponse.class);
-            if (!rsp.isLocalHostOwner) {
-                // We do not need to do anything
-                maintOp.complete();
-                return;
-            }
-
-            if (rsp.availableNodeCount > 1) {
-                verifyFactoryOwnership(maintOp, rsp);
-                return;
-            }
-
-            synchronizeChildServicesAsOwner(maintOp, rsp.membershipUpdateTimeMicros);
-        });
-
-        getHost().selectOwner(this.nodeSelectorLink, this.getSelfLink(), selectOwnerOp);
+        ServiceMaintenanceRequest body = (ServiceMaintenanceRequest) maintOp.getBodyRaw();
+        synchronizeChildServices(maintOp, body.nodeGroupState.membershipUpdateTimeMicros);
     }
 
-    private void synchronizeChildServicesAsOwner(Operation maintOp,
-            long membershipUpdateTimeMicros) {
+    private void synchronizeChildServices(Operation maintOp,
+            long nodeMembershipUpdateTimeMicros) {
         maintOp.nestCompletion((o, e) -> {
             if (e != null) {
                 logWarning("Synchronization failed: %s", e.toString());
             }
             maintOp.complete();
         });
-        startFactorySynchronizationTask(maintOp, membershipUpdateTimeMicros);
+        startFactorySynchronizationTask(maintOp, nodeMembershipUpdateTimeMicros);
     }
 
     private void startFactorySynchronizationTask(Operation parentOp,
@@ -1092,7 +1063,7 @@ public abstract class FactoryService extends StatelessService {
 
         logWarning("Scheduling retry of child service synchronization task in %d seconds",
                 TimeUnit.MICROSECONDS.toSeconds(delay));
-        getHost().scheduleCore(() -> synchronizeChildServicesIfOwner(op),
+        getHost().scheduleCore(() -> synchronizeChildServices(op),
                 delay, TimeUnit.MICROSECONDS);
     }
 
@@ -1127,62 +1098,6 @@ public abstract class FactoryService extends StatelessService {
                 "SYNCH_ALL_VERSIONS",
                 false);
         return task;
-    }
-
-    private void verifyFactoryOwnership(Operation maintOp, SelectOwnerResponse ownerResponse) {
-        // Local node thinks it's the owner. Let's confirm that
-        // majority of the nodes in the node-group
-        NodeSelectorService.SelectAndForwardRequest request = new NodeSelectorService.SelectAndForwardRequest();
-        request.key = this.getSelfLink();
-
-        Operation broadcastSelectOp = Operation
-                .createPost(UriUtils.buildUri(this.getHost(), this.nodeSelectorLink))
-                .setReferer(this.getHost().getUri())
-                .setBody(request)
-                .setCompletion((op, t) -> {
-                    if (t != null) {
-                        logWarning("owner selection failed: %s", t.toString());
-                        maintOp.fail(t);
-                        return;
-                    }
-
-                    NodeGroupBroadcastResponse response = op
-                            .getBody(NodeGroupBroadcastResponse.class);
-                    for (Map.Entry<URI, String> r : response.jsonResponses.entrySet()) {
-                        NodeSelectorService.SelectOwnerResponse rsp = null;
-                        try {
-                            rsp = Utils.fromJson(r.getValue(),
-                                    NodeSelectorService.SelectOwnerResponse.class);
-                        } catch (Exception e) {
-                            logWarning("Exception thrown in de-serializing json response. %s",
-                                    e.toString());
-
-                            // Ignore if the remote node returned a bad response. Most likely this is because
-                            // the remote node is offline and if so, ownership check for the remote node is
-                            // irrelevant.
-                            continue;
-                        }
-                        if (rsp == null || rsp.ownerNodeId == null) {
-                            logWarning("%s responded with '%s'", r.getKey(), r.getValue());
-                        }
-                        if (!rsp.ownerNodeId.equals(this.getHost().getId())) {
-                            logWarning("SelectOwner response from %s does not indicate that " +
-                                    "local node %s is the owner for factory %s. JsonResponse: %s",
-                                    r.getKey().toString(), this.getHost().getId(),
-                                    this.getSelfLink(), r.getValue());
-                            maintOp.complete();
-                            return;
-                        }
-                    }
-
-                    logFine("%s elected as owner for factory %s. Starting synch ...",
-                            getHost().getId(), this.getSelfLink());
-                    synchronizeChildServicesAsOwner(maintOp,
-                            ownerResponse.membershipUpdateTimeMicros);
-                });
-
-        getHost().broadcastRequest(this.nodeSelectorLink, this.getSelfLink(), true,
-                broadcastSelectOp);
     }
 
     public abstract Service createServiceInstance() throws Throwable;

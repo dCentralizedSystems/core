@@ -243,7 +243,7 @@ public class UtilityService implements Service {
 
         // Synchronize the FactoryService
         if (this.parent instanceof FactoryService) {
-            ((FactoryService)this.parent).synchronizeChildServicesIfOwner(new Operation());
+            ((FactoryService) this.parent).synchronizeChildServices(new Operation());
             op.complete();
             return;
         }

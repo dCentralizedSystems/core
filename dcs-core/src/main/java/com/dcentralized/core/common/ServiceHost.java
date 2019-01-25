@@ -115,7 +115,6 @@ import com.dcentralized.core.services.common.RoleService;
 import com.dcentralized.core.services.common.ServiceHostLogService;
 import com.dcentralized.core.services.common.ServiceHostManagementService;
 import com.dcentralized.core.services.common.ServiceUriPaths;
-import com.dcentralized.core.services.common.SynchronizationManagementService;
 import com.dcentralized.core.services.common.SystemUserService;
 import com.dcentralized.core.services.common.TaskFactoryService;
 import com.dcentralized.core.services.common.TenantService;
@@ -1614,6 +1613,7 @@ public class ServiceHost implements ServiceRequestSender {
             throw new IllegalStateException("Already started");
         }
 
+        addPrivilegedService(SynchronizationTaskService.class);
         addPrivilegedService(this.managementService.getClass());
         addPrivilegedService(BasicAuthenticationService.class);
         addPrivilegedService(NodeSelectorReplicationService.class);
@@ -1680,10 +1680,6 @@ public class ServiceHost implements ServiceRequestSender {
         coreServices.add(TenantService.createFactory());
         coreServices.add(new SystemUserService());
         coreServices.add(new GuestUserService());
-
-        Service synchronizationManagementService = new SynchronizationManagementService();
-        coreServices.add(synchronizationManagementService);
-        addPrivilegedService(SynchronizationManagementService.class);
 
         Service[] coreServiceArray = new Service[coreServices.size()];
         coreServices.toArray(coreServiceArray);

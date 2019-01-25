@@ -13,8 +13,6 @@
 
 package com.dcentralized.core.common;
 
-import static java.util.stream.Collectors.toList;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -32,6 +30,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleODLService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
@@ -43,12 +47,6 @@ import com.dcentralized.core.services.common.NodeGroupService;
 import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.InMemoryExampleService;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 
 public class TestSynchronizationTaskService extends BasicTestCase {
@@ -164,47 +162,6 @@ public class TestSynchronizationTaskService extends BasicTestCase {
     public void tearDown() {
         this.host.tearDownInProcessPeers();
         this.host.tearDown();
-    }
-
-    @Test
-    public void ownershipValidation() throws Throwable {
-        // This test verifies that only the owner node
-        // executes the synchronization task. If the task
-        // is started on a non-owner node, the task should
-        // self-cancel.
-        setUpMultiNode();
-
-        ownershipValidationDo(ExampleService.FACTORY_LINK);
-        ownershipValidationDo(InMemoryExampleService.FACTORY_LINK);
-        ownershipValidationDo(ExampleODLService.FACTORY_LINK);
-    }
-
-    private void ownershipValidationDo(String factoryLink) throws Throwable {
-        boolean skipAvailabilityCheck = factoryLink.equals(ExampleODLService.FACTORY_LINK) ? true : false;
-        this.host.createExampleServices(this.host.getPeerHost(), this.serviceCount, null, skipAvailabilityCheck, factoryLink);
-        long membershipUpdateTimeMicros = getLatestMembershipUpdateTime(this.host.getPeerHostUri());
-
-        SynchronizationTaskService.State task = createSynchronizationTaskState(membershipUpdateTimeMicros, factoryLink);
-        List<Operation> ops = this.host.getInProcessHostMap().keySet().stream()
-                .map(uri -> Operation
-                    .createPost(UriUtils.buildUri(uri, SynchronizationTaskService.FACTORY_LINK))
-                    .setBody(task)
-                    .setReferer(this.host.getUri())
-                ).collect(toList());
-
-        TestRequestSender sender = new TestRequestSender(this.host);
-        List<SynchronizationTaskService.State> results = sender
-                .sendAndWait(ops, SynchronizationTaskService.State.class);
-
-        int finishedCount = 0;
-        for (SynchronizationTaskService.State r : results) {
-            assertTrue(r.taskInfo.stage == TaskState.TaskStage.FINISHED ||
-                    r.taskInfo.stage == TaskState.TaskStage.CANCELLED);
-            if (r.taskInfo.stage == TaskState.TaskStage.FINISHED) {
-                finishedCount++;
-            }
-        }
-        assertTrue(finishedCount == 1);
     }
 
     @Test
@@ -465,13 +422,6 @@ public class TestSynchronizationTaskService extends BasicTestCase {
                 assertFalse(ns.documentVersion < nsFromIndex.documentVersion);
             }
         }
-    }
-
-    private long getLatestMembershipUpdateTime(URI nodeUri) throws Throwable {
-        NodeGroupService.NodeGroupState ngs = this.host.getServiceState(null,
-                NodeGroupService.NodeGroupState.class,
-                UriUtils.buildUri(nodeUri, ServiceUriPaths.DEFAULT_NODE_GROUP));
-        return ngs.membershipUpdateTimeMicros;
     }
 
     private SynchronizationTaskService.State createSynchronizationTaskState(
