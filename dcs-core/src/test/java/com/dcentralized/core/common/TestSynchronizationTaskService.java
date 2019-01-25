@@ -30,12 +30,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleODLService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
@@ -48,6 +42,11 @@ import com.dcentralized.core.services.common.QueryTask;
 import com.dcentralized.core.services.common.ServiceUriPaths;
 import com.dcentralized.core.services.common.TestLuceneDocumentIndexService.InMemoryExampleService;
 
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestSynchronizationTaskService extends BasicTestCase {
     public static class SynchRetryExampleService extends StatefulService {
