@@ -5199,16 +5199,17 @@ public class ServiceHost implements ServiceRequestSender {
             }
 
             if (match != null) {
+                String caseInvariantPath = servicePath.toLowerCase();
                 if (doPrefixMatch) {
-                    if (!servicePath.startsWith(match)) {
+                    if (!caseInvariantPath.startsWith(match)) {
                         continue;
                     }
                 } else if (doContainsMatch) {
-                    if (!servicePath.contains(match)) {
+                    if (!caseInvariantPath.contains(match)) {
                         continue;
                     }
                 } else {
-                    if (!servicePath.equals(match)) {
+                    if (!caseInvariantPath.equals(match)) {
                         continue;
                     }
                 }
