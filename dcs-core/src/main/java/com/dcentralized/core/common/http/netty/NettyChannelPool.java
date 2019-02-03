@@ -803,9 +803,14 @@ public class NettyChannelPool {
         int removedCount = 0;
 
         synchronized (group) {
+            boolean queueFull = group.pendingRequests.size() == this.pendingRequestQueueLimit;
             Iterator<Operation> pendingOpIt = group.pendingRequests.iterator();
             while (pendingOpIt.hasNext() && ++count < searchLimit) {
                 Operation pendingOp = pendingOpIt.next();
+                if (queueFull) {
+                    // clear queue
+                    pendingOp.fail(Operation.STATUS_CODE_UNAVAILABLE);
+                }
 
                 if (pendingOp.getStatusCode() < Operation.STATUS_CODE_FAILURE_THRESHOLD) {
                     if (count > 10) {
@@ -826,7 +831,6 @@ public class NettyChannelPool {
         if (removedCount == 0) {
             return;
         }
-
         LOGGER.warning(String.format("Pending %d, failed pending operations removed: %d",
                 group.pendingRequests.size(), removedCount));
     }
