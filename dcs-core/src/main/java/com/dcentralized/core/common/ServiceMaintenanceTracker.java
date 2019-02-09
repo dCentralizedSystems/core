@@ -207,9 +207,9 @@ class ServiceMaintenanceTracker {
         };
 
         if (s.hasOption(ServiceOption.CORE)) {
-            this.host.scheduleCore(t, SCHEDULING_EPSILON_MICROS, TimeUnit.MICROSECONDS);
+            this.host.getCoreScheduledExecutor().execute(t);
         } else {
-            this.host.schedule(t, SCHEDULING_EPSILON_MICROS, TimeUnit.MICROSECONDS);
+            this.host.getScheduledExecutor().execute(t);
         }
     }
 

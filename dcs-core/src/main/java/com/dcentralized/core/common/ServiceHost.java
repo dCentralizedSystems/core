@@ -1421,6 +1421,10 @@ public class ServiceHost implements ServiceRequestSender {
         return this.serviceScheduledExecutor;
     }
 
+    ScheduledExecutorService getCoreScheduledExecutor() {
+        return this.scheduledExecutor;
+    }
+
     public ExecutorService getExecutor() {
         return this.executor;
     }
@@ -4692,7 +4696,7 @@ public class ServiceHost implements ServiceRequestSender {
         }, delay, unit);
     }
 
-    private void executeRunnableSafe(Runnable task) {
+    void executeRunnableSafe(Runnable task) {
         try {
             task.run();
         } catch (Exception e) {

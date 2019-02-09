@@ -1,0 +1,4 @@
+[6085][I][2019-02-09T19:36:41.683Z][1][1234][startImpl][ServiceHost/e9aeda04(1bb8b046-ea3d-40b1-a120-d628d762b32e) listening on http://localhost:58189]
+[6086][I][2019-02-09T19:36:41.688Z][1][1234][stopCoreServices][Waiting for DELETE from 22 core services]
+[6087][I][2019-02-09T19:36:41.688Z][3939][58189/core/document-index][close][Document count: 0 ]
+[6088][I][2019-02-09T19:36:41.688Z][1][1234][stopCoreServices][All core services stopped]
