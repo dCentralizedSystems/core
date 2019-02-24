@@ -506,6 +506,7 @@ public class ServiceHost implements ServiceRequestSender {
         public URI documentIndexReference;
         public URI authorizationServiceReference;
         public String id;
+        public boolean isCoreServiceStartFailureCritical;
         public boolean isPeerSynchronizationEnabled;
         public int peerSynchronizationTimeLimitSeconds;
         public boolean isAuthorizationEnabled;
@@ -2137,6 +2138,11 @@ public class ServiceHost implements ServiceRequestSender {
         startCoreServicesSynchronously(posts, Arrays.asList(services));
     }
 
+    protected ServiceHost setCoreServiceStartFailureCritical(boolean toggle) {
+        this.state.isCoreServiceStartFailureCritical = toggle;
+        return this;
+    }
+
     protected void startCoreServicesSynchronously(List<Operation> startPosts,
             List<Service> services)
             throws Throwable {
@@ -2149,6 +2155,16 @@ public class ServiceHost implements ServiceRequestSender {
                 if (e != null) {
                     failure[0] = e;
                     log(Level.SEVERE, "Service %s failed start: %s", o.getUri(), e);
+                    if (o.getUri().getPath().equals(getDocumentIndexServiceUri().getPath())) {
+                        log(Level.SEVERE, "Deleting potentially corrupt index");
+                        File baseDir = new File(getStorageSandbox());
+                        File luceneDir = new File(baseDir,
+                                LuceneDocumentIndexService.FILE_PATH_LUCENE);
+                        luceneDir.deleteOnExit();
+                    }
+                    if (this.state.isCoreServiceStartFailureCritical) {
+                        System.exit(-1);
+                    }
                     return;
                 }
 

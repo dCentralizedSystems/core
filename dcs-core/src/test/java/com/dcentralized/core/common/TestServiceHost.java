@@ -154,6 +154,7 @@ public class TestServiceHost {
         ServiceHost.ServiceHostState state = (ServiceHostState) field.get(this.host);
         state.operationTimeoutMicros = TimeUnit.MILLISECONDS.toMicros(100);
 
+        this.host.setCoreServiceStartFailureCritical(false);
         this.host.startCoreServicesSynchronously(new StatelessService() {
             @SuppressWarnings("unused")
             public static final String SELF_LINK = "/foo";
