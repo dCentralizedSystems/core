@@ -289,6 +289,9 @@ public class NettyHttpServiceClient implements ServiceClient {
     }
 
     private void setCookies(Operation clone) {
+        if (clone.hasOption(OperationOption.COOKIES_DISABLED)) {
+            return;
+        }
         if (this.cookieJar.isEmpty()) {
             return;
         }

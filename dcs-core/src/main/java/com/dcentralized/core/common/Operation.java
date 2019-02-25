@@ -322,7 +322,12 @@ public class Operation implements Cloneable {
          * Set by service support classes to indicate this operation is a
          * notification request.
          */
-        NOTIFICATION
+        NOTIFICATION,
+
+        /**
+        * Set by request senders that use an alternative authentication and authorization scheme
+        */
+        COOKIES_DISABLED
     }
 
     public static class SerializedOperation extends ServiceDocument {
