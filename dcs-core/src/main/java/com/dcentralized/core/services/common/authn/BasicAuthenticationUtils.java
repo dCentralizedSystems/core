@@ -68,7 +68,7 @@ public final class BasicAuthenticationUtils {
      * @param service service invoking this method
      * @param op Operation context of the logout request
      */
-    public static void handleLogout(StatelessService service, Operation op) {
+    public static void handleLogout(Service service, Operation op) {
         if (op.getAuthorizationContext() == null) {
             op.complete();
             return;
