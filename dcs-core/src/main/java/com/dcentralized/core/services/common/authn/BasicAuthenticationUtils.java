@@ -20,11 +20,13 @@ import java.util.Base64;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import com.dcentralized.core.common.AuthUtils;
 import com.dcentralized.core.common.Claims;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
+import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.StatelessService;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.jwt.Verifier;
@@ -96,7 +98,7 @@ public final class BasicAuthenticationUtils {
      * @param op Operation context of the login request
      * @return
      */
-    public static String[] parseRequest(StatelessService service, Operation op) {
+    public static String[] parseRequest(Service service, Operation op) {
         // Attempt to fetch and use userInfo, if AUTHORIZATION_HEADER_NAME is null.
         String authHeader = op.getRequestHeader(Operation.AUTHORIZATION_HEADER);
         String userInfo = op.getUri().getUserInfo();
@@ -112,7 +114,8 @@ public final class BasicAuthenticationUtils {
             try {
                 authString = new String(Base64.getDecoder().decode(authHeaderParts[1]), Utils.CHARSET);
             } catch (UnsupportedEncodingException e) {
-                service.logWarning("Exception decoding auth header: %s", Utils.toString(e));
+                service.getHost().log(Level.WARNING, "Exception decoding auth header: %s",
+                        Utils.toString(e));
                 op.setStatusCode(Operation.STATUS_CODE_BAD_REQUEST).complete();
                 return null;
             }
