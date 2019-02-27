@@ -27,6 +27,7 @@ import com.dcentralized.core.common.Claims;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Service;
+import com.dcentralized.core.common.StatefulService;
 import com.dcentralized.core.common.StatelessService;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.jwt.Verifier;
@@ -87,7 +88,7 @@ public final class BasicAuthenticationUtils {
      * @param authContext authContext to perform the login checks
      * @param expirationTimeMicros expiration time for the auth token
      */
-    public static void handleLogin(StatelessService service, Operation op,
+    public static void handleLogin(Service service, Operation op,
             BasicAuthenticationContext authContext, long expirationTimeMicros) {
         queryUserService(service, op, authContext, expirationTimeMicros);
     }
@@ -159,7 +160,7 @@ public final class BasicAuthenticationUtils {
      * @param authContext authContext to perform the login checks
      * @param expirationTimeMicros expiration time for the auth token
      */
-    private static void queryUserService(StatelessService service, Operation parentOp,
+    private static void queryUserService(Service service, Operation parentOp,
             BasicAuthenticationContext authContext, long expirationTimeMicros) {
         QueryTask q = new QueryTask();
         q.querySpec = new QueryTask.QuerySpecification();
@@ -170,7 +171,7 @@ public final class BasicAuthenticationUtils {
 
         Operation.CompletionHandler userServiceCompletion = (o, ex) -> {
             if (ex != null) {
-                service.logWarning("Exception validating user: %s", Utils.toString(ex));
+                Utils.logWarning("Exception validating user: %s", Utils.toString(ex));
                 parentOp.setBodyNoCloning(o.getBodyRaw()).fail(o.getStatusCode());
                 return;
             }
@@ -204,7 +205,7 @@ public final class BasicAuthenticationUtils {
      * @param authContext authContext to perform the login checks
      * @param expirationTimeMicros expiration time for the auth token
      */
-    private static void queryAuthStore(StatelessService service, Operation parentOp, String userLink,
+    private static void queryAuthStore(Service service, Operation parentOp, String userLink,
             BasicAuthenticationContext authContext, long expirationTimeMicros) {
         // query against the auth credentials store
         QueryTask authQuery = new QueryTask();
@@ -215,7 +216,7 @@ public final class BasicAuthenticationUtils {
         authQuery.taskInfo.isDirect = true;
         Operation.CompletionHandler authCompletionHandler = (authOp, authEx) -> {
             if (authEx != null) {
-                service.logWarning("Exception validating user credentials: %s",
+                Utils.logWarning("Exception validating user credentials: %s",
                         Utils.toString(authEx));
                 parentOp.setBodyNoCloning(authOp.getBodyRaw()).fail(
                         Operation.STATUS_CODE_SERVER_FAILURE_THRESHOLD);
@@ -256,7 +257,7 @@ public final class BasicAuthenticationUtils {
      * @param propagateToClient whether to propagate auth token to client
      * @return
      */
-    private static boolean associateAuthorizationContext(StatelessService service, Operation op,
+    private static boolean associateAuthorizationContext(Service service, Operation op,
             String userLink,
             long expirationTimeMicros, boolean propagateToClient) {
         Claims.Builder builder = new Claims.Builder();
@@ -266,12 +267,15 @@ public final class BasicAuthenticationUtils {
 
         // Generate token for set of claims
         Claims claims = builder.getResult();
-        String token;
-
+        String token = null;
         try {
-            token = service.getTokenSigner().sign(claims);
+            if (service instanceof StatefulService) {
+                token = ((StatefulService) service).getTokenSigner().sign(claims);
+            } else if (service instanceof StatelessService) {
+                token = ((StatelessService) service).getTokenSigner().sign(claims);
+            }
         } catch (Exception e) {
-            service.logSevere(e);
+            Utils.logWarning("Signing error: %s", e.toString());
             return false;
         }
 
