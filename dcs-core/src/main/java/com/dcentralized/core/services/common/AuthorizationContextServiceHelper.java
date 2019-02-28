@@ -717,6 +717,27 @@ public class AuthorizationContextServiceHelper {
 
                 builder.setResourceQueryMap(queryByAction);
                 builder.setResourceQueryFilterMap(queryFilterByAction);
+            } else {
+                Map<Action, QueryFilter> falseMap = new HashMap<>();
+                falseMap.put(Action.GET, QueryFilter.FALSE);
+                falseMap.put(Action.POST, QueryFilter.FALSE);
+                falseMap.put(Action.PUT, QueryFilter.FALSE);
+                falseMap.put(Action.PATCH, QueryFilter.FALSE);
+                builder.setResourceQueryFilterMap(falseMap);
+                Map<Action, Query> falseQueryMap = new HashMap<>();
+                Query q = new Query();
+                q.occurance = Occurance.MUST_OCCUR;
+                Query guestPrincipalClause = new Query();
+                guestPrincipalClause
+                        .setTermPropertyName(ServiceDocument.FIELD_NAME_AUTH_PRINCIPAL_LINK);
+                guestPrincipalClause.setTermMatchValue(GuestUserService.SELF_LINK);
+                q.addBooleanClause(guestPrincipalClause);
+
+                falseQueryMap.put(Action.GET, q);
+                falseQueryMap.put(Action.POST, q);
+                falseQueryMap.put(Action.PUT, q);
+                falseQueryMap.put(Action.PATCH, q);
+                builder.setResourceQueryMap(falseQueryMap);
             }
 
             AuthorizationContext newContext = builder.getResult();
