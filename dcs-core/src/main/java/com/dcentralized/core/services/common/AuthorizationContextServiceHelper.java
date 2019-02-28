@@ -361,6 +361,7 @@ public class AuthorizationContextServiceHelper {
                 .setResultLimit(resultLimit)
                 .build();
 
+        Utils.logWarning("loading user groups for %s", claims.getSubject());
         URI queryPostUri = AuthUtils.buildAuthProviderHostUri(context.authContextService.getHost(),
                 ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
         Operation postOp = Operation.createPost(queryPostUri)
