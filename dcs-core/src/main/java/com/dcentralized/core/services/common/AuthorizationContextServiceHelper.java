@@ -166,6 +166,8 @@ public class AuthorizationContextServiceHelper {
             return true;
         }
 
+        Utils.logWarning("%s %s", op.toLogString(), ctx.getToken());
+
         // Needs to be scheduled by the service host, as we'll have to retrieve the
         // user, find out which roles apply, and verify whether the authorization
         // context allows access to the service targeted by the operation.
@@ -361,7 +363,6 @@ public class AuthorizationContextServiceHelper {
                 .setResultLimit(resultLimit)
                 .build();
 
-        Utils.logWarning("loading user groups for %s", claims.getSubject());
         URI queryPostUri = AuthUtils.buildAuthProviderHostUri(context.authContextService.getHost(),
                 ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
         Operation postOp = Operation.createPost(queryPostUri)
@@ -722,6 +723,7 @@ public class AuthorizationContextServiceHelper {
 
             AuthorizationContext newContext = builder.getResult();
             // set the populated auth context on the operation
+            Utils.logWarning("%s %s", op.toLogString(), ctx.getToken());
             context.authContextService.setAuthorizationContext(op, newContext);
             op.complete();
         } catch (Exception e) {
