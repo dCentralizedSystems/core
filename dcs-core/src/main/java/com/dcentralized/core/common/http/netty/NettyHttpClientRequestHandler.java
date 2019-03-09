@@ -149,7 +149,13 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             long expMicros = Utils.fromNowMicrosUtc(this.host.getOperationTimeoutMicros());
 
             request = Operation.createGet(null);
-            request.setAction(Action.valueOf(nettyRequest.method().toString()))
+            String httpMethod = nettyRequest.method().toString();
+            if (httpMethod.startsWith("PROP")) {
+                failBadRequest(ctx, startTime, request, streamId);
+                return;
+            }
+
+            request.setAction(Action.valueOf(httpMethod))
                     .setExpiration(expMicros)
                     .forceRemote();
 
@@ -162,12 +168,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             }
 
             if (nettyRequest.decoderResult().isFailure()) {
-                request.setStatusCode(Operation.STATUS_CODE_BAD_REQUEST).setKeepAlive(false);
-                request.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
-                request.setBody(ServiceErrorResponse.create(
-                        new IllegalArgumentException(ERROR_MSG_DECODING_FAILURE),
-                        request.getStatusCode()));
-                sendResponse(ctx, request, streamId, null, startTime);
+                failBadRequest(ctx, startTime, request, streamId);
                 return;
             }
 
@@ -183,16 +184,22 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             if (request == null) {
                 request = Operation.createGet(this.host.getUri());
             }
-            int sc = Operation.STATUS_CODE_BAD_REQUEST;
             if (e instanceof URISyntaxException) {
                 request.setUri(this.host.getUri());
             }
-            request.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
-            request.setKeepAlive(false).setStatusCode(sc)
-                    .setBodyNoCloning(ServiceErrorResponse.create(e, sc));
-            sendResponse(ctx, request, streamId, requestedPath, startTime);
+            failBadRequest(ctx, startTime, request, streamId);
             OperationContext.reset();
         }
+    }
+
+    public void failBadRequest(ChannelHandlerContext ctx, double startTime, Operation request,
+            Integer streamId) {
+        request.setStatusCode(Operation.STATUS_CODE_BAD_REQUEST).setKeepAlive(false);
+        request.setContentType(Operation.MEDIA_TYPE_APPLICATION_JSON);
+        request.setBody(ServiceErrorResponse.create(
+                new IllegalArgumentException(ERROR_MSG_DECODING_FAILURE),
+                request.getStatusCode()));
+        sendResponse(ctx, request, streamId, null, startTime);
     }
 
     private void parseRequestUri(Operation request, FullHttpRequest nettyRequest)
