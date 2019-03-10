@@ -88,6 +88,7 @@ import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType
 import com.dcentralized.core.common.ServiceSubscriptionState.ServiceSubscriber;
 import com.dcentralized.core.common.config.Configuration;
 import com.dcentralized.core.common.http.netty.NettyHttpListener;
+import com.dcentralized.core.common.http.netty.NettyHttpServerResponseHandler;
 import com.dcentralized.core.common.http.netty.NettyHttpServiceClient;
 import com.dcentralized.core.common.jwt.JWTUtils;
 import com.dcentralized.core.common.jwt.Signer;
@@ -1112,6 +1113,7 @@ public class ServiceHost implements ServiceRequestSender {
             this.skipLoggingPragmaDirectives.remove(Operation.PRAGMA_DIRECTIVE_SYNCH_PEER);
         }
         NettyHttpServiceClient.LOGGER.setLevel(loggingInfo.serviceClientLogLevel);
+        NettyHttpServerResponseHandler.LOGGER.setLevel(loggingInfo.serviceClientLogLevel);
     }
 
     public int getPeerSynchronizationTimeLimitSeconds() {
@@ -1944,7 +1946,8 @@ public class ServiceHost implements ServiceRequestSender {
         // Currently, the default behavior is that all nodes in the node group are target
         // for replication; one should set the replicationFactor to enable sharding.
         Integer defaultNodeSelectorReplicationFactor = DEFAULT_NODEGROUP_REPLICATION_FACTOR == 0
-                ? null : Integer.valueOf(DEFAULT_NODEGROUP_REPLICATION_FACTOR);
+                ? null
+                : Integer.valueOf(DEFAULT_NODEGROUP_REPLICATION_FACTOR);
         // We set the replication quorum as follows:
         // (1) If sharding is not enabled, we set it to null, so that membershipQuorum is used
         // (2) If sharding is enabled and replication quorum is provided by the user, we use
@@ -2894,7 +2897,8 @@ public class ServiceHost implements ServiceRequestSender {
             switch (next) {
             case INITIALIZING:
                 final ProcessingStage nextStage = isServiceIndexed(s)
-                        ? ProcessingStage.LOADING_INITIAL_STATE : ProcessingStage.SYNCHRONIZING;
+                        ? ProcessingStage.LOADING_INITIAL_STATE
+                        : ProcessingStage.SYNCHRONIZING;
 
                 buildDocumentDescription(s);
                 if (post.hasBody()) {
@@ -3425,7 +3429,8 @@ public class ServiceHost implements ServiceRequestSender {
         }
 
         ServiceDocument stateFromStore = indexQueryOperation.hasBody()
-                ? indexQueryOperation.getBody(s.getStateType()) : null;
+                ? indexQueryOperation.getBody(s.getStateType())
+                : null;
         boolean isSynchronizePeer = serviceStartPost.isSynchronizePeer();
 
         ServiceDocument stateToLink = isSynchronizePeer ? serviceStartPost.getBody(s.getStateType())
@@ -4895,7 +4900,8 @@ public class ServiceHost implements ServiceRequestSender {
         // set from when it was first saved.
         if (!op.isFromReplication()) {
             state.documentAuthPrincipalLink = op.getAuthorizationContext() != null
-                    ? op.getAuthorizationContext().getClaims().getSubject() : null;
+                    ? op.getAuthorizationContext().getClaims().getSubject()
+                    : null;
         }
 
         if (!op.isSynchronizePeer()) {
