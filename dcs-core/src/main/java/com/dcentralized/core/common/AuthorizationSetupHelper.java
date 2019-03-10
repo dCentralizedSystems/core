@@ -112,8 +112,8 @@ public class AuthorizationSetupHelper {
     /**
      * The steps we follow in order to fully create a user. See {@link #setupUser} for details
      */
-    private enum UserCreationStep {
-        QUERY_USER, MAKE_USER, MAKE_CREDENTIALS, MAKE_USER_GROUP, UPDATE_USERGROUP_FOR_USER, MAKE_RESOURCE_GROUP, MAKE_ROLE, SUCCESS, FAILURE
+    public enum UserCreationStep {
+        QUERY_USER, MAKE_USER, MAKE_CREDENTIALS, MAKE_USER_GROUP, UPDATE_USERGROUP_FOR_USER, MAKE_RESOURCE_GROUP, MAKE_ROLE, SUCCESS_USER_EXISTS, SUCCESS, FAILURE
     }
 
     private String userEmail;
@@ -270,7 +270,8 @@ public class AuthorizationSetupHelper {
         if (this.host == null) {
             throw new IllegalStateException("Missing host");
         }
-        if (this.resourceQuery == null && (!this.isAdmin && (this.documentKind == null && this.documentLink == null))) {
+        if (this.resourceQuery == null
+                && (!this.isAdmin && (this.documentKind == null && this.documentLink == null))) {
             throw new IllegalStateException("User has access to nothing");
         }
     }
@@ -334,7 +335,14 @@ public class AuthorizationSetupHelper {
             makeRole();
             break;
         case SUCCESS:
-            printUserDetails();
+            finish();
+            break;
+        case SUCCESS_USER_EXISTS:
+            this.host.log(Level.INFO, "User %s already exists, skipping setup of user",
+                    this.userEmail);
+            if (this.completion != null) {
+                this.completion.handle(null);
+            }
             break;
         case FAILURE:
             handleFailure();
@@ -384,11 +392,8 @@ public class AuthorizationSetupHelper {
                         setupUser();
                         return;
                     }
-                    this.host.log(Level.INFO, "User %s already exists, skipping setup of user",
-                            this.userEmail);
-                    if (this.completion != null) {
-                        this.completion.handle(null);
-                    }
+                    this.currentStep = UserCreationStep.SUCCESS_USER_EXISTS;
+                    setupUser();
                 });
         this.host.sendRequest(postQuery);
     }
@@ -689,7 +694,7 @@ public class AuthorizationSetupHelper {
     /**
      * When we complete the process, log the full details of the user
      */
-    private void printUserDetails() {
+    private void finish() {
         if (this.userEmail != null) {
             this.host.log(Level.INFO,
                     "Created user %s (%s) with credentials, user group (%s) "
@@ -719,4 +724,7 @@ public class AuthorizationSetupHelper {
         return;
     }
 
+    public UserCreationStep getFinalStep() {
+        return this.currentStep;
+    }
 }
