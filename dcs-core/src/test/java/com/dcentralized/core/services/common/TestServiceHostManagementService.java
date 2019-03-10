@@ -13,7 +13,6 @@
 
 package com.dcentralized.core.services.common;
 
-
 import static java.util.stream.Collectors.toList;
 
 import static com.dcentralized.core.common.ServiceStats.STAT_NAME_SUFFIX_PER_DAY;
@@ -40,6 +39,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 
 import com.dcentralized.core.common.BasicTestCase;
 import com.dcentralized.core.common.FileUtils;
@@ -110,7 +110,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
         assertTrue(localRsp.systemInfo.freeDiskByteCount > 10000);
 
         assertTrue(rsp.httpPort == localRsp.httpPort);
-        assertTrue(rsp.systemInfo.availableProcessorCount == localRsp.systemInfo.availableProcessorCount);
+        assertTrue(
+                rsp.systemInfo.availableProcessorCount == localRsp.systemInfo.availableProcessorCount);
         // we have seen, once, the maxMemoryByteCount change, during test execution, so here simply
         // check the values are reasonable
         assertTrue(rsp.systemInfo.maxMemoryByteCount > localRsp.systemInfo.maxMemoryByteCount / 2);
@@ -305,11 +306,12 @@ public class TestServiceHostManagementService extends BasicTestCase {
             ExampleServiceState state = new ExampleServiceState();
             state.name = "foo-" + i;
             state.documentSelfLink = state.name;
-            Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK).setBody(state);
+            Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK)
+                    .setBody(state);
             ops.add(post);
         }
-        List<ExampleServiceState> initialStates = sender.sendAndWait(ops, ExampleServiceState.class);
-
+        List<ExampleServiceState> initialStates = sender.sendAndWait(ops,
+                ExampleServiceState.class);
 
         // specify local dir to the destination
         ServiceHostManagementService.BackupRequest backupRequest = new ServiceHostManagementService.BackupRequest();
@@ -318,7 +320,9 @@ public class TestServiceHostManagementService extends BasicTestCase {
         backupRequest.backupType = BackupType.DIRECTORY;
 
         // trigger backup
-        Operation backupOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(backupRequest);
+        Operation backupOp = Operation
+                .createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                .setBody(backupRequest);
         sender.sendAndWait(backupOp);
 
         // verify backup directory has populated
@@ -340,21 +344,25 @@ public class TestServiceHostManagementService extends BasicTestCase {
         restoreRequest.kind = ServiceHostManagementService.RestoreRequest.KIND;
 
         // perform restore
-        Operation restoreOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(restoreRequest);
+        Operation restoreOp = Operation
+                .createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                .setBody(restoreRequest);
         sender.sendAndWait(restoreOp);
 
         // restart
         restartHostAndWaitAvailable();
         sender = this.host.getTestRequestSender();
 
-
         // verify existence of initial data
-        ops = initialStates.stream().map(state -> Operation.createGet(this.host, state.documentSelfLink)).collect(toList());
+        ops = initialStates.stream()
+                .map(state -> Operation.createGet(this.host, state.documentSelfLink))
+                .collect(toList());
         sender.sendAndWait(ops);
 
-
         // delete first half of initial data
-        ops = initialStates.subList(0, 10).stream().map(state -> Operation.createDelete(this.host, state.documentSelfLink)).collect(toList());
+        ops = initialStates.subList(0, 10).stream()
+                .map(state -> Operation.createDelete(this.host, state.documentSelfLink))
+                .collect(toList());
         sender.sendAndWait(ops);
 
         // update doc 10-15
@@ -371,14 +379,15 @@ public class TestServiceHostManagementService extends BasicTestCase {
             ExampleServiceState state = new ExampleServiceState();
             state.name = "foo-new-" + i;
             state.documentSelfLink = state.name;
-            Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK).setBody(state);
+            Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK)
+                    .setBody(state);
             ops.add(post);
         }
         List<ExampleServiceState> newData = sender.sendAndWait(ops, ExampleServiceState.class);
 
-
         // trigger backup (incremental)
-        backupOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(backupRequest);
+        backupOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                .setBody(backupRequest);
         sender.sendAndWait(backupOp);
 
         // destroy current node and spin up new one
@@ -388,29 +397,35 @@ public class TestServiceHostManagementService extends BasicTestCase {
         this.host.start();
 
         // perform restore
-        restoreOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(restoreRequest);
+        restoreOp = Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                .setBody(restoreRequest);
         sender.sendAndWait(restoreOp);
 
         restartHostAndWaitAvailable();
         sender = this.host.getTestRequestSender();
 
         // verify initial data: doc 0-9 deleted, 10-14 updated, 15-20 exists
-        ops = initialStates.subList(0, 10).stream().map(state -> Operation.createGet(this.host, state.documentSelfLink)).collect(toList());
+        ops = initialStates.subList(0, 10).stream()
+                .map(state -> Operation.createGet(this.host, state.documentSelfLink))
+                .collect(toList());
         for (Operation op : ops) {
             FailureResponse failureResponse = sender.sendAndWaitFailure(op);
             assertEquals(Operation.STATUS_CODE_NOT_FOUND, failureResponse.op.getStatusCode());
         }
 
-        ops = initialStates.subList(10, 20).stream().map(state -> Operation.createGet(this.host, state.documentSelfLink)).collect(toList());
+        ops = initialStates.subList(10, 20).stream()
+                .map(state -> Operation.createGet(this.host, state.documentSelfLink))
+                .collect(toList());
         List<ExampleServiceState> states = sender.sendAndWait(ops, ExampleServiceState.class);
         for (int i = 0; i < 5; i++) {
             ExampleServiceState state = states.get(i);
-            assertTrue("doc should be updated: " + state.documentSelfLink, state.name.endsWith("-patched"));
+            assertTrue("doc should be updated: " + state.documentSelfLink,
+                    state.name.endsWith("-patched"));
         }
 
-
         // verify new data exists
-        ops = newData.stream().map(state -> Operation.createGet(this.host, state.documentSelfLink)).collect(toList());
+        ops = newData.stream().map(state -> Operation.createGet(this.host, state.documentSelfLink))
+                .collect(toList());
         sender.sendAndWait(ops);
 
     }
@@ -419,9 +434,9 @@ public class TestServiceHostManagementService extends BasicTestCase {
         this.host.stop();
         this.host.setPort(0);
         this.host.start();
-        this.host.waitForReplicatedFactoryServiceAvailable(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK));
+        this.host.waitForReplicatedFactoryServiceAvailable(
+                UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK));
     }
-
 
     private Map<URI, ExampleServiceState> populateExampleServices(int serviceCount) {
         // Post some documents to populate the index.
@@ -441,12 +456,15 @@ public class TestServiceHostManagementService extends BasicTestCase {
     @Test
     public void threadCountStats() {
         this.host.waitFor("Waiting thread count to be populated in stats", () -> {
-            Map<String, ServiceStat> stats = this.host.getServiceStats(this.host.getManagementServiceUri());
+            Map<String, ServiceStat> stats = this.host
+                    .getServiceStats(this.host.getManagementServiceUri());
             return stats.get(STAT_NAME_THREAD_COUNT) != null;
         });
-        Map<String, ServiceStat> stats = this.host.getServiceStats(this.host.getManagementServiceUri());
+        Map<String, ServiceStat> stats = this.host
+                .getServiceStats(this.host.getManagementServiceUri());
         double threadCountValue = stats.get(STAT_NAME_THREAD_COUNT).latestValue;
-        assertEquals("threadCount in management/stats", Utils.DEFAULT_THREAD_COUNT, threadCountValue, 0);
+        assertEquals("threadCount in management/stats", Utils.DEFAULT_THREAD_COUNT,
+                threadCountValue, 0);
     }
 
     @Test
@@ -472,7 +490,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
 
         // create indexed metadata factory
         Service factoryService = IndexedMetadataExampleService.createFactory();
-        this.host.startServiceAndWait(factoryService, IndexedMetadataExampleService.FACTORY_LINK, null);
+        this.host.startServiceAndWait(factoryService, IndexedMetadataExampleService.FACTORY_LINK,
+                null);
 
         List<String> selfLinks = Arrays.asList(
                 UriUtils.buildUriPath(ExampleService.FACTORY_LINK, "foo"),
@@ -484,7 +503,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
 
         for (String selfLink : selfLinks) {
             doc.documentSelfLink = selfLink;
-            sender.sendAndWait(Operation.createPost(this.host, UriUtils.getParentPath(selfLink)).setBody(doc));
+            sender.sendAndWait(
+                    Operation.createPost(this.host, UriUtils.getParentPath(selfLink)).setBody(doc));
         }
 
         doc.documentSelfLink = null;
@@ -529,7 +549,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
         backupRequest.kind = ServiceHostManagementService.BackupRequest.KIND;
 
         sender.sendAndWait(
-                Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(backupRequest));
+                Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                        .setBody(backupRequest));
 
         this.host.tearDown();
 
@@ -538,7 +559,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
         this.host.start();
 
         factoryService = IndexedMetadataExampleService.createFactory();
-        this.host.startServiceAndWait(factoryService, IndexedMetadataExampleService.FACTORY_LINK, null);
+        this.host.startServiceAndWait(factoryService, IndexedMetadataExampleService.FACTORY_LINK,
+                null);
 
         sender = this.host.getTestRequestSender();
 
@@ -551,16 +573,19 @@ public class TestServiceHostManagementService extends BasicTestCase {
         restoreRequest.destination = UriUtils.buildUri(this.host, restoreServiceLink);
         restoreRequest.kind = ServiceHostManagementService.RestoreRequest.KIND;
         restoreRequest.timeSnapshotBoundaryMicros = snapshotTime;
-        sender.sendAndWait(Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK).setBody(restoreRequest));
+        sender.sendAndWait(Operation.createPatch(this.host, ServiceHostManagementService.SELF_LINK)
+                .setBody(restoreRequest));
 
         // verify document version is the one specified as snapshotTime
-        this.host.waitForReplicatedFactoryServiceAvailable(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK));
+        this.host.waitForReplicatedFactoryServiceAvailable(
+                UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK));
         this.host.waitForReplicatedFactoryServiceAvailable(
                 UriUtils.buildUri(this.host, IndexedMetadataExampleService.FACTORY_LINK));
 
         for (String selfLink : selfLinks) {
             ExampleServiceState result = sender
-                    .sendAndWait(Operation.createGet(this.host, selfLink), ExampleServiceState.class);
+                    .sendAndWait(Operation.createGet(this.host, selfLink),
+                            ExampleServiceState.class);
             assertEquals("Point-in-time version", snapshotServiceVersion, result.documentVersion);
 
             QueryTask.Builder builder = QueryTask.Builder.createDirectTask()
@@ -578,7 +603,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
             assertEquals(1, queryTask.results.documents.size());
             result = Utils.fromJson(queryTask.results.documents.values().iterator().next(),
                     ExampleServiceState.class);
-            assertEquals("Point-in-time version from query", snapshotServiceVersion, result.documentVersion);
+            assertEquals("Point-in-time version from query", snapshotServiceVersion,
+                    result.documentVersion);
         }
     }
 
@@ -600,7 +626,6 @@ public class TestServiceHostManagementService extends BasicTestCase {
         this.host.startService(post, new LocalFileService());
         this.host.waitForServiceAvailable(serviceLink);
     }
-
 
     @Test
     public void autoBackup() throws Throwable {
@@ -633,17 +658,20 @@ public class TestServiceHostManagementService extends BasicTestCase {
         String autoBackupStatKey = STAT_NAME_AUTO_BACKUP_PERFORMED_COUNT + STAT_NAME_SUFFIX_PER_DAY;
 
         TestRequestSender sender = this.host.getTestRequestSender();
-        ServiceStat autoBackupStat = sender.sendStatsGetAndWait(host.getManagementServiceUri()).entries.get(autoBackupStatKey);
+        ServiceStat autoBackupStat = sender
+                .sendStatsGetAndWait(host.getManagementServiceUri()).entries.get(autoBackupStatKey);
 
         // populate data
         List<ExampleServiceState> states = sender.sendAndWait(ops, ExampleServiceState.class);
 
         // perform lucene commit and triggers auto backup (needs to be a local operation)
-        Operation post = Operation.createPost(host, ServiceUriPaths.CORE_DOCUMENT_INDEX).setBody(new MaintenanceRequest());
+        Operation post = Operation.createPost(host, ServiceUriPaths.CORE_DOCUMENT_INDEX)
+                .setBody(new MaintenanceRequest());
         host.getTestRequestSender().sendAndWait(post);
 
         host.waitFor("AutoBackup needs to be performed.", () -> {
-            ServiceStat stat = sender.sendStatsGetAndWait(host.getManagementServiceUri()).entries.get(autoBackupStatKey);
+            ServiceStat stat = sender.sendStatsGetAndWait(host.getManagementServiceUri()).entries
+                    .get(autoBackupStatKey);
             return autoBackupStat.latestValue < stat.latestValue;
         });
 
@@ -651,7 +679,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
         AutoBackupConfiguration autoBackupConfig = new AutoBackupConfiguration();
         autoBackupConfig.kind = AutoBackupConfiguration.KIND;
         autoBackupConfig.enable = false;
-        Operation disableAutoBackup = Operation.createPatch(host, ServiceUriPaths.CORE_MANAGEMENT).setBody(autoBackupConfig);
+        Operation disableAutoBackup = Operation.createPatch(host, ServiceUriPaths.CORE_MANAGEMENT)
+                .setBody(autoBackupConfig);
         sender.sendAndWait(disableAutoBackup);
 
         // populate more data which should not be part of backup because autobackup is disabled
@@ -662,8 +691,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
             state.documentSelfLink = state.name;
             ops.add(Operation.createPost(host, ExampleService.FACTORY_LINK).setBody(state));
         }
-        List<ExampleServiceState> statesAfterDisabled = sender.sendAndWait(ops, ExampleServiceState.class);
-
+        List<ExampleServiceState> statesAfterDisabled = sender.sendAndWait(ops,
+                ExampleServiceState.class);
 
         // start new host. assign new sandbox to make sure it doesn't reuse the old one
         Arguments restoreHostArgs = new Arguments();
@@ -686,22 +715,25 @@ public class TestServiceHostManagementService extends BasicTestCase {
         Operation restoreOp = Operation.createPatch(restoreOpUri).setBody(restoreRequest);
         sender.sendAndWait(restoreOp);
 
-
         // restart
         newHost.stop();
         newHost.setPort(0);
         newHost.start();
-        newHost.waitForReplicatedFactoryServiceAvailable(UriUtils.buildUri(newHost, ExampleService.FACTORY_LINK));
-
+        newHost.waitForReplicatedFactoryServiceAvailable(
+                UriUtils.buildUri(newHost, ExampleService.FACTORY_LINK));
 
         // verify data exists
-        List<Operation> gets = states.stream().map(state -> Operation.createGet(newHost, state.documentSelfLink)).collect(toList());
+        List<Operation> gets = states.stream()
+                .map(state -> Operation.createGet(newHost, state.documentSelfLink))
+                .collect(toList());
         sender.sendAndWait(gets);
 
         // verify data that have generated after auto-backup is disabled should not exist
         for (ExampleServiceState state : statesAfterDisabled) {
-            FailureResponse failure = sender.sendAndWaitFailure(Operation.createGet(newHost, state.documentSelfLink));
-            String message = String.format("%s should not find on restored host", state.documentSelfLink);
+            FailureResponse failure = sender
+                    .sendAndWaitFailure(Operation.createGet(newHost, state.documentSelfLink));
+            String message = String.format("%s should not find on restored host",
+                    state.documentSelfLink);
             assertEquals(message, Operation.STATUS_CODE_NOT_FOUND, failure.op.getStatusCode());
         }
     }
@@ -730,10 +762,10 @@ public class TestServiceHostManagementService extends BasicTestCase {
         assertEquals(0, findLogLine(newHost, "unknown-self-link"));
 
         // Enable request logging
-        setRequestLogging(newHost, true);
+        setRequestLogging(newHost, true, Level.FINEST);
 
         // Again make requests on the same service.
-        int requestCount = 100;
+        int requestCount = 10;
         for (int i = 0; i < requestCount; i++) {
             sender.sendAndWaitFailure(Operation.createGet(newHost, "/unknown-self-link"));
             assertEquals(Operation.STATUS_CODE_NOT_FOUND, response.op.getStatusCode());
@@ -741,24 +773,27 @@ public class TestServiceHostManagementService extends BasicTestCase {
 
         // Verify that the log service shows requests logged for the self-link
         this.host.waitFor("Log messages failed to be printed",
-                () -> requestCount == findLogLine(newHost, "unknown-self-link"));
+                () -> requestCount < findLogLine(newHost, "unknown-self-link"));
 
+        int currentCount = findLogLine(newHost, "unknown-self-link");
         // Disable request logging
-        setRequestLogging(newHost, false);
+        setRequestLogging(newHost, false, Level.OFF);
 
-        // make one more request
-        sender.sendAndWaitFailure(Operation.createGet(newHost, "/unknown-self-link"));
-        assertEquals(Operation.STATUS_CODE_NOT_FOUND, response.op.getStatusCode());
+        // make more requests
+        for (int i = 0; i < requestCount; i++) {
+            sender.sendAndWaitFailure(Operation.createGet(newHost, "/unknown-self-link"));
+            assertEquals(Operation.STATUS_CODE_NOT_FOUND, response.op.getStatusCode());
+        }
 
         // assert that the log-line count stays the same
-        assertEquals(requestCount, findLogLine(newHost, "unknown-self-link"));
+        assertEquals(currentCount, findLogLine(newHost, "unknown-self-link"));
     }
 
-    private void setRequestLogging(VerificationHost newHost, boolean enabled) {
+    private void setRequestLogging(VerificationHost newHost, boolean enabled, Level clientLevel) {
         ServiceHost.RequestLoggingInfo loggingInfo = new ServiceHost.RequestLoggingInfo();
         loggingInfo.enabled = enabled;
-        ServiceHostManagementService.ConfigureInboundRequestLogging request = new
-                ServiceHostManagementService.ConfigureInboundRequestLogging();
+        loggingInfo.serviceClientLogLevel = clientLevel;
+        ServiceHostManagementService.ConfigureInboundRequestLogging request = new ServiceHostManagementService.ConfigureInboundRequestLogging();
         request.kind = ServiceHostManagementService.ConfigureInboundRequestLogging.KIND;
         request.loggingInfo = loggingInfo;
         this.host.getTestRequestSender().sendAndWait(Operation.createPatch(
@@ -770,7 +805,8 @@ public class TestServiceHostManagementService extends BasicTestCase {
 
         Operation getOp = this.host.getTestRequestSender()
                 .sendAndWait(Operation.createGet(logServiceUri));
-        ServiceHostLogService.LogServiceState state = getOp.getBody(ServiceHostLogService.LogServiceState.class);
+        ServiceHostLogService.LogServiceState state = getOp
+                .getBody(ServiceHostLogService.LogServiceState.class);
 
         int foundCount = 0;
         for (String i : state.items) {

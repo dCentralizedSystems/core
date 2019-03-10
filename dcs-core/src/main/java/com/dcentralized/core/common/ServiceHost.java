@@ -445,10 +445,10 @@ public class ServiceHost implements ServiceRequestSender {
      */
     public static class RequestLoggingInfo {
         public Boolean enabled = false;
-
         public Boolean skipGossipRequests = true;
         public Boolean skipSynchronizationRequests = true;
         public Boolean skipForwardingRequests = true;
+        public Level serviceClientLogLevel = Level.OFF;
     }
 
     public static class AttachedServiceInfo {
@@ -860,7 +860,10 @@ public class ServiceHost implements ServiceRequestSender {
         this.state.isPeerSynchronizationEnabled = args.isPeerSynchronizationEnabled;
         this.state.isAuthorizationEnabled = args.isAuthorizationEnabled;
 
-        RequestLoggingInfo requestLoggingInfo = new RequestLoggingInfo();
+        RequestLoggingInfo requestLoggingInfo = this.state.requestLoggingInfo;
+        if (requestLoggingInfo == null) {
+            requestLoggingInfo = new RequestLoggingInfo();
+        }
         requestLoggingInfo.enabled = ENABLE_REQUEST_LOGGING;
         setRequestLoggingInfo(requestLoggingInfo);
 
@@ -1095,7 +1098,7 @@ public class ServiceHost implements ServiceRequestSender {
             this.skipLoggingPragmaDirectives.remove(Operation.PRAGMA_DIRECTIVE_FORWARDED);
         }
 
-        // Update pragma directives list for synchronization requests
+        // Update PRAGMA directives list for synchronization requests
         if (loggingInfo.skipSynchronizationRequests) {
             if (!this.skipLoggingPragmaDirectives
                     .contains(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)) {
@@ -1108,6 +1111,7 @@ public class ServiceHost implements ServiceRequestSender {
             this.skipLoggingPragmaDirectives.remove(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER);
             this.skipLoggingPragmaDirectives.remove(Operation.PRAGMA_DIRECTIVE_SYNCH_PEER);
         }
+        NettyHttpServiceClient.LOGGER.setLevel(loggingInfo.serviceClientLogLevel);
     }
 
     public int getPeerSynchronizationTimeLimitSeconds() {
