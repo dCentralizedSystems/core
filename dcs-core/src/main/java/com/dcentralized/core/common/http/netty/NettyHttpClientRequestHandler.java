@@ -180,7 +180,7 @@ public class NettyHttpClientRequestHandler extends SimpleChannelInboundHandler<O
             decodeRequestBody(ctx, request, nettyRequest.content(), streamId,
                     requestedPath, startTime);
         } catch (Exception e) {
-            this.host.log(Level.SEVERE, "Uncaught exception: %s", Utils.toString(e));
+            this.host.log(Level.SEVERE, "Uncaught exception: %s", e.toString());
             if (request == null) {
                 request = Operation.createGet(this.host.getUri());
             }
