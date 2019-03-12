@@ -853,7 +853,7 @@ public class ServiceHost implements ServiceRequestSender {
         }
 
         if (args.id != null) {
-            this.state.id = args.id;
+            setId(args.id);
         }
         this.hashedId = Utils.computeHash(this.state.id);
 
@@ -1206,6 +1206,17 @@ public class ServiceHost implements ServiceRequestSender {
     public ServiceHost setPublicUri(URI publicUri) {
         this.state.publicUri = publicUri;
         clearUriAndLogPrefix();
+        return this;
+    }
+
+    public ServiceHost setId(String id) {
+        if (isStarted()) {
+            throw new IllegalStateException("Already started");
+        }
+        if (id == null) {
+            throw new IllegalArgumentException("id is required");
+        }
+        this.state.id = id;
         return this;
     }
 
