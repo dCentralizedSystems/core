@@ -640,6 +640,8 @@ public class Operation implements Cloneable {
     public static final int STATUS_CODE_FAILURE_THRESHOLD = HttpURLConnection.HTTP_BAD_REQUEST;
     public static final int STATUS_CODE_UNAUTHORIZED = HttpURLConnection.HTTP_UNAUTHORIZED;
     public static final int STATUS_CODE_UNAVAILABLE = HttpURLConnection.HTTP_UNAVAILABLE;
+    public static final int STATUS_CODE_BAD_GATEWAY = HttpURLConnection.HTTP_BAD_GATEWAY;
+    public static final int STATUS_CODE_GATEWAY_TIMEOUT = HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
     public static final int STATUS_CODE_FORBIDDEN = HttpURLConnection.HTTP_FORBIDDEN;
     public static final int STATUS_CODE_TIMEOUT = HttpURLConnection.HTTP_CLIENT_TIMEOUT;
     public static final int STATUS_CODE_CONFLICT = HttpURLConnection.HTTP_CONFLICT;
