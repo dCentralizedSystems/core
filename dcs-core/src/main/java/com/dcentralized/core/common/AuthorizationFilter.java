@@ -229,7 +229,6 @@ public class AuthorizationFilter implements Filter {
         Long expirationTime = claims.getExpirationTime();
         if (expirationTime != null
                 && TimeUnit.SECONDS.toMicros(expirationTime) <= Utils.getSystemNowMicrosUtc()) {
-            host.log(Level.INFO, "Token expired for %s", claims.getSubject());
             host.clearAuthorizationContext(null, claims.getSubject());
             return null;
         }
