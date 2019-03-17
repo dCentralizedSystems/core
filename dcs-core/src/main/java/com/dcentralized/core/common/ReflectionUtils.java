@@ -58,7 +58,7 @@ public final class ReflectionUtils {
         try {
             return pd.accessor.get(instance);
         } catch (Exception e) {
-            Utils.logWarning("Reflection error: %s", Utils.toString(e));
+            Utils.logWarning("Reflection error: %s", e.toString());
         }
         return null;
     }
