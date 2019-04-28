@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -497,6 +498,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         int numBins = 4;
         long interval = 1000;
         double value = 100;
+
         // set data to fill up the specified number of bins
         TimeSeriesStats timeSeriesStats = new TimeSeriesStats(numBins, interval,
                 EnumSet.allOf(AggregationType.class));
@@ -540,6 +542,13 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         assertTrue(lastBin.min.equals(origValue));
         assertTrue(lastBin.latest.equals(newValue));
 
+        ServiceStats allStats = new ServiceStats();
+        ServiceStat tsst = new ServiceStat();
+        tsst.name = "timeSeriesStat";
+        tsst.timeSeriesStats = timeSeriesStats;
+        allStats.entries.put(tsst.name, tsst);
+        validateJsonStatSerialization(allStats);
+
         // test with a subset of the aggregation types specified
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.AVG));
         timeSeriesStats.add(startTime, value, value);
@@ -549,6 +558,13 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         assertTrue(lastBin.sum == null);
         assertTrue(lastBin.max == null);
         assertTrue(lastBin.min == null);
+
+        allStats = new ServiceStats();
+        tsst = new ServiceStat();
+        tsst.name = "timeSeriesStat";
+        tsst.timeSeriesStats = timeSeriesStats;
+        allStats.entries.put(tsst.name, tsst);
+        validateJsonStatSerialization(allStats);
 
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.MIN,
                 AggregationType.MAX));
@@ -593,9 +609,12 @@ public class TestUtilityService extends BasicReusableHostTestCase {
             this.host.sendAndWaitExpectSuccess(Operation.createPost(UriUtils.buildStatsUri(
                     this.host, exampleServiceState.documentSelfLink)).setBody(stat));
         }
-        ServiceStats allStats = this.host.getServiceState(null, ServiceStats.class,
+        allStats = this.host.getServiceState(null, ServiceStats.class,
                 UriUtils.buildStatsUri(
                         this.host, exampleServiceState.documentSelfLink));
+
+        validateJsonStatSerialization(allStats);
+
         ServiceStat retStatEntry = allStats.entries.get(stat.name);
         assertTrue(retStatEntry.accumulatedValue == 100 * (numBins + 1));
         assertTrue(retStatEntry.latestValue == 100);
@@ -648,6 +667,71 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         assertTrue(retStatEntry.timeSeriesStats.bins.size() == 1);
         assertTrue(retStatEntry.timeSeriesStats.bins.firstKey()
                 .equals(TimeUnit.MICROSECONDS.toMillis(sourceTimeMicrosUtc2)));
+
+    }
+
+    private void validateJsonStatSerialization(ServiceStats allStats) {
+        String json = Utils.toJsonHtml(allStats);
+        this.host.log("%s", json);
+
+        ServiceStats allStatsFromJson = Utils.fromJson(json, ServiceStats.class);
+        for (ServiceStat st : allStats.entries.values()) {
+            ServiceStat jsonStat = allStatsFromJson.entries.get(st.name);
+            assertTrue(st != null);
+            assertEquals(st.accumulatedValue, jsonStat.accumulatedValue, 0.000001);
+            assertEquals(st.latestValue, jsonStat.latestValue, 0.000001);
+            assertEquals(st.version, jsonStat.version);
+            assertEquals(st.lastUpdateMicrosUtc, jsonStat.lastUpdateMicrosUtc);
+            if (st.timeSeriesStats == null && jsonStat.timeSeriesStats != null) {
+                throw new IllegalStateException();
+            }
+            if (st.timeSeriesStats != null && jsonStat.timeSeriesStats == null) {
+                throw new IllegalStateException();
+            }
+            if (st.timeSeriesStats == null) {
+                continue;
+            }
+            TimeSeriesStats timeStats = st.timeSeriesStats;
+            TimeSeriesStats jsonTimeStats = jsonStat.timeSeriesStats;
+            assertEquals(timeStats.aggregationType.toString(),jsonTimeStats.aggregationType.toString());
+            assertEquals(timeStats.binDurationMillis, jsonTimeStats.binDurationMillis);
+            assertEquals(timeStats.numBins, jsonTimeStats.numBins);
+            assertEquals(timeStats.roundingFactor, jsonTimeStats.roundingFactor);
+            assertEquals(timeStats.bins.size(), jsonTimeStats.bins.size());
+            for (Entry<Long, TimeBin> tbe : timeStats.bins.entrySet()) {
+                TimeBin bin = tbe.getValue();
+                TimeBin jsonBin = jsonTimeStats.bins.get(tbe.getKey());
+                assertTrue(jsonBin != null);
+                assertEquals(bin.count, jsonBin.count, 0.0000001);
+                assertEquals(bin.avg, jsonBin.avg, 0.0000001);
+                if (bin.sum != null) {
+                    assertEquals(bin.sum, jsonBin.sum, 0.0000001);
+                } else {
+                    assertTrue(jsonBin.sum == null);
+                }
+                if (bin.max != null) {
+                    assertEquals(bin.max, jsonBin.max, 0.0000001);
+                } else {
+                    assertTrue(jsonBin.max == null);
+                }
+                if (bin.min != null) {
+                    assertEquals(bin.min, jsonBin.min, 0.0000001);
+                } else {
+                    assertTrue(jsonBin.min == null);
+                }
+                if (bin.latest != null) {
+                    assertEquals(bin.latest, jsonBin.latest, 0.0000001);
+                } else {
+                    assertTrue(jsonBin.latest == null);
+                }
+                if ((bin.var != null && bin.var == 0.0) || bin.var == null) {
+                    assertTrue(jsonBin.var == null);
+                }
+                if (bin.var != null && bin.var != 0.0) {
+                    assertEquals(bin.var, jsonBin.var, 0.0000001);
+                }
+            }
+        }
     }
 
     public static class SetAvailableValidationService extends StatefulService {

@@ -575,21 +575,16 @@ public class UtilityService implements Service {
     private void handleStatsRequest(Operation op) {
         switch (op.getAction()) {
         case PUT:
-            ServiceStats.ServiceStat stat = op
-                    .getBody(ServiceStats.ServiceStat.class);
-            if (stat.kind == null) {
-                op.fail(new IllegalArgumentException("kind is required"));
-                return;
-            }
-            if (stat.kind.equals(ServiceStats.ServiceStat.KIND)) {
+            ServiceStats stats = op.getBody(ServiceStats.class);
+            if (stats.entries == null || stats.entries.isEmpty()) {
+                ServiceStat stat = op.getBody(ServiceStat.class);
                 if (stat.name == null) {
                     op.fail(new IllegalArgumentException("stat name is required"));
                     return;
                 }
                 replaceSingleStat(stat);
-            } else if (stat.kind.equals(ServiceStats.KIND)) {
-                ServiceStats stats = op.getBody(ServiceStats.class);
-                if (stats.entries == null || stats.entries.isEmpty()) {
+            } else if (stats.kind.equals(ServiceStats.KIND)) {
+                if (stats.entries.isEmpty()) {
                     op.fail(new IllegalArgumentException("stats entries need to be defined"));
                     return;
                 }

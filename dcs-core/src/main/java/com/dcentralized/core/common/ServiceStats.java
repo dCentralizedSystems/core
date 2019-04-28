@@ -48,6 +48,8 @@ public class ServiceStats extends ServiceDocument {
      */
     public static class TimeSeriesStats {
 
+        public static final int DEFAULT_ROUNDING_FACTOR = 10000000;
+
         public static class TimeBin {
             public Double avg;
             public Double var;
@@ -62,10 +64,20 @@ public class ServiceStats extends ServiceDocument {
             AVG, MIN, MAX, SUM, LATEST
         }
 
+        public static final EnumSet<AggregationType> AGG_AVG_INSTANCE = EnumSet
+                .of(AggregationType.AVG);
+
+        public static final EnumSet<AggregationType> AGG_SUM_INSTANCE = EnumSet
+                .of(AggregationType.SUM);
+
+        public static final EnumSet<AggregationType> AGG_ALL_INSTANCE = EnumSet
+                .allOf(AggregationType.class);
+
         public SortedMap<Long, TimeBin> bins;
         public int numBins;
         public long binDurationMillis;
         public EnumSet<AggregationType> aggregationType;
+        public int roundingFactor = DEFAULT_ROUNDING_FACTOR;
 
         public TimeSeriesStats() {
             // no-op
@@ -152,8 +164,6 @@ public class ServiceStats extends ServiceDocument {
     }
 
     public static class ServiceStat {
-        public static final String KIND = Utils.buildKind(ServiceStat.class);
-
         public static final String FIELD_NAME_NAME = "name";
 
         public static final String FIELD_NAME_VERSION = "version";
@@ -188,11 +198,6 @@ public class ServiceStats extends ServiceDocument {
          * Time, in microseconds since UNIX epoch, the stat was received at the service.
          */
         public long lastUpdateMicrosUtc;
-
-        /**
-         * The kind of document, in this case the ServiceStat kind.
-         */
-        public String kind = KIND;
 
         /**
          * The unit of measurement associated with the stat.

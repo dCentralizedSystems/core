@@ -317,6 +317,7 @@ public class JsonMapper {
         bldr.registerTypeAdapter(ObjectMapTypeConverter.TYPE, ObjectMapTypeConverter.INSTANCE);
         bldr.registerTypeAdapter(InstantConverter.TYPE, InstantConverter.INSTANCE);
         bldr.registerTypeAdapter(ZonedDateTimeConverter.TYPE, ZonedDateTimeConverter.INSTANCE);
+        bldr.registerTypeAdapter(ServiceStatTypeConverter.TYPE, ServiceStatTypeConverter.INSTANCE);
         bldr.registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter());
         bldr.registerTypeHierarchyAdapter(Path.class, PathConverter.INSTANCE);
         bldr.registerTypeHierarchyAdapter(Date.class, UtcDateTypeAdapter.INSTANCE);
