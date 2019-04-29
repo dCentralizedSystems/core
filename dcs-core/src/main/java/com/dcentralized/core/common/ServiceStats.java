@@ -155,7 +155,7 @@ public class ServiceStats extends ServiceDocument {
          * This method normalizes the input timestamp at UTC time boundaries
          *  based on the bin size, effectively creating time series that are comparable to each other
          */
-        private long normalizeTimestamp(long timestampMicros, long binDurationMillis) {
+        public static long normalizeTimestamp(long timestampMicros, long binDurationMillis) {
             long timeMillis = TimeUnit.MICROSECONDS.toMillis(timestampMicros);
             timeMillis -= (timeMillis % binDurationMillis);
             return timeMillis;
