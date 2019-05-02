@@ -725,7 +725,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                     assertTrue(jsonBin.latest == null);
                 }
                 if ((bin.var != null && bin.var == 0.0) || bin.var == null) {
-                    assertTrue(jsonBin.var == null);
+                    assertTrue(jsonBin.var == null || jsonBin.var == 0.0);
                 }
                 if (bin.var != null && bin.var != 0.0) {
                     assertEquals(bin.var, jsonBin.var, 0.0000001);

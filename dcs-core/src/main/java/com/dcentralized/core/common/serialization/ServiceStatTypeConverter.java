@@ -213,6 +213,7 @@ public enum ServiceStatTypeConverter
             e = sBin.get("a");
             if (e != null) {
                 bin.avg = e.getAsDouble();
+                bin.var = 0.0;
             }
             e = sBin.get("s");
             if (e != null) {
