@@ -305,7 +305,7 @@ public class TestServiceHost {
         assertTrue(ri.options.contains(RequestRateInfo.Option.FAIL));
         assertTrue(ri.timeSeries != null);
         assertTrue(ri.timeSeries.numBins == 60);
-        assertTrue(ri.timeSeries.aggregationType.contains(AggregationType.SUM));
+        assertTrue(ri.timeSeries.aggregationType.contains(AggregationType.AVG));
 
         // set maintenance to default time to see how throttling behaves with default interval
         this.host.setMaintenanceIntervalMicros(

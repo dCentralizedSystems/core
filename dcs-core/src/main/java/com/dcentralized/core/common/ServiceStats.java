@@ -53,11 +53,14 @@ public class ServiceStats extends ServiceDocument {
         public static class TimeBin {
             public Double avg;
             public Double var;
+            public double count;
+        }
+
+        public static class ExtendedTimeBin extends TimeBin {
             public Double min;
             public Double max;
             public Double sum;
             public Double latest;
-            public double count;
         }
 
         public enum AggregationType {
@@ -106,7 +109,14 @@ public class ServiceStats extends ServiceDocument {
                         // remove the oldest entry
                         this.bins.remove(this.bins.firstKey());
                     }
-                    dataBin = new TimeBin();
+                    if (this.aggregationType.contains(AggregationType.SUM)
+                            || this.aggregationType.contains(AggregationType.MAX)
+                            || this.aggregationType.contains(AggregationType.MIN)
+                            || this.aggregationType.contains(AggregationType.LATEST)) {
+                        dataBin = new ExtendedTimeBin();
+                    } else {
+                        dataBin = new TimeBin();
+                    }
                     this.bins.put(binId, dataBin);
                 }
                 if (this.aggregationType.contains(AggregationType.AVG)) {
@@ -125,28 +135,32 @@ public class ServiceStats extends ServiceDocument {
                     }
                 }
                 if (this.aggregationType.contains(AggregationType.SUM)) {
-                    if (dataBin.sum == null) {
-                        dataBin.sum = delta;
+                    ExtendedTimeBin exBin = (ExtendedTimeBin) dataBin;
+                    if (exBin.sum == null) {
+                        exBin.sum = delta;
                     } else {
-                        dataBin.sum += delta;
+                        exBin.sum += delta;
                     }
                 }
                 if (this.aggregationType.contains(AggregationType.MAX)) {
-                    if (dataBin.max == null) {
-                        dataBin.max = value;
-                    } else if (dataBin.max < value) {
-                        dataBin.max = value;
+                    ExtendedTimeBin exBin = (ExtendedTimeBin) dataBin;
+                    if (exBin.max == null) {
+                        exBin.max = value;
+                    } else if (exBin.max < value) {
+                        exBin.max = value;
                     }
                 }
                 if (this.aggregationType.contains(AggregationType.MIN)) {
-                    if (dataBin.min == null) {
-                        dataBin.min = value;
-                    } else if (dataBin.min > value) {
-                        dataBin.min = value;
+                    ExtendedTimeBin exBin = (ExtendedTimeBin) dataBin;
+                    if (exBin.min == null) {
+                        exBin.min = value;
+                    } else if (exBin.min > value) {
+                        exBin.min = value;
                     }
                 }
                 if (this.aggregationType.contains(AggregationType.LATEST)) {
-                    dataBin.latest = value;
+                    ExtendedTimeBin exBin = (ExtendedTimeBin) dataBin;
+                    exBin.latest = value;
                 }
             }
         }

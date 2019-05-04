@@ -23,8 +23,10 @@ import com.dcentralized.core.common.ServiceStats;
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
+import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.ExtendedTimeBin;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.TimeBin;
 import com.dcentralized.core.common.Utils;
+
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -110,27 +112,30 @@ public enum ServiceStatTypeConverter
                     v = round(tb.avg, stat.timeSeriesStats.roundingFactor);
                     bin.addProperty("a", v);
                 }
-                if (tb.sum != null) {
-                    v = round(tb.sum, stat.timeSeriesStats.roundingFactor);
-                    bin.addProperty("s", v);
-                }
-                if (tb.max != null) {
-                    v = round(tb.max, stat.timeSeriesStats.roundingFactor);
-                    bin.addProperty("mx", v);
-                }
-                if (tb.min != null) {
-                    v = round(tb.min, stat.timeSeriesStats.roundingFactor);
-                    bin.addProperty("mn", v);
-                }
                 if (tb.var != null) {
                     v = round(tb.var, stat.timeSeriesStats.roundingFactor);
                     if (v > 0) {
                         bin.addProperty("v", v);
                     }
                 }
-                if (tb.latest != null) {
-                    v = round(tb.latest, stat.timeSeriesStats.roundingFactor);
-                    bin.addProperty("lt", v);
+                if (tb instanceof ExtendedTimeBin) {
+                    ExtendedTimeBin etb = (ExtendedTimeBin) tb;
+                    if (etb.sum != null) {
+                        v = round(etb.sum, stat.timeSeriesStats.roundingFactor);
+                        bin.addProperty("s", v);
+                    }
+                    if (etb.max != null) {
+                        v = round(etb.max, stat.timeSeriesStats.roundingFactor);
+                        bin.addProperty("mx", v);
+                    }
+                    if (etb.min != null) {
+                        v = round(etb.min, stat.timeSeriesStats.roundingFactor);
+                        bin.addProperty("mn", v);
+                    }
+                    if (etb.latest != null) {
+                        v = round(etb.latest, stat.timeSeriesStats.roundingFactor);
+                        bin.addProperty("lt", v);
+                    }
                 }
                 bin.addProperty("c", tb.count);
                 jsonBins.add("" + binId, bin);
@@ -208,7 +213,17 @@ public enum ServiceStatTypeConverter
             long binId = Long.parseLong(en.getKey());
 
             long binTimeMillis = binId * result.timeSeriesStats.binDurationMillis;
-            TimeBin bin = new TimeBin();
+            TimeBin bin = null;
+            ExtendedTimeBin ebin = null;
+            if (result.timeSeriesStats.aggregationType.contains(AggregationType.SUM)
+                    || result.timeSeriesStats.aggregationType.contains(AggregationType.LATEST)
+                    || result.timeSeriesStats.aggregationType.contains(AggregationType.MAX)
+                    || result.timeSeriesStats.aggregationType.contains(AggregationType.MIN)) {
+                ebin = new ExtendedTimeBin();
+                bin = ebin;
+            } else {
+                bin = new TimeBin();
+            }
             JsonObject sBin = en.getValue().getAsJsonObject();
             e = sBin.get("a");
             if (e != null) {
@@ -217,7 +232,7 @@ public enum ServiceStatTypeConverter
             }
             e = sBin.get("s");
             if (e != null) {
-                bin.sum = e.getAsDouble();
+                ebin.sum = e.getAsDouble();
             }
             e = sBin.get("v");
             if (e != null) {
@@ -225,15 +240,15 @@ public enum ServiceStatTypeConverter
             }
             e = sBin.get("lt");
             if (e != null) {
-                bin.latest = e.getAsDouble();
+                ebin.latest = e.getAsDouble();
             }
             e = sBin.get("mn");
             if (e != null) {
-                bin.min = e.getAsDouble();
+                ebin.min = e.getAsDouble();
             }
             e = sBin.get("mx");
             if (e != null) {
-                bin.max = e.getAsDouble();
+                ebin.max = e.getAsDouble();
             }
             e = sBin.get("c");
             if (e != null) {

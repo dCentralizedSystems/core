@@ -58,10 +58,10 @@ public class RequestRateLimitsFilter implements Filter {
 
 
         synchronized (rateInfo) {
-            rateInfo.timeSeries.add(Utils.getSystemNowMicrosUtc(), 0, 1);
+            rateInfo.timeSeries.add(Utils.getSystemNowMicrosUtc(), 1, 0);
             TimeBin mostRecentBin = rateInfo.timeSeries.bins
                     .get(rateInfo.timeSeries.bins.lastKey());
-            if (mostRecentBin.sum < rateInfo.limit) {
+            if (mostRecentBin.avg * mostRecentBin.count < rateInfo.limit) {
                 return FilterReturnCode.CONTINUE_PROCESSING;
             }
         }

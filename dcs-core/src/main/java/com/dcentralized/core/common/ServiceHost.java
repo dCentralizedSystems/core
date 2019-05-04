@@ -4415,10 +4415,10 @@ public class ServiceHost implements ServiceRequestSender {
             ri.timeSeries = new TimeSeriesStats(
                     60,
                     TimeUnit.SECONDS.toMillis(1),
-                    EnumSet.of(AggregationType.SUM));
-        } else if (!ri.timeSeries.aggregationType.contains(AggregationType.SUM)) {
+                    EnumSet.of(AggregationType.AVG));
+        } else if (!ri.timeSeries.aggregationType.contains(AggregationType.AVG)) {
             throw new IllegalArgumentException(
-                    "time series must be of type " + AggregationType.SUM);
+                    "time series must be of type " + AggregationType.AVG);
         }
 
         if (ri.options == null || ri.options.isEmpty()) {

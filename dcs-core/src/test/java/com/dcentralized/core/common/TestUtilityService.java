@@ -31,6 +31,7 @@ import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.ServiceStats.ServiceStatLogHistogram;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
+import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.ExtendedTimeBin;
 import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.TimeBin;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
@@ -161,7 +162,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                             this.host,
                             UriUtils.buildUriPath(ExampleService.FACTORY_LINK,
                                     ServiceHost.SERVICE_URI_SUFFIX_UI))
-                            .toString(), null, 1);
+                            .toString(),
+                    null, 1);
 
             validateServiceUiHtmlResponse(htmlResponse);
 
@@ -170,7 +172,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                             this.host,
                             UriUtils.buildUriPath(ExampleService.FACTORY_LINK, s.name,
                                     ServiceHost.SERVICE_URI_SUFFIX_UI))
-                            .toString(), null, 1);
+                            .toString(),
+                    null, 1);
 
             validateServiceUiHtmlResponse(htmlResponse);
         }
@@ -533,7 +536,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
             timeSeriesStats.add(startTime, newValue, 2);
             accumulatedValue += newValue;
         }
-        TimeBin lastBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
+        ExtendedTimeBin lastBin = (ExtendedTimeBin) timeSeriesStats.bins
+                .get(timeSeriesStats.bins.lastKey());
         assertTrue(lastBin.avg.equals(accumulatedValue / count));
         assertTrue(lastBin.var.equals((1.0 * numBins) / 2.0));
         assertTrue(lastBin.sum.equals((2 * count) - 1));
@@ -552,12 +556,9 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         // test with a subset of the aggregation types specified
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.AVG));
         timeSeriesStats.add(startTime, value, value);
-        lastBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
-        assertTrue(lastBin.avg != null);
-        assertTrue(lastBin.count != 0);
-        assertTrue(lastBin.sum == null);
-        assertTrue(lastBin.max == null);
-        assertTrue(lastBin.min == null);
+        TimeBin lBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
+        assertTrue(lBin.avg != null);
+        assertTrue(lBin.count != 0);
 
         allStats = new ServiceStats();
         tsst = new ServiceStat();
@@ -569,16 +570,17 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.MIN,
                 AggregationType.MAX));
         timeSeriesStats.add(startTime, value, value);
-        lastBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
+        lastBin = (ExtendedTimeBin) timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
         assertTrue(lastBin.avg == null);
         assertTrue(lastBin.count == 0);
         assertTrue(lastBin.sum == null);
         assertTrue(lastBin.max != null);
         assertTrue(lastBin.min != null);
 
-        timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.LATEST));
+        timeSeriesStats = new TimeSeriesStats(numBins, interval,
+                EnumSet.of(AggregationType.LATEST));
         timeSeriesStats.add(startTime, value, value);
-        lastBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
+        lastBin = (ExtendedTimeBin) timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
         assertTrue(lastBin.avg == null);
         assertTrue(lastBin.count == 0);
         assertTrue(lastBin.sum == null);
@@ -601,7 +603,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         stat.name = "key1";
         stat.latestValue = 100;
         // set bin size to 1ms
-        stat.timeSeriesStats = new TimeSeriesStats(numBins, 1, EnumSet.allOf(AggregationType.class));
+        stat.timeSeriesStats = new TimeSeriesStats(numBins, 1,
+                EnumSet.allOf(AggregationType.class));
         this.host.sendAndWaitExpectSuccess(Operation.createPost(UriUtils.buildStatsUri(
                 this.host, exampleServiceState.documentSelfLink)).setBody(stat));
         for (int i = 0; i < numBins; i++) {
@@ -645,8 +648,10 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         Long sourceTimeMicrosUtc2 = 946800000000000L;
         sourceStat2.sourceTimeMicrosUtc = sourceTimeMicrosUtc2;
         // set bucket size to 1ms
-        sourceStat1.timeSeriesStats = new TimeSeriesStats(numBins, 1, EnumSet.allOf(AggregationType.class));
-        sourceStat2.timeSeriesStats = new TimeSeriesStats(numBins, 1, EnumSet.allOf(AggregationType.class));
+        sourceStat1.timeSeriesStats = new TimeSeriesStats(numBins, 1,
+                EnumSet.allOf(AggregationType.class));
+        sourceStat2.timeSeriesStats = new TimeSeriesStats(numBins, 1,
+                EnumSet.allOf(AggregationType.class));
         this.host.sendAndWaitExpectSuccess(Operation.createPost(UriUtils.buildStatsUri(
                 this.host, returnExampleState.documentSelfLink)).setBody(sourceStat1));
         this.host.sendAndWaitExpectSuccess(Operation.createPost(UriUtils.buildStatsUri(
@@ -693,42 +698,55 @@ public class TestUtilityService extends BasicReusableHostTestCase {
             }
             TimeSeriesStats timeStats = st.timeSeriesStats;
             TimeSeriesStats jsonTimeStats = jsonStat.timeSeriesStats;
-            assertEquals(timeStats.aggregationType.toString(),jsonTimeStats.aggregationType.toString());
+            assertEquals(timeStats.aggregationType.toString(),
+                    jsonTimeStats.aggregationType.toString());
             assertEquals(timeStats.binDurationMillis, jsonTimeStats.binDurationMillis);
             assertEquals(timeStats.numBins, jsonTimeStats.numBins);
             assertEquals(timeStats.roundingFactor, jsonTimeStats.roundingFactor);
             assertEquals(timeStats.bins.size(), jsonTimeStats.bins.size());
             for (Entry<Long, TimeBin> tbe : timeStats.bins.entrySet()) {
                 TimeBin bin = tbe.getValue();
+                ExtendedTimeBin ebin = null;
+                if (bin instanceof ExtendedTimeBin) {
+                    ebin = (ExtendedTimeBin) bin;
+                }
+                ExtendedTimeBin eJsonBin = null;
                 TimeBin jsonBin = jsonTimeStats.bins.get(tbe.getKey());
+                if (jsonBin instanceof ExtendedTimeBin) {
+                    eJsonBin = (ExtendedTimeBin) jsonBin;
+                }
                 assertTrue(jsonBin != null);
                 assertEquals(bin.count, jsonBin.count, 0.0000001);
                 assertEquals(bin.avg, jsonBin.avg, 0.0000001);
-                if (bin.sum != null) {
-                    assertEquals(bin.sum, jsonBin.sum, 0.0000001);
-                } else {
-                    assertTrue(jsonBin.sum == null);
-                }
-                if (bin.max != null) {
-                    assertEquals(bin.max, jsonBin.max, 0.0000001);
-                } else {
-                    assertTrue(jsonBin.max == null);
-                }
-                if (bin.min != null) {
-                    assertEquals(bin.min, jsonBin.min, 0.0000001);
-                } else {
-                    assertTrue(jsonBin.min == null);
-                }
-                if (bin.latest != null) {
-                    assertEquals(bin.latest, jsonBin.latest, 0.0000001);
-                } else {
-                    assertTrue(jsonBin.latest == null);
-                }
                 if ((bin.var != null && bin.var == 0.0) || bin.var == null) {
                     assertTrue(jsonBin.var == null || jsonBin.var == 0.0);
                 }
                 if (bin.var != null && bin.var != 0.0) {
                     assertEquals(bin.var, jsonBin.var, 0.0000001);
+                }
+                if (eJsonBin == null) {
+                    assertTrue(ebin == null);
+                    continue;
+                }
+                if (ebin.sum != null) {
+                    assertEquals(ebin.sum, eJsonBin.sum, 0.0000001);
+                } else {
+                    assertTrue(eJsonBin == null);
+                }
+                if (ebin.max != null) {
+                    assertEquals(ebin.max, eJsonBin.max, 0.0000001);
+                } else {
+                    assertTrue(eJsonBin == null);
+                }
+                if (ebin.min != null) {
+                    assertEquals(ebin.min, eJsonBin.min, 0.0000001);
+                } else {
+                    assertTrue(eJsonBin == null);
+                }
+                if (ebin.latest != null) {
+                    assertEquals(ebin.latest, eJsonBin.latest, 0.0000001);
+                } else {
+                    assertTrue(eJsonBin == null);
                 }
             }
         }
@@ -875,7 +893,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
 
         ExampleServiceState state = new ExampleServiceState();
         state.name = "foo";
-        Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK).setBody(state);
+        Operation post = Operation.createPost(this.host, ExampleService.FACTORY_LINK)
+                .setBody(state);
         state = this.sender.sendAndWait(post, ExampleServiceState.class);
 
         ServiceStats stats = new ServiceStats();
