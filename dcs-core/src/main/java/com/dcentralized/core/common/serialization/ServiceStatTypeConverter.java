@@ -99,9 +99,15 @@ public enum ServiceStatTypeConverter
             }
             JsonObject jsonBins = new JsonObject();
 
+            long baseId = 0;
             for (Entry<Long, TimeBin> e : stat.timeSeriesStats.bins.entrySet()) {
                 long binId = e.getKey();
                 binId /= stat.timeSeriesStats.binDurationMillis;
+                if (baseId == 0) {
+                    baseId = binId;
+                } else {
+                    binId -= baseId;
+                }
                 JsonObject bin = new JsonObject();
                 TimeBin tb = e.getValue();
                 if (tb.count == 0) {
@@ -208,9 +214,15 @@ public enum ServiceStatTypeConverter
         }
 
         result.timeSeriesStats.bins = new ConcurrentSkipListMap<>();
+        long baseId = 0;
         for (Entry<String, JsonElement> en : timeSeriesStats.get("bins").getAsJsonObject()
                 .entrySet()) {
             long binId = Long.parseLong(en.getKey());
+            if (baseId == 0) {
+                baseId = binId;
+            } else {
+                binId += baseId;
+            }
 
             long binTimeMillis = binId * result.timeSeriesStats.binDurationMillis;
             TimeBin bin = null;
