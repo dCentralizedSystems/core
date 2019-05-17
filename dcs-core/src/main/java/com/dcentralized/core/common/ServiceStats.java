@@ -98,9 +98,8 @@ public class ServiceStats extends ServiceDocument {
             synchronized (this) {
                 long binId = normalizeTimestamp(timestampMicros, this.binDurationMillis);
                 TimeBin dataBin = null;
-                if (this.bins.containsKey(binId)) {
-                    dataBin = this.bins.get(binId);
-                } else {
+                dataBin = this.bins.get(binId);
+                if (dataBin == null) {
                     if (this.bins.size() == this.numBins) {
                         if (this.bins.firstKey() > timestampMicros) {
                             // incoming data is too old; ignore
