@@ -1297,6 +1297,7 @@ public final class Utils {
             previousTimeValue.compareAndSet(time + 1, now);
             return previousTimeValue.getAndIncrement();
         } else if (time - now > timeDriftThresholdMicros) {
+            previousTimeValue.set(now);
             throw new IllegalStateException("Time drift is " + (time - now));
         }
 
