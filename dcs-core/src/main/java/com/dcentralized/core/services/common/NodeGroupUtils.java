@@ -410,20 +410,22 @@ public final class NodeGroupUtils {
         Map<URI, String> hostIdByUrl = response.selectedNodes.entrySet().stream()
                 .collect(toMap(entry -> {
                     URI uri = entry.getValue();
-                    return URI.create(uri.toString().replace(uri.getPath(), ""));
+                    return UriUtils.buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), null,
+                            null);
                 }, Map.Entry::getKey));
 
         // for successful responses
         for (Entry<URI, String> entry : response.jsonResponses.entrySet()) {
             PeerNodeResult singleResult = new PeerNodeResult();
-            URI requestUri = entry.getKey();
+            URI uri = entry.getKey();
             String json = entry.getValue();
 
-            URI hostUri = URI.create(requestUri.toString().replace(requestUri.getPath(), ""));
+            URI hostUri = UriUtils.buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), null,
+                    null);
             String hostId = hostIdByUrl.get(hostUri);
             URI nodeGroupUri = response.selectedNodes.get(hostId);
 
-            singleResult.requestUri = requestUri;
+            singleResult.requestUri = uri;
             singleResult.hostId = hostId;
             singleResult.nodeGroupUri = nodeGroupUri;
             singleResult.json = json;
@@ -436,14 +438,15 @@ public final class NodeGroupUtils {
         // for failure responses
         for (Entry<URI, ServiceErrorResponse> entry : response.failures.entrySet()) {
             PeerNodeResult singleResult = new PeerNodeResult();
-            URI requestUri = entry.getKey();
+            URI uri = entry.getKey();
             ServiceErrorResponse errorResponse = entry.getValue();
 
-            URI hostUri = URI.create(requestUri.toString().replace(requestUri.getPath(), ""));
+            URI hostUri = UriUtils.buildUri(uri.getScheme(), uri.getHost(), uri.getPort(), null,
+                    null);
             String hostId = hostIdByUrl.get(hostUri);
             URI nodeGroupUri = response.selectedNodes.get(hostId);
 
-            singleResult.requestUri = requestUri;
+            singleResult.requestUri = uri;
             singleResult.hostId = hostId;
             singleResult.nodeGroupUri = nodeGroupUri;
             singleResult.json = null;
