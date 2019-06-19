@@ -111,7 +111,14 @@ public enum ServiceStatTypeConverter
                 JsonObject bin = new JsonObject();
                 TimeBin tb = e.getValue();
                 if (tb.count == 0) {
-                    continue;
+                    if (tb instanceof ExtendedTimeBin) {
+                        ExtendedTimeBin etb = (ExtendedTimeBin) tb;
+                        if (etb.sum == null) {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
                 }
                 double v = 0;
                 if (tb.avg != null) {
