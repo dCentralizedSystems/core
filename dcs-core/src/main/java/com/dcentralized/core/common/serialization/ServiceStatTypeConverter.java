@@ -37,7 +37,7 @@ import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 
 /**
- * GSON {@link JsonSerializer}/{@link JsonDeserializer} for representing {@link Map}s of objects
+ * GSON {@link JsonSerializer}/{@link JsonDeserializer} for representing {@link ServiceStat}s of objects
  * keyed by strings, whereby the objects are themselves serialized as JSON objects.
  */
 public enum ServiceStatTypeConverter
@@ -150,7 +150,9 @@ public enum ServiceStatTypeConverter
                         bin.addProperty("lt", v);
                     }
                 }
-                bin.addProperty("c", tb.count);
+                if (tb.count > 1) {
+                    bin.addProperty("c", tb.count);
+                }
                 jsonBins.add("" + binId, bin);
             }
             jsonTimeseries.add("bins", jsonBins);
@@ -272,6 +274,8 @@ public enum ServiceStatTypeConverter
             e = sBin.get("c");
             if (e != null) {
                 bin.count = e.getAsDouble();
+            } else {
+                bin.count = 1;
             }
 
             result.timeSeriesStats.bins.put(binTimeMillis, bin);
