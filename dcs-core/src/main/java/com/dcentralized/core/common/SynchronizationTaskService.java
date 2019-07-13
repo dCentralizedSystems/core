@@ -494,7 +494,6 @@ public class SynchronizationTaskService
         Operation queryPost = Operation
                 .createPost(this, ServiceUriPaths.CORE_LOCAL_QUERY_TASKS)
                 .setBody(queryTask)
-                .setConnectionSharing(true)
                 .setCompletion((o, e) -> {
                     if (getHost().isStopping()) {
                         sendSelfCancellationPatch(task, "host is stopping");
@@ -619,7 +618,6 @@ public class SynchronizationTaskService
         };
 
         sendRequest(Operation.createGet(task.queryPageReference)
-                .setConnectionSharing(true)
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .setRetryCount(3)
                 .setCompletion(c));
@@ -791,7 +789,6 @@ public class SynchronizationTaskService
                 .setBody(d)
                 .setCompletion(c)
                 .setReferer(getUri())
-                .setConnectionSharing(true)
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)
                 .setRetryCount(0);
@@ -837,7 +834,6 @@ public class SynchronizationTaskService
         Operation op = Operation.createPost(
                 UriUtils.buildAvailableUri(this.getHost(), task.factorySelfLink))
                 .setBody(body)
-                .setConnectionSharing(true)
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .setCompletion((o, e) -> {
                     if (parentOp != null) {

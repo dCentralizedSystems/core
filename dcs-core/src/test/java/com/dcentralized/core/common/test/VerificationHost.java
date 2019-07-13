@@ -71,6 +71,7 @@ import com.dcentralized.core.common.NodeSelectorState;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Operation.CompletionHandler;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.OperationContext;
 import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.Service.Action;
@@ -1006,7 +1007,7 @@ public class VerificationHost extends ExampleServiceHost {
                 get.forceRemote();
             }
             if (props != null && props.contains(TestProperty.HTTP2)) {
-                get.setConnectionSharing(true);
+                get.toggleOption(OperationOption.CONNECTION_SHARING, true);
             }
 
             if (props != null && props.contains(TestProperty.DISABLE_CONTEXT_ID_VALIDATION)) {
@@ -1277,7 +1278,7 @@ public class VerificationHost extends ExampleServiceHost {
         }
 
         if (properties.contains(TestProperty.HTTP2)) {
-            updateOp.setConnectionSharing(true);
+            updateOp.toggleOption(OperationOption.CONNECTION_SHARING, true);
         }
 
         if (properties.contains(TestProperty.BINARY_PAYLOAD)) {

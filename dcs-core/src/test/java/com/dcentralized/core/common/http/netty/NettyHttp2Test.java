@@ -33,6 +33,7 @@ import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.TestResults;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestProperty;
@@ -158,7 +159,7 @@ public class NettyHttp2Test {
         this.host.testStart(1);
         Operation put = Operation.createPut(u)
                 .forceRemote()
-                .setConnectionSharing(true)
+                .toggleOption(OperationOption.CONNECTION_SHARING, true)
                 .setBody(largeState)
                 .setCompletion((o, e) -> {
                     if (e != null) {
@@ -184,7 +185,7 @@ public class NettyHttp2Test {
         // Part 2: GET the large state and ensure it is correct.
         Operation get = Operation.createGet(u)
                 .forceRemote()
-                .setConnectionSharing(true)
+                .toggleOption(OperationOption.CONNECTION_SHARING, true)
                 .setCompletion((o, e) -> {
                     if (e != null) {
                         this.host.failIteration(e);
@@ -266,7 +267,7 @@ public class NettyHttp2Test {
             Operation getRequest = Operation
                     .createGet(u)
                     .forceRemote()
-                    .setConnectionSharing(true)
+                    .toggleOption(OperationOption.CONNECTION_SHARING, true)
                     .setCompletion((o, e) -> {
                         if (e != null) {
                             this.host.failIteration(e);
@@ -342,7 +343,7 @@ public class NettyHttp2Test {
             for (int j = 0; j < this.requestCount; j++) {
                 Operation request = Operation.createPatch(serviceUri)
                         .forceRemote()
-                        .setConnectionSharing(true)
+                        .toggleOption(OperationOption.CONNECTION_SHARING, true)
                         .setBody(body)
                         .setCompletion((o, e) -> {
                             if (e != null && e instanceof TimeoutException) {
@@ -611,7 +612,7 @@ public class NettyHttp2Test {
                     Operation put = Operation.createPut(s.getUri())
                             .forceRemote()
                             .setBodyNoCloning(host.buildMinimalTestState())
-                            .setConnectionSharing(connectionSharing)
+                            .toggleOption(OperationOption.CONNECTION_SHARING, connectionSharing)
                             .setCompletion((o, e) -> {
                                 if (e == null) {
                                     ctx.complete();

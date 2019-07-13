@@ -373,7 +373,7 @@ public class NettyHttpServiceClient implements ServiceClient {
         }
 
         if (op.isConnectionSharing() && isHttpsScheme && !NettyChannelContext.isALPNEnabled()) {
-            op.setConnectionSharing(false);
+            op.toggleOption(OperationOption.CONNECTION_SHARING, false);
             if (!this.warnHttp2DisablingConnectionSharing) {
                 this.warnHttp2DisablingConnectionSharing = true;
                 LOGGER.warning(

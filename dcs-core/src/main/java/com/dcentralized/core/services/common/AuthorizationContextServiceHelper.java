@@ -217,7 +217,6 @@ public class AuthorizationContextServiceHelper {
         }
         URI getSubjectUri = AuthUtils.buildUserUriFromClaims(context.authContextService.getHost(), claims);
         Operation get = Operation.createGet(getSubjectUri)
-                .setConnectionSharing(true)
                 .setCompletion((o, e) -> {
                     if (e != null) {
                         op.fail(e);
@@ -365,7 +364,6 @@ public class AuthorizationContextServiceHelper {
                 ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
         Operation postOp = Operation.createPost(queryPostUri)
                 .setBody(userGroupQueryTask)
-                .setConnectionSharing(true)
                 .setCompletion((o, e) -> {
                     if (e != null) {
                         op.fail(e);
@@ -394,7 +392,6 @@ public class AuthorizationContextServiceHelper {
 
         URI nextPageUri = AuthUtils.buildAuthProviderHostUri(context.authContextService.getHost(), nextPageLink);
         Operation get = Operation.createGet(nextPageUri)
-                .setConnectionSharing(true)
                 .setCompletion((queryOp, queryEx) -> {
                     if (queryEx != null) {
                         op.fail(queryEx);
@@ -522,7 +519,6 @@ public class AuthorizationContextServiceHelper {
                 ServiceUriPaths.CORE_LOCAL_QUERY_TASKS);
         Operation post = Operation.createPost(postQueryUri)
                 .setBody(queryTask)
-                .setConnectionSharing(true)
                 .setCompletion((o, e) -> {
                     if (e != null) {
                         op.fail(e);
@@ -552,7 +548,6 @@ public class AuthorizationContextServiceHelper {
 
         URI nextPageUri = AuthUtils.buildAuthProviderHostUri(context.authContextService.getHost(), nextPageLink);
         Operation get = Operation.createGet(nextPageUri)
-                .setConnectionSharing(true)
                 .setCompletion((queryOp, queryEx) -> {
                     if (queryEx != null) {
                         op.fail(queryEx);

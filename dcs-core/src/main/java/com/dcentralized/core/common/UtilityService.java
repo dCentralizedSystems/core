@@ -284,7 +284,6 @@ public class UtilityService implements Service {
                 .setBody(d)
                 .setCompletion(c)
                 .setReferer(getUri())
-                .setConnectionSharing(true)
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)
                 .sendWith(this.parent);

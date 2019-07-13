@@ -2004,7 +2004,7 @@ public class TestLuceneDocumentIndexService {
         TestContext ctx = this.host.testCreate(getCount + 1);
         for (int gi = 0; gi < getCount; gi++) {
             get = Operation.createGet(yetToBeCreatedChildUri)
-                    .setConnectionSharing(true)
+                    .toggleOption(OperationOption.CONNECTION_SHARING, true)
                     .setCompletion((o, e) -> {
                         if (e != null) {
                             ctx.fail(e);
@@ -2019,7 +2019,7 @@ public class TestLuceneDocumentIndexService {
             if (gi == getCount / 2) {
                 // now issue the POST to create the service, in parallel with most of the GETs
                 post = Operation.createPost(factoryUri)
-                        .setConnectionSharing(true)
+                        .toggleOption(OperationOption.CONNECTION_SHARING, true)
                         .setCompletion((o, e) -> {
                             if (e != null) {
                                 ctx.fail(e);

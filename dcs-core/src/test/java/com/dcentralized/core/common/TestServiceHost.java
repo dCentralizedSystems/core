@@ -1207,7 +1207,8 @@ public class TestServiceHost {
         this.host.waitFor("wait for http stat update.", () -> {
             Operation get = Operation.createGet(this.host, ServiceHostManagementService.SELF_LINK);
             this.host.send(get.forceRemote());
-            this.host.send(get.clone().forceRemote().setConnectionSharing(true));
+            this.host.send(get.clone().forceRemote()
+                    .toggleOption(OperationOption.CONNECTION_SHARING, true));
 
             Map<String, ServiceStat> hostMgmtStats = this.host
                     .getServiceStats(serviceHostMgmtURI);

@@ -613,7 +613,6 @@ public class StatefulService implements Service {
                 .setBody(d)
                 .linkState(op.getLinkedState())
                 .setReferer(getUri())
-                .setConnectionSharing(true)
                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION)
                 .addPragmaDirective(Operation.PRAGMA_DIRECTIVE_SYNCH_OWNER)
                 .setRetryCount(0)

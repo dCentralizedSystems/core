@@ -1919,14 +1919,6 @@ public class Operation implements Cloneable {
     }
 
     /**
-     * Infrastructure use only
-     */
-    public Operation setConnectionSharing(boolean enable) {
-        toggleOption(OperationOption.CONNECTION_SHARING, enable);
-        return this;
-    }
-
-    /**
      * Infrastructure use only.
      *
      * Value indicating whether this operation is sharing a connection

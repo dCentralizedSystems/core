@@ -31,6 +31,7 @@ import javax.net.ssl.TrustManagerFactory;
 
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.ServiceClient;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceHost;
@@ -327,7 +328,7 @@ public class Netty2WaySslAuthTest {
         AtomicReference<String> result = new AtomicReference<>();
         Operation get = Operation
                 .createGet(UriUtils.buildUri(this.host.getSecureUri(), TestService.SELF_LINK))
-                .setConnectionSharing(true)
+                .toggleOption(OperationOption.CONNECTION_SHARING, true)
                 .setReferer(this.host.getPublicUri())
                 .setCompletion((o, e) -> {
                     if (e == null) {

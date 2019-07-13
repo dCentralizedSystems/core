@@ -693,7 +693,6 @@ public final class Utils {
                                 UriUtils.buildAvailableUri(host, factoryLink))
                                 .setBody(body)
                                 .setReferer(host.getUri())
-                                .setConnectionSharing(true)
                                 .setConnectionTag(ServiceClient.CONNECTION_TAG_SYNCHRONIZATION);
                         host.sendRequest(op);
                     }
