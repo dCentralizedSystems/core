@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.Service;
 import com.dcentralized.core.common.ServiceClient;
 import com.dcentralized.core.common.ServiceClient.ConnectionPoolMetrics;
@@ -33,7 +34,6 @@ import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.TestResults;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.Utils;
-import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestProperty;

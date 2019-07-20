@@ -455,9 +455,9 @@ public final class FileUtils {
                                 String body = op.isRemote() ? null
                                         : Utils.decodeIfText(bb, contentType);
                                 if (body != null) {
-                                    op.setBody(body);
+                                    op.setBodyNoCloning(body);
                                 } else {
-                                    op.setBody(bb.array());
+                                    op.setBodyNoCloning(bb.array());
                                     op.setContentLength(bb.limit());
                                 }
                                 op.complete();
