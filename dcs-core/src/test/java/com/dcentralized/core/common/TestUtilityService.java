@@ -538,8 +538,8 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         }
         ExtendedTimeBin lastBin = (ExtendedTimeBin) timeSeriesStats.bins
                 .get(timeSeriesStats.bins.lastKey());
-        assertTrue(lastBin.avg.equals(accumulatedValue / count));
-        assertTrue(lastBin.var.equals((1.0 * numBins) / 2.0));
+        assertTrue(lastBin.avg == accumulatedValue / count);
+        assertTrue(lastBin.var == (1.0 * numBins) / 2.0);
         assertTrue(lastBin.sum.equals((2 * count) - 1));
         assertTrue(lastBin.count == count);
         assertTrue(lastBin.max.equals(newValue));
@@ -557,7 +557,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.AVG));
         timeSeriesStats.add(startTime, value, value);
         TimeBin lBin = timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
-        assertTrue(lBin.avg != null);
+        assertTrue(lBin.avg != 0.0);
         assertTrue(lBin.count != 0);
 
         allStats = new ServiceStats();
@@ -571,7 +571,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                 AggregationType.MAX));
         timeSeriesStats.add(startTime, value, value);
         lastBin = (ExtendedTimeBin) timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
-        assertTrue(lastBin.avg == null);
+        assertTrue(lastBin.avg == 0.0);
         assertTrue(lastBin.count == 0);
         assertTrue(lastBin.sum == null);
         assertTrue(lastBin.max != null);
@@ -581,7 +581,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                 EnumSet.of(AggregationType.LATEST));
         timeSeriesStats.add(startTime, value, value);
         lastBin = (ExtendedTimeBin) timeSeriesStats.bins.get(timeSeriesStats.bins.lastKey());
-        assertTrue(lastBin.avg == null);
+        assertTrue(lastBin.avg == 0.0);
         assertTrue(lastBin.count == 0);
         assertTrue(lastBin.sum == null);
         assertTrue(lastBin.max == null);
@@ -718,10 +718,10 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                 assertTrue(jsonBin != null);
                 assertEquals(bin.count, jsonBin.count, 0.0000001);
                 assertEquals(bin.avg, jsonBin.avg, 0.0000001);
-                if ((bin.var != null && bin.var == 0.0) || bin.var == null) {
-                    assertTrue(jsonBin.var == null || jsonBin.var == 0.0);
+                if (bin.var == 0.0) {
+                    assertTrue(jsonBin.var == 0.0);
                 }
-                if (bin.var != null && bin.var != 0.0) {
+                if (bin.var != 0.0) {
                     assertEquals(bin.var, jsonBin.var, 0.0000001);
                 }
                 if (eJsonBin == null) {

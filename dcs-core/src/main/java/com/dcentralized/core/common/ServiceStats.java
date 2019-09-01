@@ -51,8 +51,8 @@ public class ServiceStats extends ServiceDocument {
         public static final int DEFAULT_ROUNDING_FACTOR = 10000000;
 
         public static class TimeBin {
-            public Double avg;
-            public Double var;
+            public double avg;
+            public double var;
             public double count;
         }
 
@@ -119,19 +119,13 @@ public class ServiceStats extends ServiceDocument {
                     this.bins.put(binId, dataBin);
                 }
                 if (this.aggregationType.contains(AggregationType.AVG)) {
-                    if (dataBin.avg == null) {
-                        dataBin.avg = value;
-                        dataBin.var = 0.0;
-                        dataBin.count = 1;
-                    } else {
-                        // Use Welford's algorithm for online computation of average and variance
-                        // see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-                        dataBin.count++;
-                        double diff = value - dataBin.avg;
-                        dataBin.avg += diff / dataBin.count;
-                        double diffAfter = value - dataBin.avg;
-                        dataBin.var += diff * diffAfter;
-                    }
+                    // Use Welford's algorithm for online computation of average and variance
+                    // see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+                    dataBin.count++;
+                    double diff = value - dataBin.avg;
+                    dataBin.avg += diff / dataBin.count;
+                    double diffAfter = value - dataBin.avg;
+                    dataBin.var += diff * diffAfter;
                 }
                 if (this.aggregationType.contains(AggregationType.SUM)) {
                     ExtendedTimeBin exBin = (ExtendedTimeBin) dataBin;

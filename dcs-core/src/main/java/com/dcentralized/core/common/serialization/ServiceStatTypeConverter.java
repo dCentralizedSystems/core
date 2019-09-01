@@ -121,16 +121,15 @@ public enum ServiceStatTypeConverter
                     }
                 }
                 double v = 0;
-                if (tb.avg != null) {
+                if (tb.count > 0) {
                     v = round(tb.avg, stat.timeSeriesStats.roundingFactor);
                     bin.addProperty("a", v);
-                }
-                if (tb.var != null) {
                     v = round(tb.var, stat.timeSeriesStats.roundingFactor);
                     if (v > 0) {
                         bin.addProperty("v", v);
                     }
                 }
+
                 if (tb instanceof ExtendedTimeBin) {
                     ExtendedTimeBin etb = (ExtendedTimeBin) tb;
                     if (etb.sum != null) {
