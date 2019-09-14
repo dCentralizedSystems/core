@@ -418,14 +418,13 @@ public abstract class FactoryService extends StatelessService {
             o.setBody(initialState);
         }
 
-        if ((this.childOptions.contains(ServiceOption.REPLICATION)
-                || this.childOptions.contains(ServiceOption.OWNER_SELECTION))
-                && !o.isFromReplication()) {
+        if (this.childOptions.contains(ServiceOption.REPLICATION) && !o.isFromReplication()) {
+            o.setParentUri(getUri());
+        }
+
+        if (this.childOptions.contains(ServiceOption.OWNER_SELECTION) && !o.isFromReplication()) {
             o.setParentUri(getUri());
             if (!o.isForwardingDisabled()) {
-                // We forward requests even if OWNER_SELECTION is not set: It has a minor perf
-                // impact and lets use reuse the synchronization algorithm to replicate the POST
-                // across peers. It also helps with convergence and eventual consistency.
                 forwardRequest(o, childService);
                 return;
             }
