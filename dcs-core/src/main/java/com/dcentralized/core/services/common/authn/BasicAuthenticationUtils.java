@@ -27,6 +27,7 @@ import com.dcentralized.core.common.Claims;
 import com.dcentralized.core.common.Operation;
 import com.dcentralized.core.common.Operation.AuthorizationContext;
 import com.dcentralized.core.common.Service;
+import com.dcentralized.core.common.ServiceHost;
 import com.dcentralized.core.common.StatefulService;
 import com.dcentralized.core.common.StatelessService;
 import com.dcentralized.core.common.Utils;
@@ -50,6 +51,8 @@ public final class BasicAuthenticationUtils {
 
     public static final EnumSet<QueryTask.QuerySpecification.QueryOption> QUERY_OPTIONS_TOP_RESULTS =
             EnumSet.of(QueryTask.QuerySpecification.QueryOption.TOP_RESULTS);
+
+    public static final long FAILED_AUTHN_COMPLETION_DELAY_SECONDS = 1;
 
     private BasicAuthenticationUtils() {
 
@@ -178,7 +181,7 @@ public final class BasicAuthenticationUtils {
 
             QueryTask rsp = o.getBody(QueryTask.class);
             if (rsp.results.documentLinks.isEmpty()) {
-                parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+                failRequestWithDelay(service, parentOp);
                 return;
             }
 
@@ -194,6 +197,17 @@ public final class BasicAuthenticationUtils {
                 .setCompletion(userServiceCompletion);
         service.setAuthorizationContext(queryOp, service.getSystemAuthorizationContext());
         service.sendRequest(queryOp);
+    }
+
+    public static void failRequestWithDelay(Service service, Operation parentOp) {
+        ServiceHost h = service.getHost();
+        if (h == null) {
+            parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+            return;
+        }
+        h.schedule(() -> {
+            parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+        }, FAILED_AUTHN_COMPLETION_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -225,7 +239,7 @@ public final class BasicAuthenticationUtils {
 
             QueryTask authRsp = authOp.getBody(QueryTask.class);
             if (authRsp.results.documentLinks.isEmpty()) {
-                parentOp.fail(Operation.STATUS_CODE_FORBIDDEN);
+                failRequestWithDelay(service, parentOp);
                 return;
             }
 
