@@ -344,6 +344,9 @@ public class ServiceResourceTracker {
         }
 
         if (ServiceHost.isServiceIndexed(s)) {
+            if (!this.isServiceStateCaching) {
+                return null;
+            }
             synchronized (serviceInfo) {
                 serviceInfo.lastAccessTime = Utils.getNowMicrosUtc();
             }
