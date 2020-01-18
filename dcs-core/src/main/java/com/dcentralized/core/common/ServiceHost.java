@@ -3993,7 +3993,10 @@ public class ServiceHost implements ServiceRequestSender {
 
         final Operation.CompletionHandler removeServiceCompletion = (o, e) -> {
             try {
-                this.attachedServices.remove(o.getUri().getPath());
+                URI u = o.getUri();
+                if (u != null) {
+                    this.attachedServices.remove(u.getPath());
+                }
             } finally {
                 latch.countDown();
             }
