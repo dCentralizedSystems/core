@@ -105,9 +105,9 @@ public enum ServiceStatTypeConverter
                 binId /= stat.timeSeriesStats.binDurationMillis;
                 if (baseId == 0) {
                     baseId = binId;
-                } else {
-                    binId -= baseId;
                 }
+                binId -= baseId;
+
                 JsonObject bin = new JsonObject();
                 TimeBin tb = e.getValue();
                 if (tb.count == 0) {
@@ -155,6 +155,7 @@ public enum ServiceStatTypeConverter
                 jsonBins.add("" + binId, bin);
             }
             jsonTimeseries.add("bins", jsonBins);
+            jsonTimeseries.addProperty("baseBinTimeMillis", baseId);
             jo.add("timeSeriesStats", jsonTimeseries);
         }
         return jo;
@@ -207,6 +208,11 @@ public enum ServiceStatTypeConverter
         result.timeSeriesStats.binDurationMillis = timeSeriesStats.get("binDurationMillis")
                 .getAsInt();
 
+        JsonElement baseBinElem = timeSeriesStats.get("baseBinTimeMillis");
+        Long baseBinTimeMillis = null;
+        if (baseBinElem != null) {
+            baseBinTimeMillis = baseBinElem.getAsLong();
+        }
         e = timeSeriesStats.get("roundingFactor");
         if (e != null) {
             result.timeSeriesStats.roundingFactor = e.getAsInt();
@@ -222,14 +228,13 @@ public enum ServiceStatTypeConverter
         }
 
         result.timeSeriesStats.bins = new ConcurrentSkipListMap<>();
-        long baseId = 0;
         for (Entry<String, JsonElement> en : timeSeriesStats.get("bins").getAsJsonObject()
                 .entrySet()) {
             long binId = Long.parseLong(en.getKey());
-            if (baseId == 0) {
-                baseId = binId;
+            if (baseBinTimeMillis == null) {
+                baseBinTimeMillis = binId;
             } else {
-                binId += baseId;
+                binId += baseBinTimeMillis;
             }
 
             long binTimeMillis = binId * result.timeSeriesStats.binDurationMillis;
