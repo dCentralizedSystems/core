@@ -41,8 +41,10 @@ import io.netty.handler.codec.http.cors.CorsConfig;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 
 /**
@@ -228,11 +230,14 @@ public class NettyHttpListener implements ServiceRequestListener {
             throw new IllegalStateException("listener already started");
         }
 
+        SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
         SslContextBuilder builder = SslContextBuilder.forServer(new File(certFile),
                 new File(keyFile), keyPassphrase);
 
         if (NettyChannelContext.isALPNEnabled()) {
-            builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
+            builder
+                    .sslProvider(provider)
+                    .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                     .applicationProtocolConfig(new ApplicationProtocolConfig(
                             ApplicationProtocolConfig.Protocol.ALPN,
                             ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
