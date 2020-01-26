@@ -101,7 +101,11 @@ public final class ReflectionUtils {
                     pd.accessor.set(instance, existingCollection);
                 } else if (currentObj instanceof Map) {
                     Map<Object, Object> existingMap = (Map<Object, Object>) currentObj;
-                    hasValueChanged = mergeMapField(existingMap, (Map<Object, Object>) value);
+                    if (pd.usageOptions.contains(PropertyUsageOption.AUTO_REPLACE_IF_NOT_NULL)) {
+                        existingMap = (Map<Object, Object>) value;
+                    } else {
+                        hasValueChanged = mergeMapField(existingMap, (Map<Object, Object>) value);
+                    }
                     pd.accessor.set(instance, existingMap);
                 } else {
                     throw new RuntimeException("Merge not supported for specified data type");
