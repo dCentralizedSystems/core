@@ -100,6 +100,8 @@ public enum ServiceStatTypeConverter
             JsonObject jsonBins = new JsonObject();
 
             long baseId = 0;
+            Double maxValue = Double.NEGATIVE_INFINITY;
+            Double minValue = Double.POSITIVE_INFINITY;
             for (Entry<Long, TimeBin> e : stat.timeSeriesStats.bins.entrySet()) {
                 long binId = e.getKey();
                 binId /= stat.timeSeriesStats.binDurationMillis;
@@ -124,6 +126,12 @@ public enum ServiceStatTypeConverter
                 if (tb.count > 0) {
                     v = round(tb.avg, stat.timeSeriesStats.roundingFactor);
                     bin.addProperty("a", v);
+                    if (v < minValue) {
+                        minValue = v;
+                    }
+                    if (v > maxValue) {
+                        maxValue = v;
+                    }
                     v = round(tb.var, stat.timeSeriesStats.roundingFactor);
                     if (v > 0) {
                         bin.addProperty("v", v);
@@ -139,10 +147,22 @@ public enum ServiceStatTypeConverter
                     if (etb.max != null) {
                         v = round(etb.max, stat.timeSeriesStats.roundingFactor);
                         bin.addProperty("mx", v);
+                        if (v < minValue) {
+                            minValue = v;
+                        }
+                        if (v > maxValue) {
+                            maxValue = v;
+                        }
                     }
                     if (etb.min != null) {
                         v = round(etb.min, stat.timeSeriesStats.roundingFactor);
                         bin.addProperty("mn", v);
+                        if (v < minValue) {
+                            minValue = v;
+                        }
+                        if (v > maxValue) {
+                            maxValue = v;
+                        }
                     }
                     if (etb.latest != null) {
                         v = round(etb.latest, stat.timeSeriesStats.roundingFactor);
@@ -156,6 +176,8 @@ public enum ServiceStatTypeConverter
             }
             jsonTimeseries.add("bins", jsonBins);
             jsonTimeseries.addProperty("baseBinTimeMillis", baseId);
+            jsonTimeseries.addProperty("min", minValue);
+            jsonTimeseries.addProperty("max", maxValue);
             jo.add("timeSeriesStats", jsonTimeseries);
         }
         return jo;

@@ -551,7 +551,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         tsst.name = "timeSeriesStat";
         tsst.timeSeriesStats = timeSeriesStats;
         allStats.entries.put(tsst.name, tsst);
-        validateJsonStatSerialization(allStats);
+        validateJsonStatSerialization(allStats, "\"min\": 103.0", "\"max\": 108.0");
 
         // test with a subset of the aggregation types specified
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.AVG));
@@ -565,7 +565,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
         tsst.name = "timeSeriesStat";
         tsst.timeSeriesStats = timeSeriesStats;
         allStats.entries.put(tsst.name, tsst);
-        validateJsonStatSerialization(allStats);
+        validateJsonStatSerialization(allStats, "\"min\": 106.0", "\"max\": 106.0");
 
         timeSeriesStats = new TimeSeriesStats(numBins, interval, EnumSet.of(AggregationType.MIN,
                 AggregationType.MAX));
@@ -616,7 +616,7 @@ public class TestUtilityService extends BasicReusableHostTestCase {
                 UriUtils.buildStatsUri(
                         this.host, exampleServiceState.documentSelfLink));
 
-        validateJsonStatSerialization(allStats);
+        validateJsonStatSerialization(allStats, "\"min\": 100.0", "\"max\": 100.0");
 
         ServiceStat retStatEntry = allStats.entries.get(stat.name);
         assertTrue(retStatEntry.accumulatedValue == 100 * (numBins + 1));
@@ -675,9 +675,12 @@ public class TestUtilityService extends BasicReusableHostTestCase {
 
     }
 
-    private void validateJsonStatSerialization(ServiceStats allStats) {
+    private void validateJsonStatSerialization(ServiceStats allStats, String minS, String maxS) {
         String json = Utils.toJsonHtml(allStats);
         this.host.log("%s", json);
+
+        assertTrue(json.contains(minS));
+        assertTrue(json.contains(maxS));
 
         ServiceStats allStatsFromJson = Utils.fromJson(json, ServiceStats.class);
         for (ServiceStat st : allStats.entries.values()) {
