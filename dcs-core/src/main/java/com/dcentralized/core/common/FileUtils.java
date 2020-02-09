@@ -24,6 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -445,7 +446,7 @@ public final class FileUtils {
                         @Override
                         public void completed(Integer arg0, Void v) {
                             try {
-                                bb.flip();
+                                ((Buffer) bb).flip();
                                 closeFileChannelSafe(ch);
                                 String contentType = FileUtils.getContentType(f.toURI());
                                 if (contentType != null) {
