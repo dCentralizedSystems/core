@@ -1513,9 +1513,17 @@ public final class Utils {
      * well.
      */
     public static String buildUUID(String id) {
+        long timeMicros = 0;
+        try {
+            // first choice is guaranteed unique, for this runtime instance, microsecond time
+            timeMicros = Utils.getNowMicrosUtc();
+        } catch (Throwable e) {
+            // second best choice, use system time at 1 millisecond resolution
+            timeMicros = Utils.getSystemNowMicrosUtc();
+        }
         return Utils.getBuilder()
                 .append(id)
-                .append(Long.toHexString(Utils.getNowMicrosUtc()))
+                .append(Long.toHexString(timeMicros))
                 .toString();
     }
 
