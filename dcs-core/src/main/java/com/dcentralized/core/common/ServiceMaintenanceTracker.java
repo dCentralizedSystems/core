@@ -172,17 +172,22 @@ class ServiceMaintenanceTracker {
                 .setBodyNoCloning(ServiceMaintenanceRequest.PERIODIC_INSTANCE)
                 .setCompletion(
                         (o, ex) -> {
-                            long now = Utils.getSystemNowMicrosUtc();
-                            long actual = now - (o.getExpirationMicrosUtc() - limit);
-
-                            if (s.hasOption(ServiceOption.INSTRUMENTATION)) {
-                                updateStats(s, actual, limit, servicePath);
-                            }
-                            // schedule again, for next maintenance interval
-                            schedule(s, now);
-                            if (ex != null) {
+                            long now = 0;
+                            try {
+                                now = Utils.getSystemNowMicrosUtc();
+                                long actual = now - (o.getExpirationMicrosUtc() - limit);
+                                if (s.hasOption(ServiceOption.INSTRUMENTATION)) {
+                                    updateStats(s, actual, limit, servicePath);
+                                }
+                                if (ex != null) {
+                                    throw ex;
+                                }
+                            } catch (Throwable exx) {
                                 this.host.log(Level.WARNING, "Service %s failed maintenance: %s",
-                                        servicePath, Utils.toString(ex));
+                                        servicePath, Utils.toString(exx));
+                            } finally {
+                                // schedule again, for next maintenance interval
+                                schedule(s, now);
                             }
                         });
 
