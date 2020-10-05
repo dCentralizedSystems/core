@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,13 +40,17 @@ import java.util.logging.Logger;
 import com.dcentralized.core.common.CommandLineArgumentParser;
 import com.dcentralized.core.common.ServiceDocument;
 import com.dcentralized.core.common.ServiceDocumentDescription;
+import com.dcentralized.core.common.ServiceStats;
+import com.dcentralized.core.common.ServiceStats.ServiceStat;
+import com.dcentralized.core.common.ServiceStats.TimeSeriesStats;
+import com.dcentralized.core.common.ServiceStats.TimeSeriesStats.AggregationType;
 import com.dcentralized.core.common.TestUtils;
 import com.dcentralized.core.common.Utils;
 import com.dcentralized.core.common.serialization.KryoSerializers.KryoForObjectThreadLocal;
 import com.dcentralized.core.common.test.ExampleService;
 import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
-
 import com.esotericsoftware.kryo.io.Output;
+
 import org.junit.Test;
 
 public class TestKryoSerializers {
@@ -197,6 +202,30 @@ public class TestKryoSerializers {
             ExampleServiceState deserializedSt = (ExampleServiceState) KryoSerializers
                     .deserializeDocument(o.getBuffer(), 0, o.position());
             assertTrue(ServiceDocument.equals(sdd, st, deserializedSt));
+        }
+        long e = System.nanoTime();
+        double thpt = this.iterationCount / ((e - s) / 1000000000.0);
+        Logger.getAnonymousLogger().info("Throughput: " + thpt);
+    }
+
+    @Test
+    public void serializeDeserializeStats() throws Throwable {
+        CommandLineArgumentParser.parseFromProperties(this);
+        ServiceStats stats = new ServiceStats();
+        stats.documentSelfLink = "some/link";
+        stats.entries = new HashMap<>();
+        ServiceStat st = new ServiceStat();
+        st.timeSeriesStats = new TimeSeriesStats(100, 1, EnumSet.of(AggregationType.AVG));
+        for (int i = 0; i < 100; i++) {
+            st.timeSeriesStats.add(Utils.getSystemNowMicrosUtc() + i * 500, 1, 0);
+        }
+        stats.entries.put("one", st);
+        long s = System.nanoTime();
+        for (int i = 0; i < this.iterationCount; i++) {
+            Output o = KryoSerializers.serializeDocument(stats, 1024);
+            ServiceStats deserializedStats = (ServiceStats) KryoSerializers
+                    .deserializeDocument(o.getBuffer(), 0, o.position());
+            assertTrue(!deserializedStats.entries.isEmpty());
         }
         long e = System.nanoTime();
         double thpt = this.iterationCount / ((e - s) / 1000000000.0);

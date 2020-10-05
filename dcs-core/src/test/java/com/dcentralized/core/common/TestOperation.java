@@ -14,7 +14,6 @@
 package com.dcentralized.core.common;
 
 import static com.dcentralized.core.common.Operation.STATUS_CODE_NOT_MODIFIED;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -26,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +36,7 @@ import com.dcentralized.core.common.Operation.OperationOption;
 import com.dcentralized.core.common.Operation.SerializedOperation;
 import com.dcentralized.core.common.Service.Action;
 import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.services.common.MinimalTestService;
@@ -645,6 +646,28 @@ public class TestOperation extends BasicReusableHostTestCase {
                     this.host.completeIteration();
                 }));
         this.host.testWait();
+    }
+
+    @Test
+    public void testKryoEncodedGetBody() throws Throwable {
+        ExampleServiceState st = new ExampleServiceState();
+        st.id = UUID.randomUUID().toString();
+        st.counter = Utils.getNowMicrosUtc();
+        st.documentSelfLink = st.id;
+        st.keyValues = new HashMap<>();
+        st.keyValues.put(st.id, st.id);
+        st.documentKind = Utils.buildKind(ExampleServiceState.class);
+        for (int i = 0; i < this.iterationCount; i++) {
+            Operation op = Operation.createPatch(this.host.getUri())
+                    .setContentType(Operation.MEDIA_TYPE_APPLICATION_KRYO_OCTET_STREAM);
+
+            op.setBodyNoCloning(Utils.encodeBody(op, st,
+                    Operation.MEDIA_TYPE_APPLICATION_KRYO_OCTET_STREAM, true));
+            ExampleServiceState resBody = op.getBody(ExampleServiceState.class);
+            assertTrue(!resBody.keyValues.isEmpty());
+            ServiceDocument genBody = op.getBody(ServiceDocument.class);
+            assertTrue(!genBody.documentSelfLink.isEmpty());
+        }
     }
 
     @Test

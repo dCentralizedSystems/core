@@ -983,13 +983,7 @@ public class Operation implements Cloneable {
                     && this.body instanceof byte[]) {
                 byte[] bytes = (byte[]) this.body;
                 this.body = KryoSerializers.deserializeDocument(bytes, 0, bytes.length);
-                this.serializedBody = Utils.toJson(this.body);
                 return (T) this.body;
-            }
-
-            if (this.contentType == null
-                    || !this.contentType.contains(MEDIA_TYPE_APPLICATION_JSON)) {
-                throw new IllegalStateException("content type is not JSON: " + this.contentType);
             }
 
             if (this.serializedBody != null) {
