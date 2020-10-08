@@ -452,7 +452,7 @@ public class TestSynchronizationTaskService extends BasicTestCase {
 
     private void validateInvalidStartState(URI taskFactoryUri,
             boolean expectFailure, Consumer<SynchronizationTaskService.State> stateSetter)
-    throws Throwable {
+            throws Throwable {
         String factorySelfLink = UUID.randomUUID().toString();
         URI taskUri = UriUtils.extendUri(
                 taskFactoryUri, UriUtils.convertPathCharsFromLink(factorySelfLink));

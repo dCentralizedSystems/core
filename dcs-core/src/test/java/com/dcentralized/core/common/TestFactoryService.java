@@ -1219,16 +1219,16 @@ public class TestFactoryService extends BasicReusableHostTestCase {
 
         this.host.testStart(1);
         Operation.createGet(UriUtils.buildUri(this.host, ExampleService.FACTORY_LINK, queryString))
-            .setCompletion((o, e) -> {
-                if (e != null) {
-                    this.host.failIteration(e);
-                    return;
-                }
-                result.set(o.getBody(ODataFactoryQueryResult.class));
-                this.host.completeIteration();
-            })
-            .setReferer(this.host.getUri())
-            .sendWith(this.host);
+                .setCompletion((o, e) -> {
+                    if (e != null) {
+                        this.host.failIteration(e);
+                        return;
+                    }
+                    result.set(o.getBody(ODataFactoryQueryResult.class));
+                    this.host.completeIteration();
+                })
+                .setReferer(this.host.getUri())
+                .sendWith(this.host);
         this.host.testWait();
 
         assertNotNull(result.get());
@@ -1240,17 +1240,17 @@ public class TestFactoryService extends BasicReusableHostTestCase {
 
         this.host.testStart(1);
         Operation.createGet(UriUtils.buildUri(this.host, nextPageLink))
-            .setCompletion((o, e) -> {
-                if (e != null) {
-                    this.host.failIteration(e);
-                    return;
-                }
+                .setCompletion((o, e) -> {
+                    if (e != null) {
+                        this.host.failIteration(e);
+                        return;
+                    }
 
-                result.set(o.getBody(ServiceDocumentQueryResult.class));
-                this.host.completeIteration();
-            })
-            .setReferer(this.host.getUri())
-            .sendWith(this.host);
+                    result.set(o.getBody(ServiceDocumentQueryResult.class));
+                    this.host.completeIteration();
+                })
+                .setReferer(this.host.getUri())
+                .sendWith(this.host);
         this.host.testWait();
 
         return result.get();
@@ -1528,7 +1528,7 @@ public class TestFactoryService extends BasicReusableHostTestCase {
             super(ExampleBarServiceContext.class);
         }
 
-        public static class ExampleBarServiceContext extends ServiceDocument{
+        public static class ExampleBarServiceContext extends ServiceDocument {
             public String message;
         }
 

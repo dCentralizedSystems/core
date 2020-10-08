@@ -134,12 +134,12 @@ public class TestDeferredResult {
     public void testThenComposeNestedStageException() throws Throwable {
         TestContext ctx = new TestContext(1, TestContext.DEFAULT_WAIT_DURATION);
         DeferredResult.completed(12345)
-            .thenCompose(ignore -> {
-                DeferredResult<String> nested = new DeferredResult<>();
-                runAfter(10, () -> nested.fail(new TestException()));
-                return nested;
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .thenCompose(ignore -> {
+                    DeferredResult<String> nested = new DeferredResult<>();
+                    runAfter(10, () -> nested.fail(new TestException()));
+                    return nested;
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         ctx.await();
     }
 
@@ -149,11 +149,11 @@ public class TestDeferredResult {
         AtomicInteger invocations = new AtomicInteger();
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .thenAccept(i -> {
-                invocations.incrementAndGet();
-                Assert.assertEquals(1, i.intValue());
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .thenAccept(i -> {
+                    invocations.incrementAndGet();
+                    Assert.assertEquals(1, i.intValue());
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         runAfter(10, () -> original.complete(1));
         ctx.await();
         Assert.assertEquals(1, invocations.get());
@@ -164,10 +164,10 @@ public class TestDeferredResult {
         TestContext ctx = new TestContext(1, TestContext.DEFAULT_WAIT_DURATION);
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .thenAccept(i -> {
-                throw new TestException();
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .thenAccept(i -> {
+                    throw new TestException();
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         runAfter(10, () -> original.complete(1));
         ctx.await();
     }
@@ -178,10 +178,10 @@ public class TestDeferredResult {
         AtomicInteger invocations = new AtomicInteger();
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .thenRun(() -> {
-                invocations.incrementAndGet();
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .thenRun(() -> {
+                    invocations.incrementAndGet();
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         runAfter(10, () -> original.complete(1));
         ctx.await();
         Assert.assertEquals(1, invocations.get());
@@ -207,12 +207,12 @@ public class TestDeferredResult {
         DeferredResult<Integer> other = new DeferredResult<>();
         AtomicInteger invocations = new AtomicInteger();
         original
-            .thenAcceptBoth(other, (x, y) -> {
-                Assert.assertEquals(1, x.intValue());
-                Assert.assertEquals(2, y.intValue());
-                invocations.incrementAndGet();
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .thenAcceptBoth(other, (x, y) -> {
+                    Assert.assertEquals(1, x.intValue());
+                    Assert.assertEquals(2, y.intValue());
+                    invocations.incrementAndGet();
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         runAfter(waitOriginal, () -> original.complete(1));
         runAfter(waitOther, () -> other.complete(2));
         ctx.await();
@@ -231,12 +231,12 @@ public class TestDeferredResult {
         DeferredResult<Integer> other = new DeferredResult<>();
         AtomicInteger invocations = new AtomicInteger();
         original
-            .runAfterBoth(other, () -> {
-                Assert.assertEquals(1, original.getNow(0).intValue());
-                Assert.assertEquals(2, other.getNow(0).intValue());
-                invocations.incrementAndGet();
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .runAfterBoth(other, () -> {
+                    Assert.assertEquals(1, original.getNow(0).intValue());
+                    Assert.assertEquals(2, other.getNow(0).intValue());
+                    invocations.incrementAndGet();
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         runAfter(waitOriginal, () -> original.complete(1));
         runAfter(waitOther, () -> other.complete(2));
         ctx.await();
@@ -291,14 +291,14 @@ public class TestDeferredResult {
         int otherValue = 20;
         int expected = (originalFirst ? originalValue : otherValue);
         original
-            .acceptEither(other, (x) -> {
-                Assert.assertEquals(expected, x.intValue());
-                invocations.incrementAndGet();
-            })
-            .thenRun(() -> {
-                Assert.assertFalse(originalFirst ? other.isDone() : original.isDone());
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .acceptEither(other, (x) -> {
+                    Assert.assertEquals(expected, x.intValue());
+                    invocations.incrementAndGet();
+                })
+                .thenRun(() -> {
+                    Assert.assertFalse(originalFirst ? other.isDone() : original.isDone());
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         TestContext synchCtx = new TestContext(1, TestContext.DEFAULT_WAIT_DURATION);
         if (originalFirst) {
             runAfterAndComplete(wait, () -> original.complete(originalValue), synchCtx);
@@ -328,15 +328,15 @@ public class TestDeferredResult {
         int expectedOriginal = (originalFirst ? originalValue : absentValue);
         int expectedOther = (originalFirst ? absentValue : otherValue);
         original
-            .runAfterEither(other, () -> {
-                Assert.assertEquals(expectedOriginal, original.getNow(absentValue).intValue());
-                Assert.assertEquals(expectedOther, other.getNow(absentValue).intValue());
-                invocations.incrementAndGet();
-            })
-            .thenRun(() -> {
-                Assert.assertFalse(originalFirst ? other.isDone() : original.isDone());
-            })
-            .whenComplete(ctx.getCompletionDeferred());
+                .runAfterEither(other, () -> {
+                    Assert.assertEquals(expectedOriginal, original.getNow(absentValue).intValue());
+                    Assert.assertEquals(expectedOther, other.getNow(absentValue).intValue());
+                    invocations.incrementAndGet();
+                })
+                .thenRun(() -> {
+                    Assert.assertFalse(originalFirst ? other.isDone() : original.isDone());
+                })
+                .whenComplete(ctx.getCompletionDeferred());
         TestContext synchCtx = new TestContext(1, TestContext.DEFAULT_WAIT_DURATION);
         if (originalFirst) {
             runAfterAndComplete(wait, () -> original.complete(originalValue), synchCtx);
@@ -401,13 +401,13 @@ public class TestDeferredResult {
         AtomicInteger invocations = new AtomicInteger();
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .exceptionally(ex -> {
-                Assert.assertNotNull(ex);
-                Assert.assertEquals(RuntimeException.class, ex.getClass());
-                invocations.incrementAndGet();
-                throw new TestException();
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .exceptionally(ex -> {
+                    Assert.assertNotNull(ex);
+                    Assert.assertEquals(RuntimeException.class, ex.getClass());
+                    invocations.incrementAndGet();
+                    throw new TestException();
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         runAfter(10, () -> original.fail(new RuntimeException()));
         ctx.await();
         Assert.assertEquals(1, invocations.get());
@@ -419,12 +419,12 @@ public class TestDeferredResult {
         AtomicInteger invocations = new AtomicInteger();
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .whenComplete((result, ex) -> {
-                invocations.incrementAndGet();
-                // We throw RTE, but the original exception is propagated
-                throw new RuntimeException();
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .whenComplete((result, ex) -> {
+                    invocations.incrementAndGet();
+                    // We throw RTE, but the original exception is propagated
+                    throw new RuntimeException();
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         runAfter(10, () -> original.fail(new TestException()));
         ctx.await();
         Assert.assertEquals(1, invocations.get());
@@ -476,16 +476,16 @@ public class TestDeferredResult {
         AtomicInteger postExceptionInvocations = new AtomicInteger();
         DeferredResult<Integer> original = new DeferredResult<>();
         original
-            .handle((x, ex) -> {
-                Assert.assertNotNull(ex);
-                Assert.assertEquals(RuntimeException.class, ex.getClass());
-                invocations.incrementAndGet();
-                throw new TestException();
-            })
-            .thenRun(() -> {
-                postExceptionInvocations.incrementAndGet();
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .handle((x, ex) -> {
+                    Assert.assertNotNull(ex);
+                    Assert.assertEquals(RuntimeException.class, ex.getClass());
+                    invocations.incrementAndGet();
+                    throw new TestException();
+                })
+                .thenRun(() -> {
+                    postExceptionInvocations.incrementAndGet();
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         runAfter(10, () -> original.fail(new RuntimeException()));
         ctx.await();
         Assert.assertEquals(1, invocations.get());
@@ -577,31 +577,31 @@ public class TestDeferredResult {
         DeferredResult<Integer> other = DeferredResult.completed(1);
         DeferredResult<Integer> deferredResult = new DeferredResult<>();
         deferredResult
-            .thenApply(x -> {
-                invocations.incrementAndGet();
-                return x;
-            })
-            .thenAccept(x -> {
-                invocations.incrementAndGet();
-            })
-            .thenCompose(x -> {
-                invocations.incrementAndGet();
-                return DeferredResult.completed(x);
-            })
-            .thenRun(() -> {
-                invocations.incrementAndGet();
-            })
-            .thenAcceptBoth(other, (x, y) -> {
-                invocations.incrementAndGet();
-            })
-            .thenCombine(other, (x, y) -> {
-                invocations.incrementAndGet();
-                return x;
-            })
-            .runAfterBoth(other, () -> {
-                invocations.incrementAndGet();
-            })
-            .whenComplete(getExpectedExceptionCompletion(ctx));
+                .thenApply(x -> {
+                    invocations.incrementAndGet();
+                    return x;
+                })
+                .thenAccept(x -> {
+                    invocations.incrementAndGet();
+                })
+                .thenCompose(x -> {
+                    invocations.incrementAndGet();
+                    return DeferredResult.completed(x);
+                })
+                .thenRun(() -> {
+                    invocations.incrementAndGet();
+                })
+                .thenAcceptBoth(other, (x, y) -> {
+                    invocations.incrementAndGet();
+                })
+                .thenCombine(other, (x, y) -> {
+                    invocations.incrementAndGet();
+                    return x;
+                })
+                .runAfterBoth(other, () -> {
+                    invocations.incrementAndGet();
+                })
+                .whenComplete(getExpectedExceptionCompletion(ctx));
         runAfter(10, () -> deferredResult.fail(new TestException()));
         ctx.await();
         Assert.assertEquals(0, invocations.get());

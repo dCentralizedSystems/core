@@ -59,7 +59,7 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
                     .createPost(host, ExampleService.FACTORY_LINK)
                     .setBody(doc);
             this.host.sendWithDeferredResult(createDocument)
-                .whenComplete(ctx.getCompletionDeferred());
+                    .whenComplete(ctx.getCompletionDeferred());
         }
         ctx.await();
     }
@@ -77,13 +77,14 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
 
         DeferredResult<Operation> result = this.host.sendWithDeferredResult(get);
         result
-            .thenAccept(op -> {
-                Assert.assertEquals(Operation.STATUS_CODE_OK, op.getStatusCode());
-                ServiceDocumentQueryResult queryResult = op.getBody(ServiceDocumentQueryResult.class);
-                Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
-                invocationCounter.incrementAndGet();
-            })
-            .whenComplete(this.host.getCompletionDeferred());
+                .thenAccept(op -> {
+                    Assert.assertEquals(Operation.STATUS_CODE_OK, op.getStatusCode());
+                    ServiceDocumentQueryResult queryResult = op
+                            .getBody(ServiceDocumentQueryResult.class);
+                    Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
+                    invocationCounter.incrementAndGet();
+                })
+                .whenComplete(this.host.getCompletionDeferred());
         this.host.testWait();
         Assert.assertEquals(1, invocationCounter.get());
     }
@@ -95,14 +96,14 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
         AtomicInteger invocationCounter = new AtomicInteger();
         this.host.testStart(1);
 
-        DeferredResult<ServiceDocumentQueryResult> result =
-                this.host.sendWithDeferredResult(get, ServiceDocumentQueryResult.class);
+        DeferredResult<ServiceDocumentQueryResult> result = this.host.sendWithDeferredResult(get,
+                ServiceDocumentQueryResult.class);
         result
-            .thenAccept(queryResult -> {
-                Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
-                invocationCounter.incrementAndGet();
-            })
-            .whenComplete(this.host.getCompletionDeferred());
+                .thenAccept(queryResult -> {
+                    Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
+                    invocationCounter.incrementAndGet();
+                })
+                .whenComplete(this.host.getCompletionDeferred());
         this.host.testWait();
         Assert.assertEquals(1, invocationCounter.get());
     }
@@ -142,36 +143,33 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
         this.host.testStart(1);
 
         this.host
-            .sendWithDeferredResult(get, ServiceDocumentQueryResult.class)
-            .thenCompose(queryResult -> {
-                invocationCounter.incrementAndGet();
-                Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
-                Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentLinks.size());
-                List<DeferredResult<ExampleServiceState>> deferredResults =
-                        queryResult.documentLinks
-                        .stream()
-                        .map(link -> Operation.createGet(host, link))
-                        .map(getLink -> this.host.sendWithDeferredResult(getLink,
-                                ExampleServiceState.class))
-                        .collect(Collectors.toList());
-                return DeferredResult.allOf(deferredResults);
-            })
-            .thenAccept(results -> {
-                invocationCounter.incrementAndGet();
-                // Note: although the ordering of the results is guaranteed,
-                // the ordering of the links above is not, hence the use of Set
-                Set<String> expectedNames =
-                        IntStream.range(0, DOCUMENT_COUNT)
-                        .mapToObj(this::generateName)
-                        .collect(Collectors.toSet());
-                Set<String> names =
-                        results.stream()
-                        .map(doc -> doc.name)
-                        .collect(Collectors.toSet());
-                Assert.assertEquals(DOCUMENT_COUNT, names.size());
-                Assert.assertEquals(expectedNames, names);
-            })
-            .whenComplete(this.host.getCompletionDeferred());
+                .sendWithDeferredResult(get, ServiceDocumentQueryResult.class)
+                .thenCompose(queryResult -> {
+                    invocationCounter.incrementAndGet();
+                    Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentCount.longValue());
+                    Assert.assertEquals(DOCUMENT_COUNT, queryResult.documentLinks.size());
+                    List<DeferredResult<ExampleServiceState>> deferredResults = queryResult.documentLinks
+                            .stream()
+                            .map(link -> Operation.createGet(host, link))
+                            .map(getLink -> this.host.sendWithDeferredResult(getLink,
+                                    ExampleServiceState.class))
+                            .collect(Collectors.toList());
+                    return DeferredResult.allOf(deferredResults);
+                })
+                .thenAccept(results -> {
+                    invocationCounter.incrementAndGet();
+                    // Note: although the ordering of the results is guaranteed,
+                    // the ordering of the links above is not, hence the use of Set
+                    Set<String> expectedNames = IntStream.range(0, DOCUMENT_COUNT)
+                            .mapToObj(this::generateName)
+                            .collect(Collectors.toSet());
+                    Set<String> names = results.stream()
+                            .map(doc -> doc.name)
+                            .collect(Collectors.toSet());
+                    Assert.assertEquals(DOCUMENT_COUNT, names.size());
+                    Assert.assertEquals(expectedNames, names);
+                })
+                .whenComplete(this.host.getCompletionDeferred());
 
         this.host.testWait();
         Assert.assertEquals(2, invocationCounter.get());
@@ -183,11 +181,11 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
         Operation get = Operation
                 .createGet(host, UriUtils.buildUriPath(ExampleService.FACTORY_LINK, "unknown"));
         this.host
-            .sendWithDeferredResult(get)
-            .thenRun(() -> {
-                Assert.fail();
-            })
-            .whenComplete(this.host.getCompletionDeferred());
+                .sendWithDeferredResult(get)
+                .thenRun(() -> {
+                    Assert.fail();
+                })
+                .whenComplete(this.host.getCompletionDeferred());
         this.host.testWait();
     }
 
@@ -197,13 +195,13 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
 
         Operation get = Operation
                 .createGet(host, UriUtils.buildUriPath(ExampleService.FACTORY_LINK, "unknown"));
-        DeferredResult<ExampleServiceState> deferredResult =
-                this.host.sendWithDeferredResult(get, ExampleServiceState.class)
-                        .exceptionally(ex -> {
-                            ExampleServiceState doc = new ExampleServiceState();
-                            doc.name = "?";
-                            return doc;
-                        });
+        DeferredResult<ExampleServiceState> deferredResult = this.host
+                .sendWithDeferredResult(get, ExampleServiceState.class)
+                .exceptionally(ex -> {
+                    ExampleServiceState doc = new ExampleServiceState();
+                    doc.name = "?";
+                    return doc;
+                });
 
         ctx.await(deferredResult);
 
@@ -218,19 +216,19 @@ public class TestSendWithDeferredResult extends BasicReusableHostTestCase {
         Operation get = Operation
                 .createGet(host, UriUtils.buildUriPath(ExampleService.FACTORY_LINK, "unknown"));
         this.host
-            .sendWithDeferredResult(get, ExampleServiceState.class)
-            .thenRun(() -> {
-                Assert.fail();
-            })
-            .exceptionally(ex -> {
-                // Make sure we are capturing the correct exception
-                if (ex.getCause() instanceof AssertionError) {
-                    throw new CompletionException(ex);
-                }
-                invocationCounter.incrementAndGet();
-                throw new CompletionException(new NumberFormatException());
-            })
-            .whenComplete(this.host.getCompletionDeferred());
+                .sendWithDeferredResult(get, ExampleServiceState.class)
+                .thenRun(() -> {
+                    Assert.fail();
+                })
+                .exceptionally(ex -> {
+                    // Make sure we are capturing the correct exception
+                    if (ex.getCause() instanceof AssertionError) {
+                        throw new CompletionException(ex);
+                    }
+                    invocationCounter.incrementAndGet();
+                    throw new CompletionException(new NumberFormatException());
+                })
+                .whenComplete(this.host.getCompletionDeferred());
         this.host.testWait();
         Assert.assertEquals(1, invocationCounter.get());
     }

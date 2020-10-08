@@ -12,12 +12,7 @@
         <module name="AvoidStarImport"/>
         <module name="UnusedImports"/>
         <module name="RedundantImport"/>
-        <module name="ImportOrder">
-            <property name="groups" value="/^javax?\./,/^(?!com\.vmware\.)[a-z]/"/>
-            <property name="ordered" value="true"/>
-            <property name="separated" value="true"/>
-            <property name="option" value="top"/>
-        </module>
+
         <module name="RequireThis">
             <property name="checkMethods" value="false"/>
         </module>

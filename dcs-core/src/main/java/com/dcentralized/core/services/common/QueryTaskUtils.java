@@ -104,6 +104,7 @@ public final class QueryTaskUtils {
             onCompletion.accept(result, null);
         }
     }
+
     /**
     * Merges a list of @ServiceDocumentQueryResult that were already <b>sorted</b> on <i>documentLink</i>.
     * The merge will be done in linear time.

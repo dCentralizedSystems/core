@@ -154,7 +154,7 @@ public final class KryoSerializers {
             }
         };
 
-        MapSerializer emptyOrSingletonMapSerializer = new MapSerializer(){
+        MapSerializer emptyOrSingletonMapSerializer = new MapSerializer() {
             @SuppressWarnings("rawtypes")
             @Override
             protected Map<?, ?> create(Kryo kryo, Input input, Class<Map> type) {
@@ -247,6 +247,7 @@ public final class KryoSerializers {
         k.writeClassAndObject(out, o);
         return out;
     }
+
     /**
      * Serializes an arbitrary object into a binary representation, using full
      * reference tracking and the object graph serializer.

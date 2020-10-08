@@ -3253,28 +3253,28 @@ public class ServiceHost implements ServiceRequestSender {
     }
 
     void loadServiceState(Service s, Operation op) {
-        ServiceDocument state = this.serviceResourceTracker.getCachedServiceState(s, op);
+        ServiceDocument st = this.serviceResourceTracker.getCachedServiceState(s, op);
 
         // Clone state if it might change while processing
-        if (state != null && !s.hasOption(ServiceOption.CONCURRENT_UPDATE_HANDLING)) {
-            state = Utils.clone(state);
+        if (st != null && !s.hasOption(ServiceOption.CONCURRENT_UPDATE_HANDLING)) {
+            st = Utils.clone(st);
         }
 
-        if (state != null && state.documentKind == null) {
+        if (st != null && st.documentKind == null) {
             log(Level.WARNING, "documentKind is null for %s", s.getSelfLink());
-            state.documentKind = Utils.buildKind(s.getStateType());
+            st.documentKind = Utils.buildKind(s.getStateType());
         }
 
         // If either there is cached state, or the service is not indexed (meaning nothing
         // will be found in the index), subject this state to authorization.
-        if (state != null || !isServiceIndexed(s)) {
-            if (!isAuthorized(s, state, op)) {
+        if (st != null || !isServiceIndexed(s)) {
+            if (!isAuthorized(s, st, op)) {
                 op.fail(Operation.STATUS_CODE_FORBIDDEN);
                 return;
             }
 
-            if (state != null) {
-                op.linkState(state);
+            if (st != null) {
+                op.linkState(st);
             }
 
             op.complete();
@@ -3295,15 +3295,15 @@ public class ServiceHost implements ServiceRequestSender {
                         return;
                     }
 
-                    ServiceDocument st = o.getBody(s.getStateType());
-                    if (!isAuthorized(s, st, op)) {
+                    ServiceDocument st2 = o.getBody(s.getStateType());
+                    if (!isAuthorized(s, st2, op)) {
                         op.fail(Operation.STATUS_CODE_FORBIDDEN);
                         return;
                     }
 
-                    this.serviceResourceTracker.updateCachedServiceState(s, st, op);
+                    this.serviceResourceTracker.updateCachedServiceState(s, st2, op);
 
-                    op.linkState(st).complete();
+                    op.linkState(st2).complete();
                 });
 
         Service indexService = getIndexServiceForService(s);
