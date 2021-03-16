@@ -67,6 +67,11 @@ public class NodeSelectorReplicationService extends StatelessService {
         int memberCount = localState.nodes.size();
         NodeState selfNode = localState.nodes.get(getHost().getId());
 
+        if (req == null || req.serviceOptions == null || selfNode == null) {
+            outboundOp.fail(new IllegalStateException("Missing self node and/or request fields"));
+            return;
+        }
+
         if (req.serviceOptions.contains(ServiceOption.OWNER_SELECTION)
                 && selfNode.membershipQuorum > memberCount) {
             outboundOp.fail(new IllegalStateException("Not enough peers: " + memberCount));
