@@ -170,6 +170,15 @@ public class ServiceAvailabilityFilter implements Filter {
             doProbe = true;
         }
 
+        if (op.getAction() == Action.GET) {
+            // GET operation should not start a service. See above comment: By doing
+            // a GET first to avoid race on local services. So as a genuine GET operation should do
+            // same thing.
+            // Also see below comment before getOp creation: "we should not use startService for
+            // checking if a service ever existed".
+            doProbe = true;
+        }
+
         if (!doProbe) {
             host.log(Level.FINE, "Skipping probe - starting service %s on-demand due to %s %d (isFromReplication: %b, isSynchronizeOwner: %b, isSynchronizePeer: %b)",
                     servicePath, op.getAction(), op.getId(),

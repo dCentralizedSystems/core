@@ -1255,5 +1255,39 @@ public class TestStatefulService extends BasicReusableHostTestCase {
 
     }
 
+    @Test
+    public void testGetBeforePost() throws Throwable {
+        int nodeCount = 3;
+
+        this.host.setPeerSynchronizationEnabled(true);
+        this.host.setUpPeerHosts(nodeCount);
+        this.host.joinNodesAndVerifyConvergence(nodeCount, true);
+        this.host.setNodeGroupQuorum(nodeCount);
+
+        VerificationHost targetHost = this.host.getPeerHost();
+        TestRequestSender sender = this.host.getTestRequestSender();
+
+        for (VerificationHost host : this.host.getInProcessHostMap().values()) {
+            host.startFactory(new NoBodyExampleService());
+        }
+        URI serviceUri = UriUtils.buildUri(targetHost.getUri(), NoBodyExampleService.FACTORY_LINK);
+        host.waitForReplicatedFactoryServiceAvailable(serviceUri);
+
+        String documentSelfLink = UriUtils.buildUriPath(NoBodyExampleService.FACTORY_LINK, "foo");
+
+        // get a non-existed doc
+        FailureResponse f = sender.sendAndWaitFailure(Operation.createGet(targetHost, documentSelfLink));
+        assertEquals(Operation.STATUS_CODE_NOT_FOUND,  f.op.getStatusCode());
+
+        // create a doc
+        ExampleServiceState initState = new ExampleServiceState();
+        initState.name = "foo";
+        initState.counter = 0L;
+        initState.documentSelfLink = documentSelfLink;
+
+        Operation post = Operation.createPost(targetHost, NoBodyExampleService.FACTORY_LINK)
+                .setBody(initState);
+        sender.sendAndWait(post);
+    }
 }
 
