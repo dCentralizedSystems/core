@@ -34,10 +34,12 @@ import com.dcentralized.core.common.Service.ProcessingStage;
 import com.dcentralized.core.common.Service.ServiceOption;
 import com.dcentralized.core.common.ServiceStats.ServiceStat;
 import com.dcentralized.core.common.test.ExampleService;
+import com.dcentralized.core.common.test.ExampleService.ExampleServiceState;
 import com.dcentralized.core.common.test.MinimalTestServiceState;
 import com.dcentralized.core.common.test.TestContext;
 import com.dcentralized.core.common.test.TestProperty;
 import com.dcentralized.core.common.test.TestRequestSender;
+import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
 import com.dcentralized.core.common.test.VerificationHost;
 import com.dcentralized.core.services.common.MinimalFactoryTestService;
 import com.dcentralized.core.services.common.MinimalTestService;
@@ -168,6 +170,41 @@ public class TestServiceModel extends BasicReusableHostTestCase {
         // Third verification:
         // Verify that the service was not created during the previous GET attempt
         this.host.getTestRequestSender().sendAndWaitFailure(Operation.createGet(uri));
+    }
+
+    @Test
+    public void onDemandStartNonExistingFactoryService() throws Throwable {
+        // This test verifies that on-demand start, triggered by a GET operation targeting
+        // a non-existent Stateful service, does not inadvertently set the service status to
+        // an error value, preventing creating the service using POST afterwards
+
+        String factoryUri = ExampleService.FACTORY_LINK;
+        String documentUri = UriUtils.buildUriPath(factoryUri, "does-not-exist");
+
+
+        // sanity check: retrieve service factory
+        Operation getFactory = Operation.createGet(this.host, factoryUri);
+        Operation response = this.host.waitForResponse(getFactory);
+        assertNotNull(response);
+        assertEquals(Operation.STATUS_CODE_OK, response.getStatusCode());
+
+        ExampleServiceState state = new ExampleServiceState();
+        state.name = "service-name";
+        state.documentSelfLink = documentUri;
+
+        // First verification: on-demand GET:
+        // We send a GET to a Stateful service. On-demand load should kick-in, but fail to find the service.
+        Operation getService = Operation.createGet(this.host, documentUri);
+        FailureResponse f = this.host.getTestRequestSender().sendAndWaitFailure(getService);
+        assertEquals(Operation.STATUS_CODE_NOT_FOUND,  f.op.getStatusCode());
+
+        // Second verification: factory POST:
+        // We send a POST to the service factory and verify that the service is created.
+        Operation postService = Operation.createPost(this.host, factoryUri).setBody(state);
+        response = this.host.waitForResponse(postService);
+
+        assertNotNull(response);
+        assertEquals(Operation.STATUS_CODE_OK, response.getStatusCode());
     }
 
     @Test

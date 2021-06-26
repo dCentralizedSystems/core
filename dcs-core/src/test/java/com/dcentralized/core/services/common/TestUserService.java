@@ -22,6 +22,8 @@ import java.util.UUID;
 
 import com.dcentralized.core.common.BasicReusableHostTestCase;
 import com.dcentralized.core.common.Operation;
+import com.dcentralized.core.common.Service.Action;
+import com.dcentralized.core.common.ServiceErrorResponse;
 import com.dcentralized.core.common.UriUtils;
 import com.dcentralized.core.common.test.TestRequestSender;
 import com.dcentralized.core.common.test.TestRequestSender.FailureResponse;
@@ -142,4 +144,61 @@ public class TestUserService extends BasicReusableHostTestCase {
         assertEquals(3, patchedState.userGroupLinks.size());
     }
 
+    @Test
+    public void testGetBeforePost() throws Throwable {
+        String email = "jake@doe.com";
+        String servicePath = UriUtils.buildUriPath(UserService.FACTORY_LINK, email);
+
+        // get a non-existed doc
+        FailureResponse f = this.sender.sendAndWaitFailure(Operation.createGet(this.host, servicePath));
+        assertEquals(Operation.STATUS_CODE_NOT_FOUND,  f.op.getStatusCode());
+
+        UserState state = new UserState();
+        state.email = email;
+        state.documentSelfLink = servicePath;
+
+        // POST operation would have failed on ServiceNotFoundException, now exception should be gone
+        Operation op = Operation.createPost(this.host, UserService.FACTORY_LINK).setBody(state);
+        UserState outState = this.sender.sendAndWait(op, UserState.class);
+
+        assertEquals(state.email, outState.email);
+        assertEquals(servicePath, outState.documentSelfLink);
+    }
+
+    @Test
+    // this test is to make sure current change does not change original behavior of "DELETE then POST"
+    public void testDeleteThenGetThenPost() throws Throwable {
+        String email = "july@doe.com";
+        String servicePath = UriUtils.buildUriPath(UserService.FACTORY_LINK, email);
+
+        UserState state = new UserState();
+        state.email = email;
+        state.documentSelfLink = servicePath;
+
+        Operation op = Operation.createPost(this.host, UserService.FACTORY_LINK).setBody(state);
+        this.sender.sendAndWait(op, UserState.class);
+
+        Operation get = Operation.createGet(this.host, servicePath);
+        UserState outState  = this.sender.sendAndWait(get, UserState.class);
+
+        assertEquals(state.email, outState.email);
+        assertEquals(servicePath, outState.documentSelfLink);
+
+        Operation delete = Operation.createDelete(this.host, servicePath);
+        outState = this.sender.sendAndWait(delete, UserState.class);
+        assertEquals(Action.DELETE.toString(), outState.documentUpdateAction);
+
+        FailureResponse f = this.sender.sendAndWaitFailure(Operation.createGet(this.host, servicePath));
+        assertEquals(Operation.STATUS_CODE_NOT_FOUND,  f.op.getStatusCode());
+
+        state = new UserState();
+        state.email = email;
+        state.documentSelfLink = servicePath;
+
+        op = Operation.createPost(this.host, UserService.FACTORY_LINK).setBody(state);
+        f = this.sender.sendAndWaitFailure(op);
+        assertEquals(Operation.STATUS_CODE_CONFLICT, f.op.getStatusCode());
+        ServiceErrorResponse r = (ServiceErrorResponse)f.op.getBodyRaw();
+        assertEquals(ServiceErrorResponse.ERROR_CODE_STATE_MARKED_DELETED,r.getErrorCode());
+    }
 }
