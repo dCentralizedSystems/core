@@ -29,7 +29,7 @@ import com.dcentralized.core.common.http.netty.NettyChannelPool.NettyChannelGrou
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.util.AttributeKey;
 
 public class NettyChannelContext extends SocketContext {
@@ -78,7 +78,7 @@ public class NettyChannelContext extends SocketContext {
         // sizes require us to pass things like max order and page size.
         // maxOrder determines the allocation chunk size as a multiple of page size
         int maxOrder = 4;
-        return new PooledByteBufAllocator(true, 2, 2, 8192, maxOrder, 64, 32, 16, true);
+        return new PooledByteBufAllocator(true, 2, 2, 8192, maxOrder, 32, 16, true);
     }
 
     public static final String ENABLE_ALPN_PROPERTY_NAME =
@@ -86,7 +86,7 @@ public class NettyChannelContext extends SocketContext {
 
     private static boolean initializeALPNEnabled() {
         String property = System.getProperty(ENABLE_ALPN_PROPERTY_NAME);
-        return (property != null) ? Boolean.parseBoolean(property) : OpenSsl.isAlpnSupported();
+        return (property != null) ? Boolean.parseBoolean(property) : SslProvider.isAlpnSupported(SslProvider.OPENSSL);
     }
 
     private static boolean isALPNEnabled = initializeALPNEnabled();
