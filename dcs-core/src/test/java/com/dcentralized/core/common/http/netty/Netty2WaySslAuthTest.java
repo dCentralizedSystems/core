@@ -71,21 +71,26 @@ import org.junit.rules.TemporaryFolder;
 public class Netty2WaySslAuthTest {
     public static final String JAVAX_NET_SSL_TRUST_STORE = "javax.net.ssl.trustStore";
     public static final String JAVAX_NET_SSL_TRUST_STORE_PASSWORD = "javax.net.ssl.trustStorePassword";
+    public static final String JDK_NET_SSL_ALLOW_NON_CA_ANCHOR = "jdk.security.allowNonCaAnchor";
 
     public int securePort = 0;
     private VerificationHost host;
     private TemporaryFolder temporaryFolder;
     private static String savedTrustStore;
     private static String savedTrustStorePassword;
+    private static String savedNonCaAnchor;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
+
         savedTrustStore = System.getProperty(JAVAX_NET_SSL_TRUST_STORE);
         savedTrustStorePassword = System.getProperty(JAVAX_NET_SSL_TRUST_STORE_PASSWORD);
+        savedNonCaAnchor = System.getProperty(JDK_NET_SSL_ALLOW_NON_CA_ANCHOR);
         System.setProperty(JAVAX_NET_SSL_TRUST_STORE,
                 getCanonicalFileForResource("/ssl/trustedcerts.jks")
                         .getCanonicalPath());
         System.setProperty(JAVAX_NET_SSL_TRUST_STORE_PASSWORD, "changeit");
+        System.setProperty(JDK_NET_SSL_ALLOW_NON_CA_ANCHOR, "true");
     }
 
     @AfterClass
@@ -99,6 +104,11 @@ public class Netty2WaySslAuthTest {
             System.clearProperty(JAVAX_NET_SSL_TRUST_STORE_PASSWORD);
         } else {
             System.setProperty(JAVAX_NET_SSL_TRUST_STORE_PASSWORD, savedTrustStorePassword);
+        }
+        if (savedNonCaAnchor == null) {
+            System.clearProperty(JDK_NET_SSL_ALLOW_NON_CA_ANCHOR);
+        } else {
+            System.setProperty(JDK_NET_SSL_ALLOW_NON_CA_ANCHOR, savedNonCaAnchor);
         }
     }
 
